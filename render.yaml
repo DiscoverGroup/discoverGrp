@@ -3,11 +3,13 @@ services:
     name: discovergroup-api
     env: node
     plan: free
-    buildCommand: node scripts/build-api-deploy.js
-    startCommand: cd dist-node/apps/api && node src/index.js
+    buildCommand: npm install --production=false && node scripts/build-api-deploy.js
+    startCommand: node render-start.js
     envVars:
       - key: NODE_ENV
         value: production
+      - key: PORT
+        value: "4000"
     autoDeploy: true
     branch: main
     rootDir: ./

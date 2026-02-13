@@ -7,13 +7,11 @@ import logger from '../utils/logger';
  * Logs admin actions for security monitoring and compliance
  */
 
-interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    fullName: string;
-    role: string;
-  };
+interface AuthenticatedUser {
+  id: string;
+  email: string;
+  fullName: string;
+  role: string;
 }
 
 /**
@@ -95,7 +93,7 @@ function extractErrorMessage(responseBody: unknown): string {
   return 'Unknown error';
 }
 
-export function auditLog(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
+export function auditLog(req: Request, res: Response, next: NextFunction): void {
   const startTime = Date.now();
   
   // Capture original response methods
@@ -128,7 +126,12 @@ export function auditLog(req: AuthenticatedRequest, res: Response, next: NextFun
   async function logAudit(): Promise<void> {
     try {
       const duration = Date.now() - startTime;
-      const user = req.user;
+      
+      // Safely extract user information with proper typing
+      interface RequestWithUser extends Request {
+        user?: AuthenticatedUser;
+      }
+      const user = (req as RequestWithUser).user;
       
       // Only log if user is authenticated
       if (!user) {
