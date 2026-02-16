@@ -159,7 +159,7 @@ export default function Footer() {
               © {new Date().getFullYear()} <span className="text-yellow-400 font-semibold">Discover Group</span>. All rights reserved.
             </p>
             <p className="text-xs text-gray-500 mt-2">
-              Creating unforgettable journeys since 2020
+              Creating unforgettable journeys since 2008
             </p>
           </div>
           
