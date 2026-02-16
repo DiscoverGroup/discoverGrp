@@ -127,7 +127,12 @@ router.post(
   upload.array('files', 10), // Max 10 files
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const files = req.files as Express.Multer.File[];
+      const files = req.files as Array<{
+        buffer: Buffer;
+        originalname: string;
+        mimetype: string;
+        size: number;
+      }>;
       
       if (!files || files.length === 0) {
         res.status(400).json({ error: 'No files uploaded' });
