@@ -2,7 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
 
-export interface AuthenticatedRequest extends Request {
+// Type for authenticated request - use intersection to ensure proper inheritance
+export type AuthenticatedRequest = Request & {
   user?: {
     id: string;
     email: string;

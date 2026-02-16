@@ -3,8 +3,8 @@ import jwt from "jsonwebtoken";
 import User from "../models/User";
 import logger from "../utils/logger";
 
-// Extend Express Request interface - explicitly include inherited properties
-export interface AuthenticatedRequest extends Request {
+// Type for authenticated request - use intersection to ensure proper inheritance
+export type AuthenticatedRequest = Request & {
   user?: {
     id: string;
     email: string;
