@@ -6,6 +6,14 @@ import FeaturedVideo from '../../models/FeaturedVideo';
 import crypto from 'crypto';
 import path from 'path';
 
+// Type for uploaded files (avoid Express namespace issues)
+type UploadedFile = {
+  buffer: Buffer;
+  originalname: string;
+  mimetype: string;
+  size: number;
+};
+
 const router = Router();
 
 // Configure Cloudflare R2 client
@@ -50,7 +58,7 @@ const upload = multer({
  * Upload video file to R2
  */
 async function uploadToR2(
-  file: Express.Multer.File,
+  file: UploadedFile,
   folder: string,
   label: string
 ): Promise<string> {
@@ -112,7 +120,7 @@ router.post(
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { title, description, is_active, display_order } = req.body;
-      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      const files = req.files as { [fieldname: string]: UploadedFile[] };
 
       if (!title) {
         res.status(400).json({ error: 'Title is required' });
