@@ -20,12 +20,17 @@ export const connectDB = async () => {
 
   try {
     logger.info('Attempting to connect to MongoDB...');
+    logger.info(`Connection string format: ${MONGODB_URI.startsWith('mongodb+srv') ? 'SRV (mongodb+srv://)' : 'Standard (mongodb://)'}`);
+    
     await mongoose.connect(MONGODB_URI, {
       maxPoolSize: 10,
       minPoolSize: 5,
-      serverSelectionTimeoutMS: 10000,
+      serverSelectionTimeoutMS: 30000, // Increased from 10s to 30s
       socketTimeoutMS: 45000,
+      connectTimeoutMS: 30000, // Added explicit connect timeout
       family: 4, // Force IPv4 (helps with DNS resolution issues)
+      retryWrites: true,
+      w: 'majority',
     });
     logger.info('✅ MongoDB connected successfully');
   } catch (err) {
