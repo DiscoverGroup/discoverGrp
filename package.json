@@ -15,8 +15,6 @@
     "build:api": "cd apps/api && npm run build",
     "build:admin": "cd apps/admin && npm run build",
     "build:app": "tsc && vite build",
-    "build:api:deploy": "node scripts/build-api-deploy.js",
-    "start:api:deploy": "node dist-node/apps/api/src/index.js",
     "install:all": "npm install && npm --prefix apps/admin install && npm --prefix apps/api install",
     "lint": "eslint .",
     "preview": "vite preview",

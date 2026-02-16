@@ -1,11 +1,12 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from "react-router-dom";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import Loading from "./components/Loading";
 import ScrollToTop from "./components/ScrollToTop";
 import React from "react";
 import { useTheme } from "./context/ThemeContext";
+import { useAuth } from "./context/useAuth";
 import BookingErrorBoundary from "./components/BookingErrorBoundary";
 
 // Redirect component for slug-based routes
@@ -13,13 +14,6 @@ function RedirectWithSlug({ to }: { to: string }) {
   const { slug } = useParams<{ slug: string }>();
   return <Navigate to={to.replace(':slug', slug || '')} replace />;
 }
-
-
-import Booking from "./pages/Booking";
-import ViewBookings from "./pages/ViewBookings";
-
-import BookingConfirmation from "./pages/BookingConfirmation";
-import VisaAssistance from "./pages/VisaAssistance";
 
 // Lazy load pages
 const Home = lazy(() => import("./pages/Home"));
@@ -40,9 +34,50 @@ const AboutUs = lazy(() => import("./pages/AboutUs"));
 const Favorites = lazy(() => import("./pages/Favorites"));
 const WaysToGo = lazy(() => import("./pages/WaysToGo"));
 const Deals = lazy(() => import("./pages/Deals"));
+const Booking = lazy(() => import("./pages/Booking"));
+const ViewBookings = lazy(() => import("./pages/ViewBookings"));
+const BookingConfirmation = lazy(() => import("./pages/BookingConfirmation"));
+const VisaAssistance = lazy(() => import("./pages/VisaAssistance"));
 
 function AppContent() {
   const { darkMode } = useTheme();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const connection = typeof navigator !== "undefined"
+      ? (navigator as Navigator & {
+          connection?: {
+            saveData?: boolean;
+            effectiveType?: string;
+          };
+        }).connection
+      : undefined;
+
+    const isSlowNetwork =
+      Boolean(connection?.saveData) ||
+      ["slow-2g", "2g", "3g"].includes(connection?.effectiveType ?? "");
+
+    const preloadDelayMs = isSlowNetwork ? 3500 : 1500;
+
+    const timer = window.setTimeout(() => {
+      if (user) {
+        void Promise.allSettled([
+          import("./pages/Booking"),
+          import("./pages/ViewBookings"),
+          import("./pages/Profile"),
+        ]);
+        return;
+      }
+
+      void Promise.allSettled([
+        import("./pages/Login"),
+        import("./pages/Register"),
+        import("./pages/ForgotPassword"),
+      ]);
+    }, preloadDelayMs);
+
+    return () => window.clearTimeout(timer);
+  }, [user]);
 
   return (
     <div className={`${darkMode ? 'dark bg-gray-900 text-white' : 'bg-white text-gray-900'} min-h-screen transition-colors duration-300`}>

@@ -201,6 +201,38 @@ const TourCarousel3D: React.FC = () => {
     return () => clearInterval(interval);
   }, [autoPlay, tours.length]);
 
+  useEffect(() => {
+    if (tours.length === 0) return;
+
+    const connection = typeof navigator !== 'undefined'
+      ? (navigator as Navigator & {
+          connection?: {
+            saveData?: boolean;
+            effectiveType?: string;
+          };
+        }).connection
+      : undefined;
+
+    if (connection?.saveData) return;
+
+    const isSlowNetwork = ['slow-2g', '2g', '3g'].includes(connection?.effectiveType ?? '');
+    const preloadDelayMs = isSlowNetwork ? 3500 : 1200;
+
+    const imageUrls = tours
+      .map((tour) => tour.image)
+      .filter((url): url is string => Boolean(url))
+      .slice(0, 3);
+
+    const timer = window.setTimeout(() => {
+      imageUrls.forEach((url) => {
+        const img = new Image();
+        img.src = url;
+      });
+    }, preloadDelayMs);
+
+    return () => window.clearTimeout(timer);
+  }, [tours]);
+
   const handlePrevious = () => {
     setCurrentIndex((prev) => (prev - 1 + tours.length) % tours.length);
   };

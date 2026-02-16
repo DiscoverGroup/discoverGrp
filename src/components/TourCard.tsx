@@ -2,7 +2,7 @@ import * as React from "react";
 import type { Tour } from "../types";
 import { Link } from "react-router-dom";
 import { Heart, MapPin, Users, Clock, Globe, ChevronLeft, ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 interface TourCardProps {
   tour: Tour;
@@ -21,9 +21,12 @@ export default function TourCard({
   onWishlist,
   isWishlisted = false
 }: TourCardProps) {
+  const cardRef = React.useRef<HTMLAnchorElement | null>(null);
   const [wishlistState, setWishlistState] = useState(isWishlisted);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [imageError, setImageError] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const imageList = useMemo(() => tour.images ?? [], [tour.images]);
 
   const handleWishlistClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -79,11 +82,69 @@ export default function TourCard({
     setImageError(false);
   }, [currentImageIndex]);
 
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (!('IntersectionObserver' in window)) {
+      setIsVisible(true);
+      return;
+    }
+
+    const element = cardRef.current;
+    if (!element) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '150px' }
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  React.useEffect(() => {
+    if (!isVisible) return;
+    if (imageList.length < 2) return;
+
+    const connection = typeof navigator !== 'undefined'
+      ? (navigator as Navigator & {
+          connection?: {
+            saveData?: boolean;
+            effectiveType?: string;
+          };
+        }).connection
+      : undefined;
+
+    if (connection?.saveData) return;
+
+    const isSlowNetwork = ['slow-2g', '2g', '3g'].includes(connection?.effectiveType ?? '');
+    const preloadDelayMs = isSlowNetwork ? 2500 : 700;
+
+    const nextIndex = (currentImageIndex + 1) % imageList.length;
+    const prevIndex = (currentImageIndex - 1 + imageList.length) % imageList.length;
+    const candidates = [imageList[nextIndex], imageList[prevIndex]].filter((url): url is string => Boolean(url));
+
+    const timer = window.setTimeout(() => {
+      candidates.forEach((url) => {
+        const img = new Image();
+        img.src = url;
+      });
+    }, preloadDelayMs);
+
+    return () => window.clearTimeout(timer);
+  }, [currentImageIndex, imageList, isVisible]);
+
   // Get tour category or type
   const tourCategory = tour.line || "Tour Package";
 
   return (
     <Link 
+      ref={cardRef}
       to={`/tour/${tour.slug}`}
       className="group block bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 w-full h-[520px] flex flex-col"
       role="article"

@@ -1,9 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import type { Booking, BookingStatus } from "../types";
+import type { Booking, BookingStatus, InstallmentPayment } from "../types";
 import { fetchAllBookings, updateBookingStatus, deleteBooking } from "../api/bookings";
 import Loading from "../components/Loading";
 import React from "react";
+import PaymentModal from "../components/booking/PaymentModal";
+import InstallmentSchedule from "../components/booking/InstallmentSchedule";
+import { verifyPaymentEligibility, logSecurityEvent } from "../utils/paymentSecurity";
 
 function formatCurrencyPHP(amount: number) {
   return `PHP ${amount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -131,6 +134,12 @@ export default function ViewBookings() {
 
   // store detected current user email (lowercased) - undefined means "not detected"
   const [currentUserEmail, setCurrentUserEmail] = useState<string | undefined>(undefined);
+  
+  // Payment modal state
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedBookingForPayment, setSelectedBookingForPayment] = useState<Booking | null>(null);
+  const [selectedInstallmentPayment, setSelectedInstallmentPayment] = useState<InstallmentPayment | null>(null);
+  const [customPaymentAmount, setCustomPaymentAmount] = useState<number | null>(null);
 
   useEffect(() => {
     const email = getCurrentUserEmailFromClient();
@@ -224,6 +233,46 @@ export default function ViewBookings() {
       console.error("Error deleting booking:", err);
       setError("Failed to delete booking. Please try again.");
     }
+  }
+  
+  function handleMakePayment(booking: Booking, installment?: InstallmentPayment, customAmount?: number) {
+    // Security check before opening payment modal
+    const eligibilityCheck = verifyPaymentEligibility(booking, currentUserEmail);
+    
+    if (!eligibilityCheck.eligible) {
+      logSecurityEvent("PAYMENT_BLOCKED", booking.bookingId, {
+        reason: eligibilityCheck.error,
+        userEmail: currentUserEmail,
+      });
+      
+      // Show error in alert
+      alert(eligibilityCheck.error || "Cannot process payment for this booking");
+      return;
+    }
+    
+    setSelectedBookingForPayment(booking);
+    setSelectedInstallmentPayment(installment || null);
+    setCustomPaymentAmount(customAmount || null);
+    setShowPaymentModal(true);
+  }
+  
+  function handlePaymentSuccess(paymentId: string) {
+    console.log('Payment successful:', paymentId);
+    
+    // Log successful payment for security audit
+    if (selectedBookingForPayment) {
+      logSecurityEvent("PAYMENT_COMPLETED", selectedBookingForPayment.bookingId, {
+        paymentId,
+        userEmail: currentUserEmail,
+        amount: customPaymentAmount || selectedInstallmentPayment?.amount,
+      });
+    }
+    
+    // In a real app, update the booking in the backend
+    // For now, just reload bookings
+    loadBookings();
+    setShowPaymentModal(false);
+    alert('Payment processed successfully! (Demo mode - no actual charge)');
   }
 
   function exportToCSV() {
@@ -478,24 +527,47 @@ export default function ViewBookings() {
                       </div>
                     </div>
                     
-                    <div className="mt-3 pt-3 border-t border-gray-200 flex gap-2">
-                      <Link
-                        to={`/booking/confirmation/${booking.id}`}
-                        state={{ booking }}
-                        className="flex-1 text-center text-xs px-3 py-2 bg-yellow-400 hover:bg-yellow-500 text-gray-900 rounded-lg font-medium transition-all"
-                      >
-                        View Details
-                      </Link>
-                      <select
-                        value={booking.status}
-                        onChange={(e) => handleStatusChange(booking.bookingId, e.target.value as BookingStatus)}
-                        className="flex-1 text-xs px-2 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                      >
-                        <option value="confirmed">Confirmed</option>
-                        <option value="pending">Pending</option>
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
-                      </select>
+                    {/* Installment Schedule for Mobile */}
+                    {booking.paymentType === "downpayment" && booking.installmentPlan && (
+                      <InstallmentSchedule
+                        booking={booking}
+                        onPayInstallment={(payment) => handleMakePayment(booking, payment)}
+                      />
+                    )}
+                    
+                    <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                      {/* Payment Button if there's remaining balance */}
+                      {booking.paidAmount < booking.totalAmount && booking.status !== "cancelled" && (
+                        <button
+                          onClick={() => handleMakePayment(booking)}
+                          className="w-full text-center text-xs px-3 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg font-bold transition-all shadow-md flex items-center justify-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                          </svg>
+                          Pay Balance ({formatCurrencyPHP(booking.totalAmount - booking.paidAmount)})
+                        </button>
+                      )}
+                      
+                      <div className="flex gap-2">
+                        <Link
+                          to={`/booking/confirmation/${booking.id}`}
+                          state={{ booking }}
+                          className="flex-1 text-center text-xs px-3 py-2 bg-yellow-400 hover:bg-yellow-500 text-gray-900 rounded-lg font-medium transition-all"
+                        >
+                          View Details
+                        </Link>
+                        <select
+                          value={booking.status}
+                          onChange={(e) => handleStatusChange(booking.bookingId, e.target.value as BookingStatus)}
+                          className="flex-1 text-xs px-2 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                        >
+                          <option value="confirmed">Confirmed</option>
+                          <option value="pending">Pending</option>
+                          <option value="completed">Completed</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -518,75 +590,99 @@ export default function ViewBookings() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredBookings.map((booking) => (
                     <tr key={booking.id} className="hover:bg-gray-50 transition-all hover:shadow-md">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{booking.bookingId}</div>
-                          <div className="text-sm text-gray-500">{formatDate(booking.bookingDate)}</div>
-                          <div className="text-xs text-gray-400">{booking.passengers} passenger{booking.passengers > 1 ? "s" : ""}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{booking.customerName}</div>
-                          <div className="text-sm text-gray-500">{booking.customerEmail}</div>
-                          <div className="text-sm text-gray-500">{booking.customerPhone}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="max-w-xs">
-                          <div className="text-sm font-medium text-gray-900 truncate">{booking.tour.title}</div>
-                          <div className="text-sm text-gray-500">{booking.tour.durationDays} days</div>
-                          <Link to={`/tour/${booking.tour.slug}`} className="text-xs text-blue-600 hover:text-blue-800 underline">View Tour Details</Link>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {new Date(booking.selectedDate).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{formatCurrencyPHP(booking.totalAmount)}</div>
-                          <div className="text-sm text-gray-500">Paid: {formatCurrencyPHP(booking.paidAmount)}</div>
-                          <div className="text-xs text-gray-400 capitalize">{booking.paymentType}{booking.paymentType === "downpayment" && " (30%)"}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <StatusBadge status={booking.status} />
-                        <select
-                          value={booking.status}
-                          onChange={(e) => handleStatusChange(booking.bookingId, e.target.value as BookingStatus)}
-                          className="ml-2 text-xs px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-all shadow-sm hover:shadow-md"
-                        >
-                          <option value="confirmed" className="text-gray-900">Confirmed</option>
-                          <option value="pending" className="text-gray-900">Pending</option>
-                          <option value="completed" className="text-gray-900">Completed</option>
-                          <option value="cancelled" className="text-gray-900">Cancelled</option>
-                        </select>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <div className="flex items-center space-x-2">
-                          {/* IMPORTANT: pass the full booking object in location.state and include the booking DB id in the path.
-                              This makes the confirmation page able to read the booking from state (preferred) and/or fetch it
-                              by id if needed. */}
-                          <Link
-                            to={`/booking/confirmation/${booking.id}`}
-                            state={{ booking }}
-                            className="text-gray-600 hover:text-yellow-600 transition-colors"
-                            title="View Details"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                          </Link>
+                      <td className="px-6 py-4 whitespace-nowrap" colSpan={7}>
+                        <table className="w-full">
+                          <tbody>
+                            <tr>
+                              <td className="px-0 py-2 whitespace-nowrap w-1/7">
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900">{booking.bookingId}</div>
+                                  <div className="text-sm text-gray-500">{formatDate(booking.bookingDate)}</div>
+                                  <div className="text-xs text-gray-400">{booking.passengers} passenger{booking.passengers > 1 ? "s" : ""}</div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-2 whitespace-nowrap w-1/7">
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900">{booking.customerName}</div>
+                                  <div className="text-sm text-gray-500">{booking.customerEmail}</div>
+                                  <div className="text-sm text-gray-500">{booking.customerPhone}</div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-2 w-1/7">
+                                <div className="max-w-xs">
+                                  <div className="text-sm font-medium text-gray-900 truncate">{booking.tour.title}</div>
+                                  <div className="text-sm text-gray-500">{booking.tour.durationDays} days</div>
+                                  <Link to={`/tour/${booking.tour.slug}`} className="text-xs text-blue-600 hover:text-blue-800 underline">View Tour Details</Link>
+                                </div>
+                              </td>
+                              <td className="px-6 py-2 whitespace-nowrap w-1/7">
+                                <div className="text-sm text-gray-900">
+                                  {new Date(booking.selectedDate).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })}
+                                </div>
+                              </td>
+                              <td className="px-6 py-2 whitespace-nowrap w-1/7">
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900">{formatCurrencyPHP(booking.totalAmount)}</div>
+                                  <div className="text-sm text-gray-500">Paid: {formatCurrencyPHP(booking.paidAmount)}</div>
+                                  <div className="text-xs text-gray-400 capitalize">{booking.paymentType}{booking.paymentType === "downpayment" && " (30%)"}</div>
+                                  {booking.paidAmount < booking.totalAmount && booking.status !== "cancelled" && (
+                                    <button
+                                      onClick={() => handleMakePayment(booking)}
+                                      className="mt-1 text-xs px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-all"
+                                    >
+                                      Pay Balance
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-6 py-2 whitespace-nowrap w-1/7">
+                                <StatusBadge status={booking.status} />
+                                <select
+                                  value={booking.status}
+                                  onChange={(e) => handleStatusChange(booking.bookingId, e.target.value as BookingStatus)}
+                                  className="ml-2 text-xs px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-all shadow-sm hover:shadow-md"
+                                >
+                                  <option value="confirmed" className="text-gray-900">Confirmed</option>
+                                  <option value="pending" className="text-gray-900">Pending</option>
+                                  <option value="completed" className="text-gray-900">Completed</option>
+                                  <option value="cancelled" className="text-gray-900">Cancelled</option>
+                                </select>
+                              </td>
+                              <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-500 w-1/7">
+                                <div className="flex items-center space-x-2">
+                                  <Link
+                                    to={`/booking/confirmation/${booking.id}`}
+                                    state={{ booking }}
+                                    className="text-gray-600 hover:text-yellow-600 transition-colors"
+                                    title="View Details"
+                                  >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                  </Link>
 
-                          <button onClick={() => handleDeleteBooking(booking.bookingId)} className="text-red-600 hover:text-red-800" title="Delete Booking">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
+                                  <button onClick={() => handleDeleteBooking(booking.bookingId)} className="text-red-600 hover:text-red-800" title="Delete Booking">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                            {/* Installment Schedule Row */}
+                            {booking.paymentType === "downpayment" && booking.installmentPlan && (
+                              <tr>
+                                <td colSpan={7} className="px-0 py-2">
+                                  <InstallmentSchedule
+                                    booking={booking}
+                                    onPayInstallment={(payment) => handleMakePayment(booking, payment)}
+                                  />
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
                       </td>
                     </tr>
                   ))}
@@ -619,6 +715,22 @@ export default function ViewBookings() {
           </div>
         )}
       </div>
+      
+      {/* Payment Modal */}
+      {showPaymentModal && selectedBookingForPayment && (
+        <PaymentModal
+          booking={selectedBookingForPayment}
+          installmentPayment={selectedInstallmentPayment || undefined}
+          customAmount={customPaymentAmount || undefined}
+          onClose={() => {
+            setShowPaymentModal(false);
+            setSelectedBookingForPayment(null);
+            setSelectedInstallmentPayment(null);
+            setCustomPaymentAmount(null);
+          }}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
     </div>
   );
 }

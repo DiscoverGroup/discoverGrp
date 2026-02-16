@@ -2,17 +2,7 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "composite": true,
-    "declaration": true,
-    "declarationMap": true,
-    "outDir": "./dist-node",
-    "rootDir": "./"
+    "types": ["node"]
   },
-  "include": [
-    "apps/**/*.ts",
-    "packages/**/*.ts", 
-    "jobs/**/*.ts",
-    "scripts/**/*.ts",
-    "vite.config.ts"
-  ],
-  "exclude": ["src/**/*", "**/*.test.*", "**/*.spec.*"]
+  "include": ["vite.config.ts"]
 }

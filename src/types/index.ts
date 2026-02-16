@@ -85,6 +85,23 @@ export type CustomRoute = {
   insertAfterDay: number;
 };
 
+// Installment payment schedule
+export type InstallmentPayment = {
+  id: string;
+  dueDate: string; // ISO date string
+  amount: number;
+  status: 'pending' | 'paid' | 'overdue';
+  paidDate?: string; // ISO date string
+  paymentIntentId?: string;
+};
+
+export type InstallmentPlan = {
+  totalMonths: number;
+  monthlyAmount: number;
+  startDate: string; // ISO date string
+  payments: InstallmentPayment[];
+};
+
 export type Booking = {
   id: string;
   bookingId: string;
@@ -108,4 +125,6 @@ export type Booking = {
   appointmentPurpose?: string;
   // Custom routes added to base tour
   customRoutes?: CustomRoute[];
+  // Installment plan for downpayment bookings
+  installmentPlan?: InstallmentPlan;
 };
