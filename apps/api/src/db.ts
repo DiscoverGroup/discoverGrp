@@ -25,6 +25,7 @@ export const connectDB = async () => {
       minPoolSize: 5,
       serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
+      family: 4, // Force IPv4 (helps with DNS resolution issues)
     });
     logger.info('✅ MongoDB connected successfully');
   } catch (err) {
