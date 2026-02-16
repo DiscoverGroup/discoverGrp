@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import User from "../models/User";
 import logger from "../utils/logger";
 
-// Extend Express Request interface
+// Extend Express Request interface - explicitly include inherited properties
 export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
@@ -12,8 +12,6 @@ export interface AuthenticatedRequest extends Request {
     fullName?: string;
     role: string;
   };
-  body: Record<string, unknown>;
-  params: Record<string, string>;
 }
 
 interface JWTPayload {
