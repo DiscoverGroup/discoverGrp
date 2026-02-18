@@ -85,7 +85,7 @@ const AuditLogSchema = new Schema<IAuditLog>({
   timestamp: {
     type: Date,
     default: Date.now,
-    index: true,
+    // Removed index: true - using compound indexes below
   },
 }, {
   timestamps: false, // Using custom timestamp field
@@ -96,7 +96,7 @@ AuditLogSchema.index({ userId: 1, timestamp: -1 });
 AuditLogSchema.index({ resource: 1, action: 1, timestamp: -1 });
 AuditLogSchema.index({ timestamp: -1, statusCode: 1 });
 
-// Auto-expire old audit logs after 90 days (optional)
+// Auto-expire old audit logs after 90 days (TTL index)
 AuditLogSchema.index({ timestamp: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
 
 export default mongoose.model<IAuditLog>('AuditLog', AuditLogSchema);

@@ -25,6 +25,7 @@ import PromoBannerManagement from './pages/PromoBannerManagement';
 import VisaAssistanceManagement from './pages/VisaAssistanceManagement';
 import ReviewManagement from './pages/ReviewManagement';
 import { ServerDiagnosticsPage } from './pages/ServerDiagnostics';
+import SecurityStatus from './pages/SecurityStatus';
 import { UserRole } from "./types/auth";
 
 // Loading component
@@ -231,6 +232,19 @@ const AppRouter: React.FC = () => {
                   allowedRoles={[UserRole.SUPER_ADMIN, UserRole.ADMINISTRATOR, UserRole.WEB_DEVELOPER]}
                 >
                   <ServerDiagnosticsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Security Status - Administrator & Web Developer */}
+            <Route
+              path="/security"
+              element={
+                <ProtectedRoute 
+                  requiredPermission="canAccessSettings"
+                  allowedRoles={[UserRole.SUPER_ADMIN, UserRole.ADMINISTRATOR, UserRole.WEB_DEVELOPER]}
+                >
+                  <SecurityStatus />
                 </ProtectedRoute>
               }
             />

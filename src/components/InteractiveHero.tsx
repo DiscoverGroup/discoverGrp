@@ -1,29 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
-import { Globe, Plane, Camera, MapPin, Stars, Play } from 'lucide-react';
+import { Globe, Plane, Camera, MapPin, Stars, Play, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { fetchCountries } from '../api/countries';
 
 interface Destination {
   id: string;
   name: string;
   country: string;
+  slug: string;
   image: string;
   description: string;
   coordinates: { x: number; y: number };
 }
 
-const destinations: Destination[] = [
-  { id: '1', name: 'Paris', country: 'France', image: '/api/placeholder/300/200', description: 'City of Light', coordinates: { x: 25, y: 30 } },
-  { id: '2', name: 'Rome', country: 'Italy', image: '/api/placeholder/300/200', description: 'Eternal City', coordinates: { x: 45, y: 45 } },
-  { id: '3', name: 'Barcelona', country: 'Spain', image: '/api/placeholder/300/200', description: 'Artistic Wonder', coordinates: { x: 15, y: 55 } },
-  { id: '4', name: 'Amsterdam', country: 'Netherlands', image: '/api/placeholder/300/200', description: 'Venice of North', coordinates: { x: 35, y: 20 } },
-  { id: '5', name: 'Prague', country: 'Czech Republic', image: '/api/placeholder/300/200', description: 'Golden City', coordinates: { x: 55, y: 25 } },
-];
+// Map coordinates for different countries (you can adjust these)
+const countryCoordinates: Record<string, { x: number; y: number }> = {
+  'france': { x: 25, y: 30 },
+  'italy': { x: 35, y: 40 },
+  'spain': { x: 15, y: 40 },
+  'japan': { x: 75, y: 35 },
+  'thailand': { x: 70, y: 50 },
+  'philippines': { x: 75, y: 55 },
+  'singapore': { x: 72, y: 58 },
+  'vietnam': { x: 68, y: 48 },
+  'germany': { x: 30, y: 25 },
+  'netherlands': { x: 28, y: 22 },
+  'czech-republic': { x: 35, y: 27 },
+  'united-kingdom': { x: 20, y: 25 },
+  'greece': { x: 40, y: 45 },
+  'turkey': { x: 45, y: 40 },
+  'switzerland': { x: 30, y: 32 },
+  'austria': { x: 35, y: 30 },
+};
 
 const InteractiveHero: React.FC = () => {
+  const [destinations, setDestinations] = useState<Destination[]>([]);
   const [selectedDestination, setSelectedDestination] = useState<Destination | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showVideoModal, setShowVideoModal] = useState(false);
   const { scrollY } = useScroll();
+  const navigate = useNavigate();
   
   const heroImages = [
     '/api/placeholder/1920/1080',
@@ -35,6 +53,43 @@ const InteractiveHero: React.FC = () => {
   const y1 = useTransform(scrollY, [0, 500], [0, 150]);
   const y2 = useTransform(scrollY, [0, 500], [0, -100]);
   const opacity = useTransform(scrollY, [0, 300], [1, 0.3]);
+
+  // Fetch destinations from countries API
+  useEffect(() => {
+    const loadDestinations = async () => {
+      try {
+        const countries = await fetchCountries();
+        const activeCountries = countries.filter(c => c.isActive);
+        
+        // Transform countries into destinations
+        const transformedDestinations: Destination[] = activeCountries.map((country) => {
+          // Get coordinates based on country slug, or use random position
+          const coords = countryCoordinates[country.slug] || {
+            x: 20 + Math.random() * 60,
+            y: 20 + Math.random() * 60
+          };
+          
+          return {
+            id: country._id,
+            name: country.name,
+            country: country.name,
+            slug: country.slug,
+            image: country.heroImageUrl || country.heroImages?.[0] || '/api/placeholder/300/200',
+            description: country.description.substring(0, 100) + '...',
+            coordinates: coords
+          };
+        });
+        
+        setDestinations(transformedDestinations.slice(0, 8)); // Show max 8 on map
+      } catch (error) {
+        console.error('Failed to load destinations:', error);
+        // Set empty array on error
+        setDestinations([]);
+      }
+    };
+    
+    loadDestinations();
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -239,6 +294,7 @@ const InteractiveHero: React.FC = () => {
                 boxShadow: "0 25px 50px -12px rgba(251, 191, 36, 0.5)"
               }}
               whileTap={{ scale: 0.95 }}
+              onClick={() => navigate('/routes')}
             >
               <motion.div
                 className="absolute inset-0 bg-gradient-to-r from-orange-500 to-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
@@ -258,7 +314,10 @@ const InteractiveHero: React.FC = () => {
                 backgroundColor: "rgba(255, 255, 255, 0.1)"
               }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => setIsPlaying(!isPlaying)}
+              onClick={() => {
+                setIsPlaying(!isPlaying);
+                setShowVideoModal(true);
+              }}
             >
               <span className="relative z-10 flex items-center gap-3">
                 Watch Our Story
@@ -350,10 +409,74 @@ const InteractiveHero: React.FC = () => {
                 </h3>
                 <p className="text-gray-600 mb-4">{selectedDestination.country}</p>
                 <p className="text-gray-700 mb-6">{selectedDestination.description}</p>
-                <button className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white py-3 rounded-xl font-semibold hover:from-orange-500 hover:to-yellow-400 transition-all duration-300">
+                <button 
+                  onClick={() => {
+                    navigate(`/destinations/${selectedDestination.slug}`);
+                  }}
+                  className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white py-3 rounded-xl font-semibold hover:from-orange-500 hover:to-yellow-400 transition-all duration-300"
+                >
                   Explore Tours
                 </button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Video Story Modal */}
+      <AnimatePresence>
+        {showVideoModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/95 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+            onClick={() => {
+              setShowVideoModal(false);
+              setIsPlaying(false);
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className="relative w-full max-w-5xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => {
+                  setShowVideoModal(false);
+                  setIsPlaying(false);
+                }}
+                className="absolute -top-12 right-0 text-white hover:text-yellow-400 transition-colors duration-300 z-10"
+              >
+                <X className="w-8 h-8" />
+              </button>
+
+              {/* Video Container */}
+              <div className="relative bg-black rounded-2xl overflow-hidden shadow-2xl">
+                <div className="aspect-video">
+                  <iframe
+                    className="w-full h-full"
+                    src="https://www.youtube.com/embed/videoseries?list=PLL5nkNoqeeq1LaGsovQuskaGsrzj_Wo0Q&autoplay=1"
+                    title="Our Story"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              </div>
+
+              {/* Video Info */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="mt-6 text-center text-white"
+              >
+                <h3 className="text-2xl font-bold mb-2">Discover Our Story</h3>
+                <p className="text-white/80">Journey through 15+ years of creating unforgettable travel experiences</p>
+              </motion.div>
             </motion.div>
           </motion.div>
         )}

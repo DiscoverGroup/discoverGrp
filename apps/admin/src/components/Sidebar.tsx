@@ -13,7 +13,8 @@ import {
   MessageSquare,
   Map,
   Globe,
-  Tag
+  Tag,
+  Shield
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { authService } from "../services/authService";
@@ -103,6 +104,12 @@ const navigationItems: NavItem[] = [
     to: "/promo-banners",
     label: "Promo Banners",
     icon: Tag,
+    permission: "canAccessSettings",
+  },
+  {
+    to: "/security",
+    label: "Security Status",
+    icon: Shield,
     permission: "canAccessSettings",
   },
   {

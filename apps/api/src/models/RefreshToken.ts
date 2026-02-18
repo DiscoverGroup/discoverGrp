@@ -36,7 +36,7 @@ const RefreshTokenSchema = new Schema<IRefreshToken>({
   expiresAt: { 
     type: Date, 
     required: true,
-    index: true 
+    // Removed index: true - using TTL index below
   },
   createdByIp: { type: String },
   revokedAt: { type: Date },
@@ -75,7 +75,7 @@ RefreshTokenSchema.methods.revoke = function(ip?: string, reason?: string, repla
   this.replacedByToken = replacedByToken;
 };
 
-// Index for automatic cleanup of expired tokens
+// TTL index for automatic cleanup of expired tokens
 RefreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 export default mongoose.model<IRefreshToken, RefreshTokenModel>('RefreshToken', RefreshTokenSchema);
