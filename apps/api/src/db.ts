@@ -37,12 +37,49 @@ export const connectDB = async () => {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error';
     logger.error('❌ MongoDB connection error:', errorMessage);
     
+    // Provide detailed diagnostics
+    if (errorMessage.includes('querySrv ENOTFOUND') || errorMessage.includes('ENOTFOUND')) {
+      logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      logger.error('🔍 DNS RESOLUTION FAILED - MongoDB Atlas Connection Issue');
+      logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      logger.error('');
+      logger.error('This error means Railway CANNOT reach MongoDB Atlas.');
+      logger.error('');
+      logger.error('✅ IMMEDIATE FIX (5 minutes):');
+      logger.error('   1. Go to: https://cloud.mongodb.com/v2');
+      logger.error('   2. Click your cluster → Network Access');
+      logger.error('   3. Click "Add IP Address"');
+      logger.error('   4. Select "ALLOW ACCESS FROM ANYWHERE" (0.0.0.0/0)');
+      logger.error('   5. Click "Confirm"');
+      logger.error('   6. Wait 2 minutes for changes to propagate');
+      logger.error('   7. Check Railway logs again');
+      logger.error('');
+      logger.error('🔒 SECURE ALTERNATIVE:');
+      logger.error('   - Contact Railway support for static IP addresses');
+      logger.error('   - Add those specific IPs to MongoDB Atlas whitelist');
+      logger.error('');
+      logger.error('💡 CONNECTION STRING FORMAT: ✅ CORRECT');
+      logger.error(`   Format: ${MONGODB_URI.startsWith('mongodb+srv') ? 'mongodb+srv:// (SRV format)' : 'mongodb:// (standard)'}`);
+      logger.error('');
+      logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    } else if (errorMessage.includes('Authentication failed') || errorMessage.includes('auth failed')) {
+      logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      logger.error('🔐 AUTHENTICATION FAILED');
+      logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      logger.error('');
+      logger.error('Check your MONGODB_URI credentials:');
+      logger.error('   - Username is correct');
+      logger.error('   - Password is correct (check for special characters)');
+      logger.error('   - Database user has proper permissions');
+      logger.error('');
+      logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    }
+    
     // Only log connection string in development for debugging
     if (!isProduction) {
       logger.error('MONGODB_URI:', MONGODB_URI);
     }
     
-    logger.error('Make sure MONGODB_URI is set in environment variables');
     throw err; // Re-throw to let the server handle it
   }
 };

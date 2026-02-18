@@ -36,7 +36,7 @@ import healthRouter from "./routes/health";
 // CRITICAL: Validate required environment variables at startup
 function validateEnvironment() {
   const required = ['JWT_SECRET', 'MONGODB_URI'];
-  const recommended = ['SENDGRID_API_KEY', 'STRIPE_SECRET_KEY', 'FRONTEND_URL', 'CLIENT_URL'];
+  const recommended = ['SENDGRID_API_KEY', 'FRONTEND_URL', 'CLIENT_URL'];
   
   const missing = required.filter(key => !process.env[key]);
   const missingRecommended = recommended.filter(key => !process.env[key]);
