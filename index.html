@@ -13,9 +13,22 @@
       script-src 'self' https://js.stripe.com 'unsafe-eval' 'unsafe-inline';
       style-src 'self' 'unsafe-inline' https://js.stripe.com https://fonts.googleapis.com;
       font-src 'self' https://fonts.gstatic.com;
-      img-src 'self' data: blob: https://*.stripe.com https://*.stripecdn.com https://*.stripe.network https://js.stripe.com https://q.stripe.com https://b.stripecdn.com https://m.stripe.network https://m.stripe.com https://*.supabase.co;
-      media-src 'self' https://*.supabase.co blob: data:;
-      connect-src 'self' ws://localhost:5173 http://localhost:4000 https://discovergroup.onrender.com https://discovergroup-api-production.up.railway.app https://*.stripe.com https://*.stripecdn.com https://*.stripe.network https://*.supabase.co;
+      img-src 'self' data: blob:
+        https://*.stripe.com https://*.stripecdn.com https://*.stripe.network
+        https://js.stripe.com https://q.stripe.com https://b.stripecdn.com
+        https://m.stripe.network https://m.stripe.com
+        https://*.supabase.co
+        https://placehold.co
+        https://images.unsplash.com
+        https://i.pravatar.cc
+        https://*.r2.cloudflarestorage.com
+        https://*.cloudflare.com;
+      media-src 'self' https://*.supabase.co https://*.r2.cloudflarestorage.com blob: data:;
+      connect-src 'self' ws://localhost:5173 http://localhost:4000
+        https://discovergroup-api-production.up.railway.app
+        https://*.stripe.com https://*.stripecdn.com https://*.stripe.network
+        https://*.supabase.co
+        https://*.r2.cloudflarestorage.com;
       frame-src 'self' https://*.stripe.com;
       worker-src 'self' blob:;
       child-src 'self' https://*.stripe.com;

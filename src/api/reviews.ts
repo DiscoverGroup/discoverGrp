@@ -38,7 +38,7 @@ export async function submitReview(review: Omit<Review, '_id' | 'isApproved' | '
 }
 
 export async function fetchApprovedReviews() {
-  const response = await fetch(buildApiUrl('/api/reviews/approved'));
+  const response = await fetchWithTimeout(buildApiUrl('/api/reviews/approved'));
   if (!response.ok) throw new Error('Failed to fetch approved reviews');
   return response.json();
 }
