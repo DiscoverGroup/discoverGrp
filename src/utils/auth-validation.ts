@@ -112,8 +112,9 @@ export async function refreshAuthToken(): Promise<boolean> {
     
     const data = await response.json();
     
-    if (data.token) {
-      localStorage.setItem('token', data.token);
+    const refreshedToken = data.accessToken || data.token;
+    if (refreshedToken) {
+      localStorage.setItem('token', refreshedToken);
       return true;
     }
     

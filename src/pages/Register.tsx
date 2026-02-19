@@ -204,7 +204,8 @@ export default function Register() {
         setRegistrationComplete(true);
       } else {
         // Old flow (shouldn't happen with new backend)
-        localStorage.setItem('token', data.token);
+        const accessToken = data.accessToken || data.token;
+        localStorage.setItem('token', accessToken);
         localStorage.setItem('user', JSON.stringify(data.user));
         setUser(data.user);
         navigate('/');

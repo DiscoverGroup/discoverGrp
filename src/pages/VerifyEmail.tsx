@@ -28,9 +28,10 @@ export default function VerifyEmail() {
           throw new Error(data.error || 'Verification failed');
         }
 
-        // Store token and user info
-        if (data.token) {
-          localStorage.setItem('token', data.token);
+        // Store token and user info (API returns accessToken)
+        const accessToken = data.accessToken || data.token;
+        if (accessToken) {
+          localStorage.setItem('token', accessToken);
           localStorage.setItem('user', JSON.stringify(data.user));
           setUser(data.user);
         }

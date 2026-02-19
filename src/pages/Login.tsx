@@ -49,7 +49,9 @@ export default function Login() {
       console.log('Login successful:', data);
       
       // Store token and user info in localStorage
-      localStorage.setItem('token', data.token);
+      // API returns accessToken (not token)
+      const accessToken = data.accessToken || data.token;
+      localStorage.setItem('token', accessToken);
       localStorage.setItem('user', JSON.stringify(data.user));
       
       // Update AuthContext state
