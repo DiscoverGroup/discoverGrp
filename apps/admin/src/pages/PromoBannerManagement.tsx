@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Power, Tag } from 'lucide-react';
 import { buildAdminApiUrl, getAdminApiBaseUrl } from '../config/apiBase';
+import { authFetch } from '../utils/tokenStorage';
 
 const API_BASE = getAdminApiBaseUrl();
 
@@ -83,7 +84,7 @@ export default function PromoBannerManagement() {
       
       const method = editingBanner ? 'PUT' : 'POST';
       
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -107,7 +108,7 @@ export default function PromoBannerManagement() {
 
   const toggleBanner = async (id: string) => {
     try {
-      const response = await fetch(`${API_BASE}/api/promo-banners/${id}/toggle`, {
+      const response = await authFetch(`${API_BASE}/api/promo-banners/${id}/toggle`, {
         method: 'PATCH',
       });
       if (response.ok) {
@@ -122,7 +123,7 @@ export default function PromoBannerManagement() {
     if (!confirm('Are you sure you want to delete this banner?')) return;
     
     try {
-      const response = await fetch(`${API_BASE}/api/promo-banners/${id}`, {
+      const response = await authFetch(`${API_BASE}/api/promo-banners/${id}`, {
         method: 'DELETE',
       });
       if (response.ok) {

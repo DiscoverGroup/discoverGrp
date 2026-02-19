@@ -15,7 +15,9 @@ export const csrfProtection = csrf({
   cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-    sameSite: 'strict', // Strict same-site policy
+    // Admin UI is hosted on a different origin (Netlify) than API (Railway) in production.
+    // Use SameSite=None + Secure so CSRF cookie is accepted in cross-site context.
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: 3600000, // 1 hour
   }
 });
