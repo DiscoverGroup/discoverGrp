@@ -14,6 +14,7 @@ import { getServerStatus, wakeUpServer } from './serverStatus';
 const TOKEN_KEY = 'auth_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
 const TOKEN_EXPIRY_KEY = 'token_expiry';
+const LEGACY_TOKEN_KEYS = ['adminToken', 'token'];
 const SESSION_TIMEOUT_MS = 1 * 60 * 60 * 1000; // 1 hour (matches access token expiry)
 
 /**
@@ -25,6 +26,8 @@ export function setToken(accessToken: string, refreshToken?: string): void {
   try {
     const expiresAt = Date.now() + SESSION_TIMEOUT_MS;
     localStorage.setItem(TOKEN_KEY, accessToken);
+    // Keep legacy token keys in sync for older pages still reading them.
+    LEGACY_TOKEN_KEYS.forEach((legacyKey) => localStorage.setItem(legacyKey, accessToken));
     localStorage.setItem(TOKEN_EXPIRY_KEY, expiresAt.toString());
     
     if (refreshToken) {
@@ -40,7 +43,20 @@ export function setToken(accessToken: string, refreshToken?: string): void {
  */
 export function getToken(): string | null {
   try {
-    const token = localStorage.getItem(TOKEN_KEY);
+    let token = localStorage.getItem(TOKEN_KEY);
+
+    // Backward compatibility: migrate from legacy token keys when present.
+    if (!token) {
+      const legacyToken = LEGACY_TOKEN_KEYS
+        .map((legacyKey) => localStorage.getItem(legacyKey))
+        .find((value): value is string => Boolean(value));
+
+      if (legacyToken) {
+        token = legacyToken;
+        localStorage.setItem(TOKEN_KEY, legacyToken);
+      }
+    }
+
     const expiryStr = localStorage.getItem(TOKEN_EXPIRY_KEY);
     
     if (!token) {
@@ -89,6 +105,7 @@ export function getRefreshToken(): string | null {
 export function clearToken(): void {
   try {
     localStorage.removeItem(TOKEN_KEY);
+    LEGACY_TOKEN_KEYS.forEach((legacyKey) => localStorage.removeItem(legacyKey));
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(TOKEN_EXPIRY_KEY);
     clearCsrfToken(); // Also clear CSRF token
