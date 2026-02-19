@@ -1,0 +1,5 @@
+# Block pushes if tracked files contain obvious secrets
+node scripts/secret-scan.cjs
+
+# Optional reminder
+echo "✅ Pre-push secret scan passed"

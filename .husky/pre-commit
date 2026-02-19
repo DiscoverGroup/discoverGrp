@@ -1,3 +1,6 @@
+# Block commits that include obvious secrets
+node scripts/secret-scan.cjs --staged
+
 # Lint staged files
 npx lint-staged
 

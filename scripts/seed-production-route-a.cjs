@@ -1,8 +1,13 @@
 // Script to seed Route A Preferred to PRODUCTION MongoDB
 const mongoose = require('mongoose');
 
-// Production MongoDB URI (from render-api.env)
-const PRODUCTION_MONGODB_URI = 'mongodb+srv://discovergroup_user:l8VdqrBa7meFhjlI@discovergroup.s2s329l.mongodb.net/discovergroup?retryWrites=true&w=majority&appName=discovergroup';
+// Production MongoDB URI (must come from environment variable)
+const PRODUCTION_MONGODB_URI = process.env.MONGODB_URI;
+
+if (!PRODUCTION_MONGODB_URI) {
+  console.error('❌ MONGODB_URI is missing. Set it in your local .env before running this script.');
+  process.exit(1);
+}
 
 const tourData = {
   title: "Route A Preferred",

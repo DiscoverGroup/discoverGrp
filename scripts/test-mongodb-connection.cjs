@@ -34,7 +34,7 @@ if (!match) {
   console.error('❌ Invalid MONGODB_URI format');
   console.error('');
   console.error('Expected format:');
-  console.error('mongodb+srv://username:password@cluster.mongodb.net/database?options');
+  console.error('mongodb+srv://<username>:<password>@<cluster-host>/<database>?options');
   console.error('');
   console.error('Current format:', MONGODB_URI.substring(0, 40) + '...');
   process.exit(1);
@@ -73,8 +73,8 @@ if (hasSpecialChars) {
     console.error('   This MUST be encoded as %40 in the URI');
     console.error('');
     console.error('   Example:');
-    console.error('   Wrong: mongodb+srv://user:pass@word@host/db');
-    console.error('   Right: mongodb+srv://user:pass%40word@host/db');
+    console.error('   Wrong: mongodb+srv://<user>:<pass>@with-at-sign@<host>/<db>');
+    console.error('   Right: mongodb+srv://<user>:<pass%40encoded>@<host>/<db>');
     console.error('');
   }
 }

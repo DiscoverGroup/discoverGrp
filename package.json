@@ -20,6 +20,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "deploy:check": "npm run build && npm run build:admin && npm run build:api",
+    "security:scan-secrets": "node scripts/secret-scan.cjs",
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch --passWithNoTests",
     "test:coverage": "jest --coverage --passWithNoTests",
