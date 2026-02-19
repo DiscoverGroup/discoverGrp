@@ -17,8 +17,8 @@ export function getApiBaseUrl(): string {
   if (explicit) {
     const normalized = trimTrailingSlash(explicit);
 
-    // Defensive override: old Render URL causes CORS 503 in production.
-    if (normalized.includes('discovergroup.onrender.com')) {
+    // Defensive override: any stale Render URL causes CORS/availability issues in production.
+    if (normalized.includes('onrender.com')) {
       return RAILWAY_API_BASE;
     }
 

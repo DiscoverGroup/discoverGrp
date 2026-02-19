@@ -12,7 +12,7 @@ export function getAdminApiBaseUrl(): string {
     const normalized = trimTrailingSlash(explicit);
 
     // Defensive override for stale Render config that causes CORS/503.
-    if (normalized.includes('discovergroup.onrender.com')) {
+    if (normalized.includes('onrender.com')) {
       return RAILWAY_API_BASE;
     }
 
