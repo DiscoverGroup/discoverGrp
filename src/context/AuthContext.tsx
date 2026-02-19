@@ -23,13 +23,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Setup automatic token refresh and expiration check
     const cleanup = setupTokenRefresh(() => {
-      const hadSession = Boolean(localStorage.getItem("token") || localStorage.getItem("user"));
-      if (!hadSession) {
+      const token = localStorage.getItem("token");
+      const userData = localStorage.getItem("user");
+      const hasValidSessionArtifacts =
+        Boolean(token && token !== "null" && token !== "undefined") ||
+        Boolean(userData && userData !== "null" && userData !== "undefined");
+
+      if (!hasValidSessionArtifacts) {
         return;
       }
 
       // Token expired or refresh failed
-      console.log('Session expired, logging out');
       setUser(null);
       localStorage.removeItem("user");
       localStorage.removeItem("token");
