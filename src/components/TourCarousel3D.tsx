@@ -177,11 +177,21 @@ const TourCarousel3D: React.FC = () => {
 
   // Fetch actual tours from API
   useEffect(() => {
+    let cancelled = false;
+    const watchdog = window.setTimeout(() => {
+      if (!cancelled) {
+        console.warn('Featured tours loading timeout reached. Showing fallback state.');
+        setTours([]);
+        setLoading(false);
+      }
+    }, 15000);
+
     const loadTours = async () => {
       try {
         setLoading(true);
         const featuredTours = await fetchFeaturedTours(5);
-        const convertedResults = await Promise.allSettled(featuredTours.map(tour => convertToTourCard(tour)));
+        const safeFeaturedTours = Array.isArray(featuredTours) ? featuredTours : [];
+        const convertedResults = await Promise.allSettled(safeFeaturedTours.map(tour => convertToTourCard(tour)));
         const convertedTours = convertedResults
           .filter((result): result is PromiseFulfilledResult<TourCard> => result.status === 'fulfilled')
           .map((result) => result.value);
@@ -190,16 +200,29 @@ const TourCarousel3D: React.FC = () => {
           console.warn('Some featured tours failed to convert and were skipped.');
         }
 
-        setTours(convertedTours);
+        if (!cancelled) {
+          setTours(convertedTours);
+        }
       } catch (error) {
         console.error('Failed to load featured tours:', error);
         // Keep empty array if fetch fails
-        setTours([]);
+        if (!cancelled) {
+          setTours([]);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
+        window.clearTimeout(watchdog);
       }
     };
+
     loadTours();
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(watchdog);
+    };
   }, []);
 
   useEffect(() => {

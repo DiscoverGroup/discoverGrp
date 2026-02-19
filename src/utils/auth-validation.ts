@@ -133,7 +133,6 @@ export function setupTokenRefresh(onExpired: () => void): () => void {
     const token = localStorage.getItem('token');
     
     if (!token) {
-      onExpired();
       return;
     }
     
