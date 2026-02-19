@@ -160,13 +160,26 @@ class AuthService {
   async getCurrentUser(): Promise<User | null> {
     const token = getToken();
     if (!token) return null;
-    
+
     try {
       const res = await authFetch(`${API_BASE_URL}/auth/me`);
-      if (!res.ok) return null;
+      if (!res.ok) {
+        // 401 means token is stale — authFetch already cleared it.
+        // Return null cleanly so AuthContext shows the login screen.
+        return null;
+      }
       return await res.json();
     } catch (error) {
-      console.error('Failed to get current user:', error);
+      // authFetch throws on 401 (token invalid/expired) after clearing the
+      // stored token. This is expected for stale sessions — not an app error.
+      const msg = error instanceof Error ? error.message : String(error);
+      const isAuthError =
+        msg.includes('Authentication failed') ||
+        msg.includes('No authentication token') ||
+        msg.includes('Please login');
+      if (!isAuthError) {
+        console.error('Failed to get current user:', error);
+      }
       return null;
     }
   }

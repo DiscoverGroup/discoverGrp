@@ -57,22 +57,50 @@ export function getToken(): string | null {
       }
     }
 
-    const expiryStr = localStorage.getItem(TOKEN_EXPIRY_KEY);
-    
     if (!token) {
       return null;
     }
-    
-    // Check expiration
+
+    const expiryStr = localStorage.getItem(TOKEN_EXPIRY_KEY);
+
+    // Check localStorage expiry first (fast path)
     if (expiryStr) {
       const expiresAt = parseInt(expiryStr, 10);
       if (Date.now() > expiresAt) {
-        // Token expired, clear it
+        clearToken();
+        return null;
+      }
+    } else {
+      // No localStorage expiry stored (e.g. migrated from legacy key).
+      // Decode the JWT's own exp claim to avoid sending an already-expired
+      // token to the API and getting a noisy 401.
+      try {
+        const payloadB64 = token.split('.')[1];
+        if (payloadB64) {
+          const payload = JSON.parse(
+            decodeURIComponent(
+              atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/'))
+                .split('')
+                .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                .join('')
+            )
+          ) as { exp?: number };
+          if (payload.exp && Date.now() >= payload.exp * 1000) {
+            clearToken();
+            return null;
+          }
+          // Persist the JWT's own expiry into localStorage so future checks are fast.
+          if (payload.exp) {
+            localStorage.setItem(TOKEN_EXPIRY_KEY, (payload.exp * 1000).toString());
+          }
+        }
+      } catch {
+        // Malformed JWT — treat as expired.
         clearToken();
         return null;
       }
     }
-    
+
     return token;
   } catch (error) {
     console.error('Failed to retrieve token:', error);
