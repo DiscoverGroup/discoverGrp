@@ -18,6 +18,8 @@ export const csrfProtection = csrf({
     // Admin UI is hosted on a different origin (Netlify) than API (Railway) in production.
     // Use SameSite=None + Secure so CSRF cookie is accepted in cross-site context.
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    // Partitioned cookies improve compatibility with modern browser third-party cookie restrictions.
+    ...(process.env.NODE_ENV === 'production' ? ({ partitioned: true } as const) : {}),
     maxAge: 3600000, // 1 hour
   }
 });

@@ -1,4 +1,5 @@
 import { getAdminApiBaseUrl } from '../config/apiBase';
+import { authFetch } from '../utils/tokenStorage';
 
 const API_BASE_URL = getAdminApiBaseUrl();
 
@@ -49,13 +50,7 @@ export interface DashboardStats {
  */
 export async function fetchDashboardStats(): Promise<DashboardStats> {
   try {
-    const token = localStorage.getItem('adminToken');
-    const response = await fetch(`${API_BASE_URL}/admin/dashboard/stats`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    const response = await authFetch(`${API_BASE_URL}/admin/dashboard/stats`);
 
     if (!response.ok) {
       throw new Error('Failed to fetch dashboard statistics');
@@ -114,13 +109,7 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
  */
 export async function fetchDepartmentStats(department: string): Promise<Partial<DashboardStats>> {
   try {
-    const token = localStorage.getItem('adminToken');
-    const response = await fetch(`${API_BASE_URL}/admin/dashboard/stats/${department}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    const response = await authFetch(`${API_BASE_URL}/admin/dashboard/stats/${department}`);
 
     if (!response.ok) {
       throw new Error(`Failed to fetch ${department} statistics`);
