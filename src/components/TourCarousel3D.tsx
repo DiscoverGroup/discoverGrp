@@ -174,6 +174,7 @@ const TourCarousel3D: React.FC = () => {
   const [autoPlay, setAutoPlay] = useState(false);
   const [tours, setTours] = useState<TourCard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Fetch actual tours from API
   useEffect(() => {
@@ -181,6 +182,7 @@ const TourCarousel3D: React.FC = () => {
     const watchdog = window.setTimeout(() => {
       if (!cancelled) {
         console.warn('Featured tours loading timeout reached. Showing fallback state.');
+        setLoadError('We could not load featured tours right now. Please try again in a moment.');
         setTours([]);
         setLoading(false);
       }
@@ -189,6 +191,7 @@ const TourCarousel3D: React.FC = () => {
     const loadTours = async () => {
       try {
         setLoading(true);
+        setLoadError(null);
         const featuredTours = await fetchFeaturedTours(5);
         const safeFeaturedTours = Array.isArray(featuredTours) ? featuredTours : [];
         const convertedResults = await Promise.allSettled(safeFeaturedTours.map(tour => convertToTourCard(tour)));
@@ -205,6 +208,10 @@ const TourCarousel3D: React.FC = () => {
         }
       } catch (error) {
         console.error('Failed to load featured tours:', error);
+        if (!cancelled) {
+          const message = error instanceof Error ? error.message : 'Failed to load featured tours';
+          setLoadError(message);
+        }
         // Keep empty array if fetch fails
         if (!cancelled) {
           setTours([]);
@@ -301,7 +308,11 @@ const TourCarousel3D: React.FC = () => {
       <section className="relative min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 overflow-hidden flex items-center justify-center">
         <div className="text-center text-white">
           <h2 className="text-3xl font-bold mb-4">No Featured Tours Available</h2>
-          <p className="text-white/70">Check back soon for exciting destinations!</p>
+          {loadError ? (
+            <p className="text-red-300 max-w-xl mx-auto">{loadError}</p>
+          ) : (
+            <p className="text-white/70">Check back soon for exciting destinations!</p>
+          )}
         </div>
       </section>
     );
