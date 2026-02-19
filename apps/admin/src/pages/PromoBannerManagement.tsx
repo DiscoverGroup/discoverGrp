@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Power, Tag } from 'lucide-react';
-import { getAdminApiBaseUrl } from '../config/apiBase';
+import { buildAdminApiUrl, getAdminApiBaseUrl } from '../config/apiBase';
 
 const API_BASE = getAdminApiBaseUrl();
 
@@ -78,8 +78,8 @@ export default function PromoBannerManagement() {
     e.preventDefault();
     try {
       const url = editingBanner
-        ? `${API_BASE}/api/promo-banners/${editingBanner._id}`
-        : `${API_BASE}/api/promo-banners`;
+        ? buildAdminApiUrl(`/api/promo-banners/${editingBanner._id}`)
+        : buildAdminApiUrl('/api/promo-banners');
       
       const method = editingBanner ? 'PUT' : 'POST';
       
@@ -94,6 +94,10 @@ export default function PromoBannerManagement() {
         setShowModal(false);
         resetForm();
         alert(editingBanner ? 'Banner updated successfully!' : 'Banner created successfully!');
+      } else {
+        const payload = await response.json().catch(() => null);
+        const message = payload?.error || payload?.message || `Failed to save banner (${response.status})`;
+        alert(message);
       }
     } catch (error) {
       console.error('Error saving banner:', error);

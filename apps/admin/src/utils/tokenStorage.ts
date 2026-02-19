@@ -53,7 +53,6 @@ export function getToken(): string | null {
       if (Date.now() > expiresAt) {
         // Token expired, clear it
         clearToken();
-        console.warn('Session expired. Please login again.');
         return null;
       }
     }
