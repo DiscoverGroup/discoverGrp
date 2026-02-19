@@ -3,8 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { motion } from 'framer-motion';
 import { Lock, Eye, EyeOff, Plane, Sparkles, ArrowRight } from 'lucide-react';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+import { buildApiUrl } from '../config/apiBase';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -34,7 +33,7 @@ export default function Login() {
     setRequiresVerification(false);
     setResendSuccess('');
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/login`, {
+      const res = await fetch(buildApiUrl('/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -75,7 +74,7 @@ export default function Login() {
     setResendSuccess('');
     setError('');
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/resend-verification`, {
+      const res = await fetch(buildApiUrl('/auth/resend-verification'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),

@@ -1,10 +1,10 @@
 // Browser-safe client used by the Admin UI to call the API.
 import type { Tour } from "@discovergroup/types";
+import { getAdminApiBaseUrl } from "../config/apiBase";
 export type { Tour };
 export type TourPayload = Partial<Tour>;
 
-// Prefer the admin-specific env var, fall back to the general VITE_API_URL, then localhost for dev
-const API_BASE = import.meta.env.VITE_ADMIN_API_URL || import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_BASE = getAdminApiBaseUrl();
 
 // Helper to extract a stable id string from a returned tour object.
 // Prefer the Mongo _id where possible (it may be a string or an object like { $oid: '...' }).

@@ -2,6 +2,7 @@
  * Authentication validation utilities
  * Handles token validation, expiration checks, and token refresh
  */
+import { buildApiUrl } from '../config/apiBase';
 
 interface DecodedToken {
   exp: number;
@@ -97,8 +98,7 @@ export async function refreshAuthToken(): Promise<boolean> {
   if (!token) return false;
   
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
-    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+    const response = await fetch(buildApiUrl('/auth/refresh'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

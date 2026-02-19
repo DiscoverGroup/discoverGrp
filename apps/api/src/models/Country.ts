@@ -31,6 +31,8 @@ const countrySchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
+countrySchema.index({ isActive: 1, updatedAt: -1 });
+
 // Update timestamp on save
 countrySchema.pre('save', function(next) {
   this.updatedAt = new Date();

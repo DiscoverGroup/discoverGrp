@@ -8,8 +8,9 @@ import {
   CustomerServiceStats,
   TaskFilter,
 } from '../types/customerService';
+import { getAdminApiBaseUrl } from '../config/apiBase';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const API_BASE_URL = getAdminApiBaseUrl();
 function getToken() { return localStorage.getItem('token'); }
 
 export const customerServiceRepo = {

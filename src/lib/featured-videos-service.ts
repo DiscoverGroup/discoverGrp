@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+import { buildApiUrl } from '../config/apiBase';
 
 export interface FeaturedVideo {
   id: string;
@@ -12,7 +12,7 @@ export interface FeaturedVideo {
 
 export async function fetchFeaturedVideos(): Promise<FeaturedVideo[]> {
   try {
-    const response = await fetch(`${API_URL}/api/featured-videos`);
+    const response = await fetch(buildApiUrl('/api/featured-videos'));
     if (!response.ok) {
       return [];
     }

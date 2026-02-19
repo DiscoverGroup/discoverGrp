@@ -5,6 +5,7 @@ import type { Tour, CustomRoute, InstallmentPlan, InstallmentPayment } from "../
 import { fetchTourBySlug } from "../api/tours";
 import type { PaymentMethod } from "../lib/payment-gateway";
 import { createBooking } from "../api/bookings";
+import { buildApiUrl } from "../config/apiBase";
 import ProgressIndicator from "../components/ProgressIndicator";
 import BackToTop from "../components/BackToTop";
 import { logSecurityEvent, validatePaymentIntentId } from "../utils/paymentSecurity";
@@ -528,10 +529,9 @@ export default function Booking(): JSX.Element {
       // Fire and forget - don't block the UI or user experience
       setTimeout(async () => {
         try {
-          const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
-          console.log('📡 Using API URL:', API_BASE_URL);
+          console.log('📡 Using API URL:', buildApiUrl(''));
           
-          const response = await fetch(`${API_BASE_URL}/api/send-booking-email`, {
+          const response = await fetch(buildApiUrl('/api/send-booking-email'), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

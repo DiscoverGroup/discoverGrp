@@ -44,9 +44,9 @@ const InteractiveHero: React.FC = () => {
   const navigate = useNavigate();
   
   const heroImages = [
-    '/api/placeholder/1920/1080',
-    '/api/placeholder/1920/1081',
-    '/api/placeholder/1920/1082',
+    'https://placehold.co/1920x1080/0f172a/ffffff?text=Discover+Europe',
+    'https://placehold.co/1920x1080/1e3a8a/ffffff?text=Discover+Asia',
+    'https://placehold.co/1920x1080/4c1d95/ffffff?text=Discover+the+World',
   ];
 
   // Parallax effects
@@ -74,7 +74,7 @@ const InteractiveHero: React.FC = () => {
             name: country.name,
             country: country.name,
             slug: country.slug,
-            image: country.heroImageUrl || country.heroImages?.[0] || '/api/placeholder/300/200',
+            image: country.heroImageUrl || country.heroImages?.[0] || 'https://placehold.co/300x200/1f2937/ffffff?text=Destination',
             description: country.description.substring(0, 100) + '...',
             coordinates: coords
           };

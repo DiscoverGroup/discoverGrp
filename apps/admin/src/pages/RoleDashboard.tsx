@@ -3,6 +3,9 @@ import { useAuth } from "../contexts/AuthContext";
 import { UserRole, ROLE_DISPLAY_NAMES } from "../types/auth";
 import PermissionsTest from "../components/PermissionsTest";
 import { fetchDashboardStats } from "../services/dashboardService";
+import { Link } from "react-router-dom";
+import { authService } from "../services/authService";
+import { buildAdminApiUrl } from "../config/apiBase";
 import { 
   Users, 
   MapPin, 
@@ -536,6 +539,80 @@ const CSRDepartmentDashboard: React.FC = () => (
 
 export default function Home(): JSX.Element {
   const { user } = useAuth();
+  const [monitoringData, setMonitoringData] = useState<MonitoringWidgetData | null>(null);
+  const [migrationData, setMigrationData] = useState<VisaMigrationWidgetData | null>(null);
+  const [monitoringLoading, setMonitoringLoading] = useState(false);
+  const [nowMs, setNowMs] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    if (!authService.hasPermission('canAccessSettings', user)) return;
+
+    let mounted = true;
+    const loadMonitoring = async (showLoading: boolean) => {
+      if (showLoading) {
+        setMonitoringLoading(true);
+      }
+
+      try {
+        const res = await fetch(buildAdminApiUrl('/api/monitoring/scan'));
+        if (!res.ok) {
+          throw new Error(`Monitoring scan failed: ${res.status}`);
+        }
+
+        const payload = (await res.json()) as MonitoringWidgetData;
+        if (!mounted) return;
+        setMonitoringData(payload);
+      } catch (error) {
+        console.error('Failed to load monitoring widget:', error);
+        if (!mounted) return;
+        setMonitoringData(null);
+      } finally {
+        if (mounted && showLoading) {
+          setMonitoringLoading(false);
+        }
+      }
+    };
+
+    const loadMigrationStatus = async () => {
+      try {
+        const res = await fetch(buildAdminApiUrl('/api/visa-readiness/migration-status'));
+        if (!res.ok) {
+          throw new Error(`Migration status failed: ${res.status}`);
+        }
+
+        const payload = (await res.json()) as VisaMigrationWidgetData;
+        if (!mounted) return;
+        setMigrationData(payload);
+      } catch (error) {
+        console.error('Failed to load migration widget:', error);
+        if (!mounted) return;
+        setMigrationData(null);
+      }
+    };
+
+    loadMonitoring(true);
+    loadMigrationStatus();
+    const interval = window.setInterval(() => {
+      loadMonitoring(false);
+      loadMigrationStatus();
+    }, 20000);
+
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+    };
+  }, [user]);
 
   if (!user) {
     return (
@@ -569,6 +646,30 @@ export default function Home(): JSX.Element {
     }
   };
 
+  const formatRelativeAge = (isoDate: string): string => {
+    const scannedMs = new Date(isoDate).getTime();
+    if (Number.isNaN(scannedMs)) return 'just now';
+
+    const diffSec = Math.max(0, Math.floor((nowMs - scannedMs) / 1000));
+    if (diffSec < 5) return 'just now';
+    if (diffSec < 60) return `${diffSec}s ago`;
+
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+
+    const diffHours = Math.floor(diffMin / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
+  };
+
+  const getMonitoringStatusDotClass = (status: MonitoringWidgetData['status']): string => {
+    if (status === 'healthy') return 'bg-green-500';
+    if (status === 'warning') return 'bg-yellow-500';
+    return 'bg-red-500';
+  };
+
   return (
     <div className="p-6">
       {/* Header */}
@@ -584,8 +685,126 @@ export default function Home(): JSX.Element {
       {/* Permissions Test Component */}
       <PermissionsTest user={user} />
 
+      {authService.hasPermission('canAccessSettings', user) && (
+        <div className="mb-6 bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Live Monitoring Status</h3>
+              <p className="text-sm text-gray-600 mt-1">Website scan summary for errors, abnormalities, and output issues.</p>
+            </div>
+            <Link to="/monitoring" className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">
+              Open Monitoring Center
+            </Link>
+          </div>
+
+          <div className="mt-4">
+            {monitoringLoading ? (
+              <p className="text-sm text-gray-600">Loading monitoring status...</p>
+            ) : monitoringData ? (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div className={`p-3 rounded-lg border ${
+                  monitoringData.status === 'healthy'
+                    ? 'bg-green-50 border-green-200'
+                    : monitoringData.status === 'warning'
+                    ? 'bg-yellow-50 border-yellow-200'
+                    : 'bg-red-50 border-red-200'
+                }`}>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Status</p>
+                  <p className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <span className={`inline-block w-2.5 h-2.5 rounded-full animate-pulse ${getMonitoringStatusDotClass(monitoringData.status)}`}></span>
+                    {monitoringData.status.toUpperCase()}
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg border border-red-200 bg-red-50">
+                  <p className="text-xs uppercase tracking-wide text-red-700">Code Errors</p>
+                  <p className="text-lg font-bold text-red-800">{monitoringData.stats.issues.codeErrors}</p>
+                </div>
+                <div className="p-3 rounded-lg border border-yellow-200 bg-yellow-50">
+                  <p className="text-xs uppercase tracking-wide text-yellow-700">Abnormalities</p>
+                  <p className="text-lg font-bold text-yellow-800">{monitoringData.stats.issues.abnormalities}</p>
+                </div>
+                <div className="p-3 rounded-lg border border-blue-200 bg-blue-50">
+                  <p className="text-xs uppercase tracking-wide text-blue-700">Incorrect Output</p>
+                  <p className="text-lg font-bold text-blue-800">{monitoringData.stats.issues.incorrectOutput}</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-600">Monitoring data unavailable. Open Monitoring Center to run a full scan.</p>
+            )}
+          </div>
+
+          {monitoringData && (
+            <p className="mt-3 text-xs text-gray-500">
+              Last scan: {formatRelativeAge(monitoringData.scannedAt)} ({new Date(monitoringData.scannedAt).toLocaleString()}) • failed checks: {monitoringData.stats.checksFailed}, warnings: {monitoringData.stats.checksWarn}
+            </p>
+          )}
+
+          {migrationData && (
+            <div className="mt-4 border-t border-gray-200 pt-4">
+              <p className="text-sm font-semibold text-gray-900">Visa Readiness Migration</p>
+              <div className="mt-2 grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div className="p-3 rounded-lg border border-indigo-200 bg-indigo-50">
+                  <p className="text-xs uppercase tracking-wide text-indigo-700">Coverage</p>
+                  <p className="text-lg font-bold text-indigo-900">{migrationData.coverage.percent}%</p>
+                </div>
+                <div className="p-3 rounded-lg border border-green-200 bg-green-50">
+                  <p className="text-xs uppercase tracking-wide text-green-700">Migrated</p>
+                  <p className="text-lg font-bold text-green-800">{migrationData.totals.withSnapshot}</p>
+                </div>
+                <div className="p-3 rounded-lg border border-yellow-200 bg-yellow-50">
+                  <p className="text-xs uppercase tracking-wide text-yellow-700">Pending</p>
+                  <p className="text-lg font-bold text-yellow-800">{migrationData.totals.pendingMigration}</p>
+                </div>
+                <div className="p-3 rounded-lg border border-gray-200 bg-gray-50">
+                  <p className="text-xs uppercase tracking-wide text-gray-700">Status</p>
+                  <p className="text-lg font-bold text-gray-900">{migrationData.coverage.isComplete ? 'Complete' : 'In Progress'}</p>
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-gray-500">
+                Ready: {migrationData.statusBreakdown.ready} • Attention: {migrationData.statusBreakdown.attention} • Not ready: {migrationData.statusBreakdown.not_ready}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Role-specific dashboard */}
       {renderDashboard()}
     </div>
   );
+}
+
+interface MonitoringWidgetData {
+  status: 'healthy' | 'warning' | 'critical';
+  scannedAt: string;
+  stats: {
+    checksFailed: number;
+    checksWarn: number;
+    issues: {
+      codeErrors: number;
+      abnormalities: number;
+      incorrectOutput: number;
+    };
+  };
+}
+
+interface VisaMigrationWidgetData {
+  generatedAt: string;
+  featureEnabled: boolean;
+  totals: {
+    totalBookings: number;
+    withSnapshot: number;
+    withScore: number;
+    withStatus: number;
+    pendingMigration: number;
+  };
+  coverage: {
+    percent: number;
+    isComplete: boolean;
+  };
+  statusBreakdown: {
+    ready: number;
+    attention: number;
+    not_ready: number;
+  };
 }

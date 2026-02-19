@@ -252,6 +252,8 @@ import apiBookingsRouter from "./routes/api/bookings";
 import apiReviewsRouter from "./routes/api/reviews";
 import favoritesRouter from "./routes/favorites";
 import securityStatusRouter from "./routes/security-status";
+import monitoringRouter from "./routes/monitoring";
+import visaReadinessRouter from "./routes/visa-readiness";
 // Reviews are now handled by api/reviews and admin/reviews routes
 import homepageSettingsRouter from "./routes/homepage-settings";
 import countriesRouter from "./routes/countries";
@@ -277,6 +279,8 @@ app.use("/api/countries", countriesRouter);
 app.use("/api/promo-banners", promoBannerRouter);
 app.use("/api/featured-videos", featuredVideosRouter);
 app.use("/api/security", securityStatusRouter);
+app.use("/api/monitoring", monitoringRouter);
+app.use("/api/visa-readiness", visaReadinessRouter);
 app.use("/api", emailRouter);
 app.use("/auth", authRouter);
 

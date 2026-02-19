@@ -18,6 +18,7 @@ import {
   Award,
   Globe
 } from 'lucide-react';
+import { getAdminApiBaseUrl } from '../config/apiBase';
 
 interface HomepageSettings {
   logo: {
@@ -131,11 +132,10 @@ const HomepageManagement: React.FC = () => {
   const [activeSection, setActiveSection] = useState('logo');
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(true);
+  const API_URL = getAdminApiBaseUrl();
 
   // Load settings from API on component mount
   useEffect(() => {
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    
     // Load homepage settings from API
     fetch(`${API_URL}/api/homepage-settings`)
       .then(res => res.json())
@@ -147,7 +147,7 @@ const HomepageManagement: React.FC = () => {
         console.error('Error loading homepage settings:', error);
       });
     
-  }, []);
+  }, [API_URL]);
 
   const sections = [
     { id: 'logo', name: 'Logo & Branding', icon: Image },
@@ -168,8 +168,6 @@ const HomepageManagement: React.FC = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-      
       // Save settings to API
       const response = await fetch(`${API_URL}/api/homepage-settings`, {
         method: 'PUT',

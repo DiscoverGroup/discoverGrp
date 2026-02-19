@@ -1,4 +1,4 @@
-import React, { JSX } from "react";
+import React, { JSX, Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ToastProvider } from "./components/Toast";
@@ -10,23 +10,25 @@ import UnauthorizedPage from "./pages/UnauthorizedPage";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Sidebar from "./components/Sidebar";
-import Home from "./pages/RoleDashboard";
-import ToursList from "./pages/tours";
-import TourForm from "./pages/tours/TourForm";
-import ManageBookings from "./pages/bookings";
-import UserManagement from "./pages/UserManagement";
-import CustomerService from "./pages/customer-service";
-import Reports from './pages/Reports';
-import Settings from './pages/Settings';
-import SalesDepartment from './pages/SalesDepartment';
-import HomepageManagement from './pages/HomepageManagement';
-import CountryManagement from './pages/CountryManagement';
-import PromoBannerManagement from './pages/PromoBannerManagement';
-import VisaAssistanceManagement from './pages/VisaAssistanceManagement';
-import ReviewManagement from './pages/ReviewManagement';
-import { ServerDiagnosticsPage } from './pages/ServerDiagnostics';
-import SecurityStatus from './pages/SecurityStatus';
 import { UserRole } from "./types/auth";
+
+const Home = lazy(() => import('./pages/RoleDashboard'));
+const ToursList = lazy(() => import('./pages/tours'));
+const TourForm = lazy(() => import('./pages/tours/TourForm'));
+const ManageBookings = lazy(() => import('./pages/bookings'));
+const UserManagement = lazy(() => import('./pages/UserManagement'));
+const CustomerService = lazy(() => import('./pages/customer-service'));
+const Reports = lazy(() => import('./pages/Reports'));
+const Settings = lazy(() => import('./pages/Settings'));
+const SalesDepartment = lazy(() => import('./pages/SalesDepartment'));
+const HomepageManagement = lazy(() => import('./pages/HomepageManagement'));
+const CountryManagement = lazy(() => import('./pages/CountryManagement'));
+const PromoBannerManagement = lazy(() => import('./pages/PromoBannerManagement'));
+const VisaAssistanceManagement = lazy(() => import('./pages/VisaAssistanceManagement'));
+const ReviewManagement = lazy(() => import('./pages/ReviewManagement'));
+const ServerDiagnosticsPage = lazy(() => import('./pages/ServerDiagnostics').then((module) => ({ default: module.ServerDiagnosticsPage })));
+const SecurityStatus = lazy(() => import('./pages/SecurityStatus'));
+const MonitoringCenter = lazy(() => import('./pages/MonitoringCenter'));
 
 // Loading component
 const LoadingScreen: React.FC = () => (
@@ -66,6 +68,7 @@ const AppRouter: React.FC = () => {
         <Sidebar />
 
         <div className="content">
+          <Suspense fallback={<LoadingScreen />}>
           <Routes>
             <Route 
               path="/" 
@@ -249,6 +252,19 @@ const AppRouter: React.FC = () => {
               }
             />
 
+            {/* Live Monitoring - Administrator & Web Developer */}
+            <Route
+              path="/monitoring"
+              element={
+                <ProtectedRoute
+                  requiredPermission="canAccessSettings"
+                  allowedRoles={[UserRole.SUPER_ADMIN, UserRole.ADMINISTRATOR, UserRole.WEB_DEVELOPER]}
+                >
+                  <MonitoringCenter />
+                </ProtectedRoute>
+              }
+            />
+
             {/* Homepage Management - Administrator & Web Developer */}
             <Route
               path="/homepage"
@@ -297,6 +313,7 @@ const AppRouter: React.FC = () => {
             {/* 404 - Redirect to home */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </Suspense>
         </div>
       </div>
 

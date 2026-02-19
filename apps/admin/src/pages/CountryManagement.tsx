@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Edit2, Trash2, Save, X, Upload, ChevronUp, ChevronDown } from 'lucide-react';
 import { fetchCountries, deleteCountry, type Country, type Attraction, type Testimonial } from '../../../../src/api/countries';
 import { createCountryAdmin, updateCountryAdmin } from '../services/apiClient';
+import { buildAdminApiUrl } from '../config/apiBase';
 import React from 'react';
 import { useToast } from '../components/Toast';
 
@@ -16,7 +17,7 @@ async function uploadImageToStorage(
   formData.append('folder', `countries/${countryId}/${imageType}`);
   formData.append('label', imageType);
 
-  const response = await fetch(`${import.meta.env.VITE_ADMIN_API_URL}/api/upload/single`, {
+  const response = await fetch(buildAdminApiUrl('/api/upload/single'), {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${localStorage.getItem('token')}`,

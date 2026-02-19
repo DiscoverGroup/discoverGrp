@@ -5,9 +5,11 @@
  * to protect against Cross-Site Request Forgery attacks
  */
 
+import { getAdminApiBaseUrl } from '../config/apiBase';
+
 const CSRF_TOKEN_KEY = 'csrf_token';
 const CSRF_EXPIRY_KEY = 'csrf_expiry';
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const API_BASE_URL = getAdminApiBaseUrl();
 
 interface CsrfTokenResponse {
   csrfToken: string;

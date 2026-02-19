@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+import { buildApiUrl } from '../config/apiBase';
 
 export interface Country {
   _id: string;
@@ -8,7 +8,7 @@ export interface Country {
   heroImageUrl?: string; // Primary hero image URL (backward compatibility)
   heroImages?: string[]; // Array of hero image URLs
   heroQuery?: string;
-  bestTime: string;
+  bestTime: string; 
   currency: string;
   language: string;
   visaInfo?: string;
@@ -35,7 +35,7 @@ export interface Testimonial {
 }
 
 export async function fetchCountries(): Promise<Country[]> {
-  const response = await fetch(`${API_BASE_URL}/api/countries`);
+  const response = await fetch(buildApiUrl('/api/countries'));
   if (!response.ok) {
     throw new Error('Failed to fetch countries');
   }
@@ -44,7 +44,7 @@ export async function fetchCountries(): Promise<Country[]> {
 
 export async function fetchCountryBySlug(slug: string): Promise<Country | null> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/countries/${slug}`);
+    const response = await fetch(buildApiUrl(`/api/countries/${slug}`));
     if (!response.ok) {
       if (response.status === 404) return null;
       throw new Error('Failed to fetch country');
@@ -57,7 +57,7 @@ export async function fetchCountryBySlug(slug: string): Promise<Country | null> 
 }
 
 export async function createCountry(country: Partial<Country>): Promise<Country> {
-  const response = await fetch(`${API_BASE_URL}/api/countries`, {
+  const response = await fetch(buildApiUrl('/api/countries'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(country),
@@ -76,7 +76,7 @@ export async function createCountry(country: Partial<Country>): Promise<Country>
 }
 
 export async function updateCountry(id: string, country: Partial<Country>): Promise<Country> {
-  const response = await fetch(`${API_BASE_URL}/api/countries/${id}`, {
+  const response = await fetch(buildApiUrl(`/api/countries/${id}`), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(country),
@@ -95,7 +95,7 @@ export async function updateCountry(id: string, country: Partial<Country>): Prom
 }
 
 export async function deleteCountry(id: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/countries/${id}`, {
+  const response = await fetch(buildApiUrl(`/api/countries/${id}`), {
     method: 'DELETE',
   });
   if (!response.ok) {
@@ -104,7 +104,7 @@ export async function deleteCountry(id: string): Promise<void> {
 }
 
 export async function addAttraction(countryId: string, attraction: Omit<Attraction, '_id'>): Promise<Country> {
-  const response = await fetch(`${API_BASE_URL}/api/countries/${countryId}/attractions`, {
+  const response = await fetch(buildApiUrl(`/api/countries/${countryId}/attractions`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(attraction),
@@ -120,7 +120,7 @@ export async function updateAttraction(
   attractionId: string,
   attraction: Partial<Attraction>
 ): Promise<Country> {
-  const response = await fetch(`${API_BASE_URL}/api/countries/${countryId}/attractions/${attractionId}`, {
+  const response = await fetch(buildApiUrl(`/api/countries/${countryId}/attractions/${attractionId}`), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(attraction),
@@ -132,7 +132,7 @@ export async function updateAttraction(
 }
 
 export async function deleteAttraction(countryId: string, attractionId: string): Promise<Country> {
-  const response = await fetch(`${API_BASE_URL}/api/countries/${countryId}/attractions/${attractionId}`, {
+  const response = await fetch(buildApiUrl(`/api/countries/${countryId}/attractions/${attractionId}`), {
     method: 'DELETE',
   });
   if (!response.ok) {
@@ -142,7 +142,7 @@ export async function deleteAttraction(countryId: string, attractionId: string):
 }
 
 export async function addTestimonial(countryId: string, testimonial: Omit<Testimonial, '_id'>): Promise<Country> {
-  const response = await fetch(`${API_BASE_URL}/api/countries/${countryId}/testimonials`, {
+  const response = await fetch(buildApiUrl(`/api/countries/${countryId}/testimonials`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(testimonial),
@@ -158,7 +158,7 @@ export async function updateTestimonial(
   testimonialId: string,
   testimonial: Partial<Testimonial>
 ): Promise<Country> {
-  const response = await fetch(`${API_BASE_URL}/api/countries/${countryId}/testimonials/${testimonialId}`, {
+  const response = await fetch(buildApiUrl(`/api/countries/${countryId}/testimonials/${testimonialId}`), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(testimonial),
@@ -170,7 +170,7 @@ export async function updateTestimonial(
 }
 
 export async function deleteTestimonial(countryId: string, testimonialId: string): Promise<Country> {
-  const response = await fetch(`${API_BASE_URL}/api/countries/${countryId}/testimonials/${testimonialId}`, {
+  const response = await fetch(buildApiUrl(`/api/countries/${countryId}/testimonials/${testimonialId}`), {
     method: 'DELETE',
   });
   if (!response.ok) {

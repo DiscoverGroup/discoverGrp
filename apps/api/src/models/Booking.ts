@@ -39,6 +39,33 @@ export interface IBooking extends Document {
   visaDestinationCountries?: string;
   visaAssistanceStatus?: 'pending' | 'in-progress' | 'completed' | 'not-needed';
   visaAssistanceNotes?: string;
+  visaReadinessScore?: number;
+  visaReadinessStatus?: 'ready' | 'attention' | 'not_ready';
+  visaReadinessSnapshot?: {
+    score: number;
+    status: 'ready' | 'attention' | 'not_ready';
+    blockers: Array<{
+      code: string;
+      message: string;
+      level: 'critical' | 'high' | 'medium' | 'low';
+      country?: string;
+    }>;
+    warnings: Array<{
+      code: string;
+      message: string;
+      level: 'critical' | 'high' | 'medium' | 'low';
+      country?: string;
+    }>;
+    nextActions: string[];
+    ruleSummary: {
+      countries: string[];
+      strictestPassportValidityMonths: number;
+      strictestVisaLeadDays: number;
+      visaRequiredCountries: string[];
+      evisaCountries: string[];
+    };
+    evaluatedAt: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -84,6 +111,44 @@ const BookingSchema = new Schema<IBooking>({
     default: 'not-needed'
   },
   visaAssistanceNotes: { type: String },
+  visaReadinessScore: { type: Number },
+  visaReadinessStatus: {
+    type: String,
+    enum: ['ready', 'attention', 'not_ready'],
+  },
+  visaReadinessSnapshot: {
+    score: { type: Number },
+    status: { type: String, enum: ['ready', 'attention', 'not_ready'] },
+    blockers: [{
+      code: { type: String },
+      message: { type: String },
+      level: { type: String, enum: ['critical', 'high', 'medium', 'low'] },
+      country: { type: String },
+    }],
+    warnings: [{
+      code: { type: String },
+      message: { type: String },
+      level: { type: String, enum: ['critical', 'high', 'medium', 'low'] },
+      country: { type: String },
+    }],
+    nextActions: [{ type: String }],
+    ruleSummary: {
+      countries: [{ type: String }],
+      strictestPassportValidityMonths: { type: Number },
+      strictestVisaLeadDays: { type: Number },
+      visaRequiredCountries: [{ type: String }],
+      evisaCountries: [{ type: String }],
+    },
+    evaluatedAt: { type: String },
+  },
 }, { timestamps: true });
+
+BookingSchema.index({ bookingId: 1 });
+BookingSchema.index({ createdAt: -1 });
+BookingSchema.index({ status: 1, createdAt: -1 });
+BookingSchema.index({ customerEmail: 1, createdAt: -1 });
+BookingSchema.index({ tourSlug: 1, selectedDate: 1 });
+BookingSchema.index({ visaReadinessStatus: 1 });
+BookingSchema.index({ 'visaReadinessSnapshot.evaluatedAt': -1 });
 
 export default mongoose.model<IBooking>('Booking', BookingSchema);

@@ -5,9 +5,7 @@
 
 [build.environment]
   NODE_VERSION = "20.19.0"
-  # Production API URL (Render)
-  VITE_API_BASE_URL = "https://discovergroup.onrender.com"
-  VITE_API_URL = "https://discovergroup.onrender.com"
+  # Set VITE_API_BASE_URL in Netlify UI (Railway production API URL)
   # Admin URL
   VITE_ADMIN_URL = "https://admin--discovergrp.netlify.app"
   # IMPORTANT: Set VITE_STRIPE_PUBLISHABLE_KEY in Netlify Dashboard > Site settings > Environment variables

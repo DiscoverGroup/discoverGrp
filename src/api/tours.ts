@@ -1,11 +1,22 @@
 import type { Tour } from "../types/index.js";
+import { buildApiUrl } from "../config/apiBase";
 
-// Use VITE_API_BASE_URL consistently
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+const API_TIMEOUT_MS = 10000;
+
+async function fetchWithTimeout(url: string, timeoutMs: number = API_TIMEOUT_MS): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { signal: controller.signal });
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
 
 export async function fetchTours(): Promise<Tour[]> {
   try {
-    const response = await fetch(`${API_BASE}/public/tours`);
+    const response = await fetchWithTimeout(buildApiUrl('/public/tours'));
     if (!response.ok) {
       throw new Error(`Failed to fetch tours: ${response.status}`);
     }
@@ -14,7 +25,7 @@ export async function fetchTours(): Promise<Tour[]> {
     return tours;
   } catch (error) {
     console.error("❌ Error fetching tours from API:", error);
-    console.error("API_BASE:", API_BASE);
+    console.error("API_BASE:", buildApiUrl(''));
     // Don't return mock tours - throw error so user knows API is down
     throw new Error(`Failed to load tours from backend: ${error}`);
   }
@@ -22,7 +33,7 @@ export async function fetchTours(): Promise<Tour[]> {
 
 export async function fetchFeaturedTours(limit: number = 6): Promise<Tour[]> {
   try {
-    const response = await fetch(`${API_BASE}/public/tours?limit=${limit}&featured=true`);
+    const response = await fetchWithTimeout(buildApiUrl(`/public/tours?limit=${limit}&featured=true`));
     if (!response.ok) {
       throw new Error(`Failed to fetch featured tours: ${response.status}`);
     }
@@ -40,7 +51,7 @@ export async function fetchFeaturedTours(limit: number = 6): Promise<Tour[]> {
 
 export async function fetchTourBySlug(slug: string): Promise<Tour | null> {
   try {
-    const response = await fetch(`${API_BASE}/public/tours/${slug}`);
+    const response = await fetchWithTimeout(buildApiUrl(`/public/tours/${slug}`));
     if (!response.ok) {
       if (response.status === 404) return null;
       throw new Error(`Failed to fetch tour: ${response.status}`);
@@ -50,7 +61,7 @@ export async function fetchTourBySlug(slug: string): Promise<Tour | null> {
     return tour;
   } catch (error) {
     console.error("❌ Error fetching tour by slug:", error);
-    console.error("API_BASE:", API_BASE);
+    console.error("API_BASE:", buildApiUrl(''));
     // Don't return mock tours - throw error so user knows API is down
     throw new Error(`Failed to load tour from backend: ${error}`);
   }
@@ -84,7 +95,7 @@ export async function fetchContinents(): Promise<string[]> {
 
 export async function fetchCountriesByContinent(continent: string): Promise<string[]> {
   try {
-    const response = await fetch(`${API_BASE}/public/tours/by-continent/${encodeURIComponent(continent)}/countries`);
+    const response = await fetchWithTimeout(buildApiUrl(`/public/tours/by-continent/${encodeURIComponent(continent)}/countries`));
     if (!response.ok) {
       throw new Error('Failed to fetch countries');
     }

@@ -1,8 +1,7 @@
 // Email API functions
+import { buildApiUrl } from '../config/apiBase';
 
 /// <reference lib="es2015" />
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
 
 interface BookingEmailData {
   bookingId: string;
@@ -26,7 +25,7 @@ export async function sendBookingConfirmationEmail(data: BookingEmailData): Prom
   error?: string;
 }> {
   try {
-    const response = await fetch(`${API_BASE}/api/send-booking-email`, {
+    const response = await fetch(buildApiUrl('/api/send-booking-email'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

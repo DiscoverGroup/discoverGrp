@@ -91,4 +91,11 @@ const TourSchema = new Schema<ITour>({
   timestamps: true,
   strict: false // Allow additional fields for flexibility
 });
+
+TourSchema.index({ createdAt: -1 });
+TourSchema.index({ line: 1, createdAt: -1 });
+TourSchema.index({ durationDays: 1 });
+TourSchema.index({ isSaleEnabled: 1, saleEndDate: 1 });
+TourSchema.index({ 'additionalInfo.countriesVisited': 1 });
+
 export default mongoose.model<ITour>('Tour', TourSchema);

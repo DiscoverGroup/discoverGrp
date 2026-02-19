@@ -7,6 +7,7 @@ import {
   fetchCountriesByContinent,
   fetchToursByCountry,
 } from "../api/tours";
+import { buildApiUrl } from "../config/apiBase";
 import type { Tour } from "../types";
 
 
@@ -54,8 +55,6 @@ interface PromoBanner {
   textColor: string;
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
-
 export default function Header(): React.ReactElement {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -79,7 +78,7 @@ export default function Header(): React.ReactElement {
     let cancelled = false;
     (async () => {
       try {
-        const response = await fetch(`${API_BASE}/api/promo-banners/active`);
+        const response = await fetch(buildApiUrl('/api/promo-banners/active'));
         const data = await response.json();
         if (!cancelled && data.banner) {
           setPromoBanner(data.banner);

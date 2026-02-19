@@ -128,3 +128,44 @@ export type Booking = {
   // Installment plan for downpayment bookings
   installmentPlan?: InstallmentPlan;
 };
+
+export type VisaReadinessStatus = 'ready' | 'attention' | 'not_ready';
+
+export type VisaReadinessLevel = 'critical' | 'high' | 'medium' | 'low';
+
+export type VisaReadinessIssue = {
+  code: string;
+  message: string;
+  level: VisaReadinessLevel;
+  country?: string;
+};
+
+export type VisaReadinessRuleSummary = {
+  countries: string[];
+  strictestPassportValidityMonths: number;
+  strictestVisaLeadDays: number;
+  visaRequiredCountries: string[];
+  evisaCountries: string[];
+};
+
+export type VisaReadinessResult = {
+  score: number;
+  status: VisaReadinessStatus;
+  blockers: VisaReadinessIssue[];
+  warnings: VisaReadinessIssue[];
+  nextActions: string[];
+  ruleSummary: VisaReadinessRuleSummary;
+  evaluatedAt: string;
+};
+
+export type VisaReadinessEvaluateInput = {
+  tourSlug: string;
+  departureDate: string;
+  nationality: string;
+  passportExpiryDate?: string;
+  documents?: {
+    hasPassport?: boolean;
+    hasVisa?: boolean;
+    hasSupportingDocuments?: boolean;
+  };
+};

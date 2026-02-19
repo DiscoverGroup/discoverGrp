@@ -2,6 +2,7 @@
  * Error Logging Service
  * Centralized error handling and logging
  */
+import { buildApiUrl } from '../config/apiBase';
 
 type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 
@@ -105,9 +106,7 @@ class ErrorLogger {
       // Examples: Sentry, LogRocket, Bugsnag, etc.
       
       // For now, just attempt to send to backend
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
-      
-      fetch(`${API_BASE_URL}/api/client-errors`, {
+      fetch(buildApiUrl('/api/client-errors'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

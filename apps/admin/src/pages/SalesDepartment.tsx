@@ -1,5 +1,6 @@
 import React, { JSX, useEffect, useState } from "react";
 import { Trash2, Plus, Edit2, Check, X, Eye, EyeOff } from "lucide-react";
+import { getAdminApiBaseUrl } from "../config/apiBase";
 
 interface MessengerAccount {
   id: string;
@@ -17,7 +18,7 @@ interface MetaMessengerConfig {
   accounts: MessengerAccount[];
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const API_BASE_URL = getAdminApiBaseUrl();
 
 interface Message {
   id: string;

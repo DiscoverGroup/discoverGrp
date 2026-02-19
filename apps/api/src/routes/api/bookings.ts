@@ -2,8 +2,18 @@
 import express from "express";
 import Booking from "../../models/Booking";
 import { sendBookingConfirmationEmail } from "../../services/emailService";
+import { evaluateVisaReadiness } from "../../services/visa-readiness";
 
 const router = express.Router();
+
+const isVisaReadinessEnabled = () => {
+  const value = process.env.VISA_READINESS_ENABLED;
+  if (typeof value !== 'string') {
+    return true;
+  }
+
+  return !['0', 'false', 'off', 'no'].includes(value.toLowerCase());
+};
 
 // GET /api/bookings - get all bookings
 router.get("/", async (req, res) => {
@@ -46,7 +56,8 @@ router.post("/", async (req, res) => {
       visaDocumentsProvided,
       visaDestinationCountries,
       visaAssistanceStatus,
-      visaAssistanceNotes
+      visaAssistanceNotes,
+      nationality
     } = req.body;
 
     // Note: Tours are served from JSON files, not MongoDB
@@ -54,6 +65,48 @@ router.post("/", async (req, res) => {
     console.log('📝 Creating booking for tour slug:', tourSlug);
     if (customRoutes && customRoutes.length > 0) {
       console.log('📋 Combined tour with', customRoutes.length, 'custom route(s)');
+    }
+
+    let visaReadinessScore: number | undefined;
+    let visaReadinessStatus: 'ready' | 'attention' | 'not_ready' | undefined;
+    let visaReadinessSnapshot:
+      | {
+          score: number;
+          status: 'ready' | 'attention' | 'not_ready';
+          blockers: Array<{ code: string; message: string; level: 'critical' | 'high' | 'medium' | 'low'; country?: string }>;
+          warnings: Array<{ code: string; message: string; level: 'critical' | 'high' | 'medium' | 'low'; country?: string }>;
+          nextActions: string[];
+          ruleSummary: {
+            countries: string[];
+            strictestPassportValidityMonths: number;
+            strictestVisaLeadDays: number;
+            visaRequiredCountries: string[];
+            evisaCountries: string[];
+          };
+          evaluatedAt: string;
+        }
+      | undefined;
+
+    if (isVisaReadinessEnabled() && typeof tourSlug === 'string' && typeof selectedDate === 'string') {
+      try {
+        const readiness = await evaluateVisaReadiness({
+          tourSlug,
+          departureDate: selectedDate,
+          nationality: typeof nationality === 'string' ? nationality : 'philippines',
+          passportExpiryDate: typeof customerPassport === 'string' ? customerPassport : undefined,
+          documents: {
+            hasPassport: Boolean(customerPassport),
+            hasVisa: Boolean(visaDocumentsProvided),
+            hasSupportingDocuments: Boolean(visaDocumentsProvided),
+          },
+        });
+
+        visaReadinessScore = readiness.score;
+        visaReadinessStatus = readiness.status;
+        visaReadinessSnapshot = readiness;
+      } catch (readinessError) {
+        console.warn('⚠️ Visa readiness evaluation failed (non-critical):', readinessError);
+      }
     }
 
     // Create the booking
@@ -82,7 +135,10 @@ router.post("/", async (req, res) => {
       visaDocumentsProvided: visaDocumentsProvided || false,
       visaDestinationCountries,
       visaAssistanceStatus: visaAssistanceRequested ? (visaAssistanceStatus || 'pending') : 'not-needed',
-      visaAssistanceNotes
+      visaAssistanceNotes,
+      visaReadinessScore,
+      visaReadinessStatus,
+      visaReadinessSnapshot
     });
 
     console.log('✅ Booking created successfully:', bookingId);

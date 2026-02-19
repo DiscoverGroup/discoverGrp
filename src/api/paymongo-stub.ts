@@ -1,8 +1,7 @@
 // PayMongo API Client
 // Full implementation for PayMongo payment integration
 // API Documentation: https://developers.paymongo.com/reference
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+import { buildApiUrl } from '../config/apiBase';
 
 type CreatePayMongoPaymentIntentRequest = {
   amount: number; // Amount in centavos (e.g., 100000 = PHP 1,000.00)
@@ -40,7 +39,7 @@ export async function createPayMongoPaymentIntent(
   });
   
   try {
-    const endpoint = `${API_BASE_URL}/api/paymongo/payment-intent`;
+    const endpoint = buildApiUrl('/api/paymongo/payment-intent');
     
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -85,7 +84,7 @@ export async function createPayMongoPaymentMethod(
   console.log('💳 Creating PayMongo payment method...', { type });
   
   try {
-    const endpoint = `${API_BASE_URL}/api/paymongo/payment-method`;
+    const endpoint = buildApiUrl('/api/paymongo/payment-method');
     
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -122,7 +121,7 @@ export async function attachPaymentMethod(
   console.log('🔗 Attaching payment method to intent...', { paymentIntentId, paymentMethodId });
   
   try {
-    const endpoint = `${API_BASE_URL}/api/paymongo/attach`;
+    const endpoint = buildApiUrl('/api/paymongo/attach');
     
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -161,7 +160,7 @@ export async function verifyPayMongoPayment(
   console.log('🔍 Verifying PayMongo payment...', paymentIntentId);
   
   try {
-    const endpoint = `${API_BASE_URL}/api/paymongo/verify/${encodeURIComponent(paymentIntentId)}`;
+    const endpoint = buildApiUrl(`/api/paymongo/verify/${encodeURIComponent(paymentIntentId)}`);
     
     const response = await fetch(endpoint, {
       method: 'GET',
@@ -193,7 +192,7 @@ export async function getPayMongoPaymentMethods(): Promise<PayMongoPaymentMethod
   console.log('📋 Fetching PayMongo payment methods...');
   
   try {
-    const endpoint = `${API_BASE_URL}/api/paymongo/payment-methods`;
+    const endpoint = buildApiUrl('/api/paymongo/payment-methods');
     
     const response = await fetch(endpoint, {
       method: 'GET',
@@ -233,7 +232,7 @@ export async function createPayMongoSource(
   console.log('🔗 Creating PayMongo source...', { type, amount: amount / 100 });
   
   try {
-    const endpoint = `${API_BASE_URL}/api/paymongo/source`;
+    const endpoint = buildApiUrl('/api/paymongo/source');
     
     const response = await fetch(endpoint, {
       method: 'POST',

@@ -1,7 +1,5 @@
 import type { Booking, Tour, BookingStatus, PaymentType, CustomRoute } from "../types";
-
-// Use VITE_API_BASE_URL consistently
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+import { buildApiUrl } from "../config/apiBase";
 
 // Helper function to generate a booking ID
 function generateBookingId(): string {
@@ -67,7 +65,7 @@ export async function createBooking(bookingData: {
     customRoutes: bookingData.customRoutes || [],
   };
 
-  const res = await fetch(`${API_BASE_URL}/api/bookings`, {
+  const res = await fetch(buildApiUrl('/api/bookings'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -98,7 +96,7 @@ export async function createBooking(bookingData: {
 export async function fetchAllBookings(): Promise<Booking[]> {
   // Try to fetch from backend
   try {
-    const res = await fetch(`${API_BASE_URL}/api/bookings`);
+    const res = await fetch(buildApiUrl('/api/bookings'));
     if (!res.ok) throw new Error('Failed to fetch bookings');
     const data = await res.json();
     // If backend returns bookings, map them to Booking type
@@ -166,7 +164,7 @@ export async function fetchBookingById(bookingId: string): Promise<Booking | nul
 // Update booking status (must be implemented via backend API)
 export async function updateBookingStatus(bookingId: string, status: BookingStatus): Promise<Booking | null> {
   // Call backend to update status for the given bookingId
-  const res = await fetch(`${API_BASE_URL}/api/bookings/${encodeURIComponent(bookingId)}/status`, {
+  const res = await fetch(buildApiUrl(`/api/bookings/${encodeURIComponent(bookingId)}/status`), {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status }),
@@ -183,7 +181,7 @@ export async function updateBookingStatus(bookingId: string, status: BookingStat
 
 // Delete booking (must be implemented via backend API)
 export async function deleteBooking(bookingId: string): Promise<boolean> {
-  const res = await fetch(`${API_BASE_URL}/api/bookings/${encodeURIComponent(bookingId)}`, {
+  const res = await fetch(buildApiUrl(`/api/bookings/${encodeURIComponent(bookingId)}`), {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
   });
@@ -220,7 +218,7 @@ export async function canUserReviewTour(tourSlug: string): Promise<{
       return { canReview: false, isVerified: false, reason: 'not_logged_in' };
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/reviews/user/eligibility/${tourSlug}`, {
+    const response = await fetch(buildApiUrl(`/api/reviews/user/eligibility/${tourSlug}`), {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -243,7 +241,7 @@ export async function fetchRecentBookingNotification(): Promise<{
   timeAgo: string;
 } | null> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/bookings/recent/notification`);
+    const res = await fetch(buildApiUrl('/api/bookings/recent/notification'));
     if (!res.ok) return null;
     const data = await res.json();
     return data;

@@ -12,6 +12,7 @@ import {
   X,
   Check
 } from "lucide-react";
+import { buildAdminApiUrl } from "../../config/apiBase";
 import { useToast } from "../../components/Toast";
 
 // --- Image Upload Helper (Cloudflare R2) ---
@@ -29,7 +30,7 @@ async function uploadImageToStorage(
   formData.append('folder', folder);
   formData.append('label', imageType);
 
-  const response = await fetch(`${import.meta.env.VITE_ADMIN_API_URL}/api/upload/single`, {
+  const response = await fetch(buildAdminApiUrl('/api/upload/single'), {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${localStorage.getItem('token')}`,

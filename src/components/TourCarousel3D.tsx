@@ -38,9 +38,10 @@ const convertToTourCard = async (tour: Tour): Promise<TourCard> => {
   
   // Fetch actual review stats for this tour
   const reviewStats = await fetchTourReviewStats(tour.slug);
+  const stableId = tour.id || (tour as Tour & { _id?: string })._id || tour.slug;
   
   return {
-    id: tour.id,
+    id: stableId,
     slug: tour.slug,
     title: tour.title,
     destination: countries,
@@ -48,7 +49,7 @@ const convertToTourCard = async (tour: Tour): Promise<TourCard> => {
     price,
     rating: reviewStats.averageRating || 0,
     reviews: reviewStats.totalReviews || 0,
-    image: tour.images?.[0] || '/api/placeholder/400/500',
+    image: tour.images?.[0] || 'https://placehold.co/400x500/1f2937/ffffff?text=Tour+Image',
     highlights: (tour.highlights || []).slice(0, 3),
     difficulty: tour.durationDays > 12 ? 'Challenging' : tour.durationDays > 7 ? 'Moderate' : 'Easy',
     category: tour.category || tour.line || 'Tour'
@@ -180,7 +181,15 @@ const TourCarousel3D: React.FC = () => {
       try {
         setLoading(true);
         const featuredTours = await fetchFeaturedTours(5);
-        const convertedTours = await Promise.all(featuredTours.map(tour => convertToTourCard(tour)));
+        const convertedResults = await Promise.allSettled(featuredTours.map(tour => convertToTourCard(tour)));
+        const convertedTours = convertedResults
+          .filter((result): result is PromiseFulfilledResult<TourCard> => result.status === 'fulfilled')
+          .map((result) => result.value);
+
+        if (convertedResults.some((result) => result.status === 'rejected')) {
+          console.warn('Some featured tours failed to convert and were skipped.');
+        }
+
         setTours(convertedTours);
       } catch (error) {
         console.error('Failed to load featured tours:', error);

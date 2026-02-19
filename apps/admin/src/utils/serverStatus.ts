@@ -4,7 +4,9 @@
  * Monitors API server status and provides fallback handling
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+import { getAdminApiBaseUrl } from '../config/apiBase';
+
+const API_BASE_URL = getAdminApiBaseUrl();
 
 interface ServerStatus {
   isOnline: boolean;

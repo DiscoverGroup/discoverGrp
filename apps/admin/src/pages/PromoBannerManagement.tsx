@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Power, Tag } from 'lucide-react';
+import { getAdminApiBaseUrl } from '../config/apiBase';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const API_BASE = getAdminApiBaseUrl();
 
 interface PromoBanner {
   _id: string;

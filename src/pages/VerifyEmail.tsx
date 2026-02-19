@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+import { buildApiUrl } from '../config/apiBase';
 
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
@@ -22,7 +21,7 @@ export default function VerifyEmail() {
       }
 
       try {
-        const res = await fetch(`${API_BASE_URL}/auth/verify-email?token=${token}`);
+        const res = await fetch(buildApiUrl(`/auth/verify-email?token=${token}`));
         const data = await res.json();
 
         if (!res.ok) {

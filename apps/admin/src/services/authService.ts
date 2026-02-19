@@ -1,7 +1,8 @@
 import { User, LoginCredentials, RegisterData, ROLE_PERMISSIONS, RolePermissions } from '../types/auth';
 import { setToken, getToken, getRefreshToken, clearToken, authFetch } from '../utils/tokenStorage';
+import { getAdminApiBaseUrl } from '../config/apiBase';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const API_BASE_URL = getAdminApiBaseUrl();
 
 type NavigationItem = {
   label: string;

@@ -127,7 +127,8 @@ Create `.env` files in the root, `apps/api`, and `apps/admin` directories based 
 
 **Root `.env` (Client)**:
 ```env
-VITE_API_URL=http://localhost:4000
+VITE_API_BASE_URL=https://your-api-url.up.railway.app
+VITE_DEV_API_TARGET=http://localhost:4000
 VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_key
 ```
@@ -146,6 +147,8 @@ SENDGRID_FROM_EMAIL=noreply@discovergroup.com
 **`apps/admin/.env` (Admin)**:
 ```env
 VITE_API_URL=http://localhost:4000
+VITE_ADMIN_API_URL=http://localhost:4000
+VITE_ADMIN_DEV_API_TARGET=http://localhost:4000
 VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_key
 ```

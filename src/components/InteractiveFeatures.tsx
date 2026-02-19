@@ -27,7 +27,7 @@ const features: Feature[] = [
     description: 'Connect with passionate locals who bring destinations to life through authentic stories and hidden gems.',
     color: 'from-blue-500 to-cyan-500',
     stats: '500+ Certified Guides',
-    image: '/api/placeholder/400/300'
+    image: 'https://placehold.co/400x300/0f172a/ffffff?text=European+Tours'
   },
   {
     id: 'instant-booking',
@@ -36,7 +36,7 @@ const features: Feature[] = [
     description: 'Book your dream trip in seconds with our advanced booking system and get instant confirmation.',
     color: 'from-purple-500 to-pink-500',
     stats: '< 30 Second Booking',
-    image: '/api/placeholder/400/301'
+    image: 'https://placehold.co/400x300/1d4ed8/ffffff?text=Luxury+Hotels'
   },
   {
     id: 'safety-first',
@@ -45,7 +45,7 @@ const features: Feature[] = [
     description: 'Travel with confidence knowing we prioritize your safety with 24/7 support and comprehensive insurance.',
     color: 'from-green-500 to-emerald-500',
     stats: '99.9% Safety Record',
-    image: '/api/placeholder/400/302'
+    image: 'https://placehold.co/400x300/581c87/ffffff?text=Expert+Guides'
   },
   {
     id: 'photo-memories',
@@ -54,7 +54,7 @@ const features: Feature[] = [
     description: 'Professional photographers document your journey, ensuring every magical moment is preserved forever.',
     color: 'from-orange-500 to-red-500',
     stats: '10,000+ Photos Taken',
-    image: '/api/placeholder/400/303'
+    image: 'https://placehold.co/400x300/065f46/ffffff?text=24%2F7+Support'
   }
 ];
 

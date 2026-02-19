@@ -1,7 +1,6 @@
 // Favorites API Client
 // Handles adding/removing tours from user's favorites/wishlist
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+import { buildApiUrl } from '../config/apiBase';
 
 /**
  * Get authentication token from localStorage
@@ -20,7 +19,7 @@ export async function getFavorites(): Promise<{ favorites: string[]; count: numb
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/favorites`, {
+    const response = await fetch(buildApiUrl('/api/favorites'), {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -55,7 +54,7 @@ export async function addToFavorites(tourSlug: string): Promise<{
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/favorites`, {
+    const response = await fetch(buildApiUrl('/api/favorites'), {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -94,7 +93,7 @@ export async function removeFromFavorites(tourSlug: string): Promise<{
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/favorites/${encodeURIComponent(tourSlug)}`, {
+    const response = await fetch(buildApiUrl(`/api/favorites/${encodeURIComponent(tourSlug)}`), {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -133,7 +132,7 @@ export async function toggleFavorite(tourSlug: string): Promise<{
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/favorites/toggle`, {
+    const response = await fetch(buildApiUrl('/api/favorites/toggle'), {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,

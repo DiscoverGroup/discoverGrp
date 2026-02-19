@@ -14,7 +14,8 @@ import {
   Map,
   Globe,
   Tag,
-  Shield
+  Shield,
+  Activity
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { authService } from "../services/authService";
@@ -110,6 +111,12 @@ const navigationItems: NavItem[] = [
     to: "/security",
     label: "Security Status",
     icon: Shield,
+    permission: "canAccessSettings",
+  },
+  {
+    to: "/monitoring",
+    label: "Live Monitoring",
+    icon: Activity,
     permission: "canAccessSettings",
   },
   {

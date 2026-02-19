@@ -20,7 +20,12 @@ export const SECURITY_CONFIG = {
 
 export const APP_VERSION = '1.0.0';
 
+export const FEATURE_FLAGS = {
+  visaReadinessEnabled: true,
+} as const;
+
 export default {
   APP_VERSION,
   SECURITY_CONFIG,
+  FEATURE_FLAGS,
 };

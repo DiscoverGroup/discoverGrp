@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Star, ThumbsUp, Verified } from 'lucide-react';
 import { useAuth } from '../context/useAuth';
-
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+import { buildApiUrl } from '../config/apiBase';
 
 interface ReviewCategory {
   tourGuide: number;
@@ -74,7 +73,7 @@ export default function TourReviews({ tourSlug, tourTitle }: TourReviewsProps) {
 
   const fetchReviews = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/reviews/tour/${tourSlug}?sortBy=${sortBy}`);
+      const response = await fetch(buildApiUrl(`/api/reviews/tour/${tourSlug}?sortBy=${sortBy}`));
       if (response.ok) {
         const data = await response.json();
         setReviews(data.reviews);
@@ -90,7 +89,7 @@ export default function TourReviews({ tourSlug, tourTitle }: TourReviewsProps) {
   const checkReviewEligibility = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/reviews/user/eligibility/${tourSlug}`, {
+      const response = await fetch(buildApiUrl(`/api/reviews/user/eligibility/${tourSlug}`), {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -110,7 +109,7 @@ export default function TourReviews({ tourSlug, tourTitle }: TourReviewsProps) {
     setSubmitting(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/reviews`, {
+      const response = await fetch(buildApiUrl('/api/reviews'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -143,7 +142,7 @@ export default function TourReviews({ tourSlug, tourTitle }: TourReviewsProps) {
 
   const markHelpful = async (reviewId: string) => {
     try {
-      const response = await fetch(`${API_URL}/api/reviews/${reviewId}/helpful`, {
+      const response = await fetch(buildApiUrl(`/api/reviews/${reviewId}/helpful`), {
         method: 'PUT'
       });
       if (response.ok) {

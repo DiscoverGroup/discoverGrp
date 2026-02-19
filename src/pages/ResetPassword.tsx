@@ -3,8 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { motion } from 'framer-motion';
 import { Lock, Eye, EyeOff, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+import { buildApiUrl } from '../config/apiBase';
 
 export default function ResetPassword() {
   const [password, setPassword] = useState('');
@@ -54,7 +53,7 @@ export default function ResetPassword() {
     setError('');
     setSuccess(false);
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/reset-password/${token}`, {
+      const res = await fetch(buildApiUrl(`/auth/reset-password/${token}`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password }),
