@@ -86,7 +86,12 @@ export function requireAdmin(req: AuthenticatedRequest, res: Response, next: Nex
     return res.status(401).json({ error: 'Authentication required.' });
   }
   
-  const adminRoles = ['admin', 'superadmin'];
+  // Include all role name variants used across admin frontend and legacy seeds.
+  const adminRoles = [
+    'admin', 'superadmin',          // legacy names
+    'super_admin', 'administrator', // current primary names
+    'web_developer',                // dev role with full access
+  ];
   
   if (!adminRoles.includes(req.user.role)) {
     logger.warn(`Unauthorized admin access attempt by user: ${req.user.email} (role: ${req.user.role})`);
