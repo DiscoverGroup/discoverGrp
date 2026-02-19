@@ -23,6 +23,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Setup automatic token refresh and expiration check
     const cleanup = setupTokenRefresh(() => {
+      const hadSession = Boolean(localStorage.getItem("token") || localStorage.getItem("user"));
+      if (!hadSession) {
+        return;
+      }
+
       // Token expired or refresh failed
       console.log('Session expired, logging out');
       setUser(null);

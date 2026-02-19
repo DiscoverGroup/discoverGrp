@@ -5,6 +5,8 @@ const normalizePath = (path: string): string => {
   return path.startsWith('/') ? path : `/${path}`;
 };
 
+const RAILWAY_API_BASE = 'https://discovergroup-api-production.up.railway.app';
+
 export function getApiBaseUrl(): string {
   if (import.meta.env.DEV) {
     return '';
@@ -13,10 +15,18 @@ export function getApiBaseUrl(): string {
   const explicit = import.meta.env.VITE_API_BASE_URL?.trim();
 
   if (explicit) {
-    return trimTrailingSlash(explicit);
+    const normalized = trimTrailingSlash(explicit);
+
+    // Defensive override: old Render URL causes CORS 503 in production.
+    if (normalized.includes('discovergroup.onrender.com')) {
+      return RAILWAY_API_BASE;
+    }
+
+    return normalized;
   }
 
-  return '';
+  // Fallback to production API when no env variable is injected at build time.
+  return RAILWAY_API_BASE;
 }
 
 export function buildApiUrl(path: string): string {
