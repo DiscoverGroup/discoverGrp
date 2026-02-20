@@ -1,11 +1,14 @@
 import express from 'express';
 import VisaApplication from '../../models/VisaApplication';
-import { requireAuth, requireAdmin } from '../../middleware/auth';
+import { requireAuth, requireRole } from '../../middleware/auth';
+
+// Roles that can access visa application management
+const visaRoles = requireRole('super_admin', 'administrator', 'visa_department', 'web_developer');
 
 const router = express.Router();
 
 // GET /admin/visa-applications — list all visa applications
-router.get('/', requireAuth, requireAdmin, async (req, res) => {
+router.get('/', requireAuth, visaRoles, async (req, res) => {
   try {
     const applications = await VisaApplication.find().sort({ createdAt: -1 });
     res.json({ success: true, applications });
@@ -16,7 +19,7 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // GET /admin/visa-applications/:id — single application
-router.get('/:id', requireAuth, requireAdmin, async (req, res) => {
+router.get('/:id', requireAuth, visaRoles, async (req, res) => {
   try {
     const application = await VisaApplication.findById(req.params.id);
     if (!application) {
@@ -29,7 +32,7 @@ router.get('/:id', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // PATCH /admin/visa-applications/:id — update status or notes
-router.patch('/:id', requireAuth, requireAdmin, async (req, res) => {
+router.patch('/:id', requireAuth, visaRoles, async (req, res) => {
   try {
     const { status, notes, assignedTo } = req.body;
     const update: Record<string, unknown> = {};
@@ -52,7 +55,7 @@ router.patch('/:id', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // POST /admin/visa-applications — manually create (admin-entered)
-router.post('/', requireAuth, requireAdmin, async (req, res) => {
+router.post('/', requireAuth, visaRoles, async (req, res) => {
   try {
     const {
       completeName, passportNumber, civilStatus, contactNumber, emailAddress,
