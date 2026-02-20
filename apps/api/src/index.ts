@@ -223,7 +223,33 @@ app.get('/api/csrf-token', csrfProtection, getCsrfToken);
 // Apply CSRF protection to admin routes (state-changing operations)
 // Note: Conditionally applied - GET requests don't need CSRF
 app.use('/admin/', conditionalCsrfProtection);
-app.use('/api/', conditionalCsrfProtection);
+
+// For /api/ routes: skip CSRF on public (unauthenticated) endpoints.
+// CSRF is only relevant when the attacker can leverage an authenticated session;
+// public routes that don't use cookies are not vulnerable.
+const PUBLIC_API_PATHS = [
+  '/visa-applications',
+  '/bookings',
+  '/reviews',
+  '/favorites',
+  '/email',
+  '/tours',
+  '/countries',
+  '/promo-banners',
+  '/featured-videos',
+  '/homepage-settings',
+  '/security',
+  '/monitoring',
+  '/visa-readiness',
+];
+
+app.use('/api/', (req: Request, res: Response, next: NextFunction) => {
+  const isPublic = PUBLIC_API_PATHS.some(
+    p => req.path === p || req.path.startsWith(p + '/') || req.path.startsWith(p + '?')
+  );
+  if (isPublic) return next();
+  conditionalCsrfProtection(req, res, next);
+});
 
 // Apply audit logging to all admin routes
 app.use('/admin/', auditLog);
