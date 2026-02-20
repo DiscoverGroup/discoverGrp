@@ -5,6 +5,19 @@ import { requireAuth, AuthenticatedRequest } from '../../middleware/auth';
 
 const router = express.Router();
 
+// GET /api/reviews/approved - get all approved reviews (used by homepage)
+router.get('/approved', async (req, res) => {
+  try {
+    const reviews = await Review.find({ isApproved: true })
+      .sort({ createdAt: -1 })
+      .limit(50);
+    res.json(reviews);
+  } catch (error) {
+    console.error('Error fetching approved reviews:', error);
+    res.status(500).json({ error: 'Failed to fetch reviews' });
+  }
+});
+
 // GET /api/reviews/tour/:tourSlug - get reviews for a specific tour
 router.get('/tour/:tourSlug', async (req, res) => {
   try {

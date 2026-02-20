@@ -48,8 +48,8 @@ export default function DestinationCountry() {
       setError(null);
       
       try {
-        // Fetch country data from API
-        const countryData = await fetchCountryBySlug(countryParam);
+        // Fetch country data from API — normalize to lowercase slug (URL may carry capitalised name)
+        const countryData = await fetchCountryBySlug(countryParam.toLowerCase());
         setCountry(countryData);
         
         // Fetch tours
