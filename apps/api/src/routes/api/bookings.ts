@@ -147,8 +147,9 @@ router.post("/", async (req, res) => {
     // Auto-create a visa application record if visa assistance was requested
     if (visaAssistanceRequested) {
       try {
-        const count = await VisaApplication.countDocuments();
-        const applicationId = `VA-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
+        const year = new Date().getFullYear();
+        const randomSuffix = Math.random().toString(36).slice(2, 8).toUpperCase();
+        const applicationId = `VA-${year}-${randomSuffix}`;
         await VisaApplication.create({
           applicationId,
           applicationDate: new Date().toISOString().split('T')[0],
@@ -211,6 +212,45 @@ router.post("/", async (req, res) => {
   }
 });
 
+// GET /api/bookings/recent/notification - get most recent confirmed booking
+// NOTE: must be defined BEFORE /:bookingId to avoid 'recent' being matched as a param
+router.get("/recent/notification", async (req, res) => {
+  try {
+    const recentBooking = await Booking.findOne({ status: 'confirmed' })
+      .sort({ createdAt: -1 });
+    
+    if (!recentBooking) {
+      return res.json(null);
+    }
+
+    const bookingTime = new Date(recentBooking.createdAt);
+    const now = new Date();
+    const diffMinutes = Math.floor((now.getTime() - bookingTime.getTime()) / (1000 * 60));
+    
+    let timeAgo = '';
+    if (diffMinutes < 1) {
+      timeAgo = 'just now';
+    } else if (diffMinutes < 60) {
+      timeAgo = `${diffMinutes} min ago`;
+    } else if (diffMinutes < 1440) {
+      const hours = Math.floor(diffMinutes / 60);
+      timeAgo = `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    } else {
+      const days = Math.floor(diffMinutes / 1440);
+      timeAgo = `${days} day${days > 1 ? 's' : ''} ago`;
+    }
+
+    res.json({
+      customerName: recentBooking.customerName,
+      tourSlug: recentBooking.tourSlug,
+      timeAgo
+    });
+  } catch (err) {
+    console.error("Error fetching recent booking:", err);
+    res.status(500).json({ error: "Failed to fetch recent booking" });
+  }
+});
+
 // GET /api/bookings/:bookingId - get a specific booking by bookingId
 router.get("/:bookingId", async (req, res) => {
   try {
@@ -225,6 +265,35 @@ router.get("/:bookingId", async (req, res) => {
   } catch (err) {
     console.error("Error fetching booking:", err);
     res.status(500).json({ error: "Failed to fetch booking" });
+  }
+});
+
+// PATCH /api/bookings/:bookingId/payment - update payment details after successful payment
+router.patch("/:bookingId/payment", async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { paidAmount, paymentIntentId, status } = req.body;
+
+    const update: Record<string, unknown> = {};
+    if (paidAmount !== undefined) update.paidAmount = paidAmount;
+    if (paymentIntentId) update.paymentIntentId = paymentIntentId;
+    if (status) update.status = status;
+
+    const booking = await Booking.findOneAndUpdate(
+      { bookingId },
+      { $set: update },
+      { new: true }
+    );
+
+    if (!booking) {
+      return res.status(404).json({ error: "Booking not found" });
+    }
+
+    console.log(`💳 Updated payment for booking ${bookingId}:`, update);
+    res.json(booking);
+  } catch (err) {
+    console.error("Error updating payment:", err);
+    res.status(500).json({ error: "Failed to update payment" });
   }
 });
 
@@ -271,44 +340,6 @@ router.delete("/:bookingId", async (req, res) => {
   }
 });
 
-// GET /api/bookings/recent/notification - get most recent booking for notification
-router.get("/recent/notification", async (req, res) => {
-  try {
-    const recentBooking = await Booking.findOne({ status: 'confirmed' })
-      .sort({ createdAt: -1 })
-      .limit(1);
-    
-    if (!recentBooking) {
-      return res.json(null);
-    }
 
-    // Calculate time ago
-    const bookingTime = new Date(recentBooking.createdAt);
-    const now = new Date();
-    const diffMinutes = Math.floor((now.getTime() - bookingTime.getTime()) / (1000 * 60));
-    
-    let timeAgo = '';
-    if (diffMinutes < 1) {
-      timeAgo = 'just now';
-    } else if (diffMinutes < 60) {
-      timeAgo = `${diffMinutes} min ago`;
-    } else if (diffMinutes < 1440) {
-      const hours = Math.floor(diffMinutes / 60);
-      timeAgo = `${hours} hour${hours > 1 ? 's' : ''} ago`;
-    } else {
-      const days = Math.floor(diffMinutes / 1440);
-      timeAgo = `${days} day${days > 1 ? 's' : ''} ago`;
-    }
-
-    res.json({
-      customerName: recentBooking.customerName,
-      tourSlug: recentBooking.tourSlug,
-      timeAgo
-    });
-  } catch (err) {
-    console.error("Error fetching recent booking:", err);
-    res.status(500).json({ error: "Failed to fetch recent booking" });
-  }
-});
 
 export default router;

@@ -1,4 +1,5 @@
 import express, { Request, Response } from "express";
+import Booking from "../models/Booking";
 
 const router = express.Router();
 
@@ -410,15 +411,39 @@ router.post('/webhook', async (req: Request, res: Response) => {
 
     // Handle different event types
     switch (event.data?.attributes?.type) {
-      case 'payment.paid':
-        console.log('✅ Payment confirmed:', event.data.attributes.data.id);
-        // TODO: Update booking status in database
+      case 'payment.paid': {
+        const paymentData = event.data.attributes.data;
+        const meta = paymentData?.attributes?.metadata || {};
+        const bookingId = meta.bookingId;
+        const paidAmount = paymentData?.attributes?.amount
+          ? paymentData.attributes.amount / 100 // centavos → pesos
+          : undefined;
+        console.log('✅ Payment confirmed:', paymentData?.id, '| bookingId:', bookingId);
+        if (bookingId) {
+          const booking = await Booking.findOne({ bookingId });
+          if (booking) {
+            const updateFields: Record<string, unknown> = { status: 'confirmed' };
+            if (paidAmount !== undefined) updateFields.paidAmount = paidAmount;
+            if (paymentData?.id) updateFields.paymentIntentId = paymentData.id;
+            await Booking.findOneAndUpdate({ bookingId }, { $set: updateFields }, { new: true });
+            console.log('✅ Booking', bookingId, 'updated to confirmed');
+          } else {
+            console.warn('⚠️ Booking not found for bookingId:', bookingId);
+          }
+        }
         break;
-      
-      case 'payment.failed':
-        console.log('❌ Payment failed:', event.data.attributes.data.id);
-        // TODO: Update booking status in database
+      }
+      case 'payment.failed': {
+        const paymentData = event.data.attributes.data;
+        const meta = paymentData?.attributes?.metadata || {};
+        const bookingId = meta.bookingId;
+        console.log('❌ Payment failed:', paymentData?.id, '| bookingId:', bookingId);
+        if (bookingId) {
+          await Booking.findOneAndUpdate({ bookingId }, { $set: { status: 'payment_failed' } });
+          console.log('📝 Booking', bookingId, 'marked as payment_failed');
+        }
         break;
+      }
       
       case 'source.chargeable':
         console.log('⚡ Source chargeable:', event.data.attributes.data.id);

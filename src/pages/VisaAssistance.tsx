@@ -52,6 +52,7 @@ export default function VisaAssistance() {
         body: JSON.stringify({
           ...formData,
           destinationCountries: tourCountries.join(', '),
+          tourTitle: (location.state as VisaAssistanceProps & { tourTitle?: string } | null)?.tourTitle || '',
         }),
       });
       if (!res.ok) {

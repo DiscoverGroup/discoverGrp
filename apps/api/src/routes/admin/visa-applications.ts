@@ -64,8 +64,9 @@ router.post('/', requireAuth, requireAdmin, async (req, res) => {
       return res.status(400).json({ success: false, error: 'completeName is required' });
     }
 
-    const count = await VisaApplication.countDocuments();
-    const applicationId = `VA-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
+    const year = new Date().getFullYear();
+    const randomSuffix = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const applicationId = `VA-${year}-${randomSuffix}`;
 
     const application = await VisaApplication.create({
       applicationId,

@@ -11,6 +11,7 @@ import {
 } from "../../utils/paymentSecurity";
 import { paymentService } from "../../services/paymentService";
 import { getProviderStatus } from "../../services/providers";
+import { buildApiUrl } from "../../config/apiBase";
 
 const PaymentMethodSelector = lazy(async () => {
   const mod = await import("../../lib/payment-gateway");
@@ -106,7 +107,7 @@ export default function PaymentModal({
     }
   }, [booking, paymentAmount, userEmail, installmentPayment]);
 
-  const handlePaymentSuccess = useCallback((paymentId: string) => {
+  const handlePaymentSuccess = useCallback(async (paymentId: string) => {
     // Validate payment intent ID format
     if (!validatePaymentIntentId(paymentId)) {
       setError("Invalid payment confirmation. Please contact support.");
@@ -119,6 +120,21 @@ export default function PaymentModal({
     if (!duplicateCheck.allowed) {
       setError(duplicateCheck.error || "Duplicate payment detected");
       return;
+    }
+    
+    // Persist payment in MongoDB
+    try {
+      await fetch(buildApiUrl(`/api/bookings/${booking.bookingId}/payment`), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paidAmount: paymentAmount,
+          paymentIntentId: paymentId,
+          status: "confirmed",
+        }),
+      });
+    } catch (e) {
+      console.warn("⚠️ Could not update booking payment record:", e);
     }
     
     // Log successful payment

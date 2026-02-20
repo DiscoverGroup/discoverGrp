@@ -14,6 +14,7 @@ import type {
   PaymentTransaction,
   PaymentStatus,
 } from "../types/payment";
+import { buildApiUrl } from "../config/apiBase";
 
 class PaymentService {
   private providers: Map<PaymentProvider, IPaymentProvider> = new Map();
@@ -158,8 +159,7 @@ class PaymentService {
       // Update transaction status
       await this.updateTransactionStatus(
         event.paymentIntentId,
-        event.status,
-        event.metadata
+        event.status
       );
 
       // Handle specific events
@@ -188,21 +188,22 @@ class PaymentService {
   private async handlePaymentSuccess(event: PaymentWebhookEvent): Promise<void> {
     console.log(`✅ Payment succeeded:`, event.paymentIntentId);
 
-    // Update booking payment status
-    // In production, this would update your database
     if (event.metadata.bookingId) {
-      console.log(`📝 Updating booking ${event.metadata.bookingId} as paid`);
-      // TODO: Call your booking update API
-      // await updateBookingPayment(event.metadata.bookingId, {
-      //   paidAmount: event.amount,
-      //   paymentIntentId: event.paymentIntentId,
-      //   status: 'confirmed',
-      // });
+      try {
+        await fetch(buildApiUrl(`/api/bookings/${event.metadata.bookingId}/payment`), {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            paidAmount: event.amount,
+            paymentIntentId: event.paymentIntentId,
+            status: "confirmed",
+          }),
+        });
+        console.log(`📝 Booking ${event.metadata.bookingId} updated as confirmed`);
+      } catch (e) {
+        console.warn(`⚠️ Failed to update booking payment:`, e);
+      }
     }
-
-    // Send confirmation email
-    // TODO: Integrate with email service
-    // await sendPaymentConfirmationEmail(event.metadata.customerEmail, {...});
   }
 
   /**
@@ -243,9 +244,20 @@ class PaymentService {
       updatedAt: new Date(),
     };
 
-    // In production, store in database
-    console.log(`💾 Storing transaction:`, transaction.id);
-    // TODO: await db.transactions.create(transaction);
+    console.log(`💾 Transaction initiated:`, transaction.id);
+
+    // Persist paymentIntentId on the booking so the admin can track it
+    if (paymentIntent.metadata.bookingId) {
+      try {
+        await fetch(buildApiUrl(`/api/bookings/${paymentIntent.metadata.bookingId}/payment`), {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentIntentId: paymentIntent.id }),
+        });
+      } catch (e) {
+        console.warn(`⚠️ Could not store transaction on booking:`, e);
+      }
+    }
   }
 
   /**
@@ -255,16 +267,8 @@ class PaymentService {
     paymentIntentId: string,
     status: PaymentStatus
   ): Promise<void> {
-    console.log(`🔄 Updating transaction status:`, {
-      paymentIntentId,
-      status,
-    });
-
-    // In production, update database
-    // TODO: await db.transactions.update(
-    //   { paymentIntentId },
-    //   { status, updatedAt: new Date() }
-    // );
+    console.log(`🔄 Updating transaction status:`, { paymentIntentId, status });
+    // Status is updated on the booking by handlePaymentSuccess / handlePaymentFailure
   }
 
   /**
