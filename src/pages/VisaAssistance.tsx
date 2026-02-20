@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, Globe, Phone, Mail, Clock } from 'lucide-react';
+import { ArrowLeft, Globe, Phone, Mail, Clock } from 'lucide-react';
 
 interface VisaAssistanceProps {
   tourCountries?: string[];
@@ -14,74 +14,28 @@ export default function VisaAssistance() {
   const location = useLocation();
   const state = location.state as VisaAssistanceProps | null;
 
-  const [selectedCountry, setSelectedCountry] = useState<string>('');
-  const [visaType, setVisaType] = useState<string>('tourist');
-  const [customerInfo, setCustomerInfo] = useState({
-    name: state?.customerName || '',
-    email: state?.customerEmail || '',
-    phone: state?.customerPhone || '',
-    nationality: 'Filipino',
+  const [formData, setFormData] = useState({
+    completeName: state?.customerName || '',
+    passportNumber: '',
+    civilStatus: '',
+    companyName: '',
+    jobTitle: '',
+    companyLocation: '',
+    dateHiredOrStarted: '',
+    contactNumber: state?.customerPhone || '',
+    emailAddress: state?.customerEmail || '',
+    presentAddress: '',
+    travelHistory: '',
   });
-  const [documents, setDocuments] = useState({
-    passport: null as File | null,
-    photo: null as File | null,
-    bankStatement: null as File | null,
-    employmentCertificate: null as File | null,
-    itr: null as File | null,
-  });
-  const [urgency, setUrgency] = useState<string>('standard');
-  const [additionalServices, setAdditionalServices] = useState<string[]>([]);
 
-  const tourCountries = state?.tourCountries || ['France', 'Switzerland', 'Italy'];
+  const tourCountries = state?.tourCountries || [];
 
-  // Visa requirements information
-  // const visaRequirements = {
-  //   'Europe': {
-  //     type: 'Schengen Visa',
-  //     processingTime: '10-15 business days',
-  //     validity: '90 days within 180 days',
-  //     cost: 'PHP 4,500 - PHP 8,000',
-  //   },
-  //   'USA': {
-  //     type: 'B1/B2 Tourist Visa',
-  //     processingTime: '3-5 weeks',
-  //     validity: '10 years (multiple entry)',
-  //     cost: 'PHP 8,000 - PHP 15,000',
-  //   }
-  // };
-
-  const services = [
-    { id: 'document-review', name: 'Document Review & Checklist', price: 'PHP 1,500' },
-    { id: 'appointment-booking', name: 'Embassy Appointment Booking', price: 'PHP 2,000' },
-    { id: 'form-assistance', name: 'Visa Form Completion', price: 'PHP 2,500' },
-    { id: 'interview-prep', name: 'Interview Preparation', price: 'PHP 3,000' },
-    { id: 'expedited', name: 'Expedited Processing', price: 'PHP 5,000' },
-  ];
-
-  const handleFileUpload = (type: keyof typeof documents, file: File) => {
-    setDocuments(prev => ({ ...prev, [type]: file }));
-  };
-
-  const handleServiceToggle = (serviceId: string) => {
-    setAdditionalServices(prev => 
-      prev.includes(serviceId) 
-        ? prev.filter(id => id !== serviceId)
-        : [...prev, serviceId]
-    );
+  const handleChange = (field: keyof typeof formData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSubmitApplication = async () => {
-    // Here you would submit the visa assistance application
-    console.log('Visa assistance application:', {
-      customerInfo,
-      selectedCountry,
-      visaType,
-      documents,
-      urgency,
-      additionalServices
-    });
-    
-    // For now, show success and navigate back
+    console.log('Visa assistance application:', formData);
     alert('Visa assistance application submitted! We will contact you within 24 hours.');
     navigate(-1);
   };
@@ -120,227 +74,168 @@ export default function VisaAssistance() {
           </div>
         </div>
 
-        {/* Visa Information */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Visa Requirements</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-2">Europe (Schengen)</h3>
-              <div className="space-y-2 text-sm text-gray-900">
-                <p className="text-gray-900"><strong>Processing Time:</strong> 10-15 business days</p>
-                <p className="text-gray-900"><strong>Validity:</strong> 90 days within 180 days</p>
-                <p className="text-gray-900"><strong>Cost:</strong> PHP 4,500 - PHP 8,000</p>
-              </div>
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-2">USA</h3>
-              <div className="space-y-2 text-sm text-gray-900">
-                <p className="text-gray-900"><strong>Processing Time:</strong> 3-5 weeks</p>
-                <p className="text-gray-900"><strong>Validity:</strong> 10 years (multiple entry)</p>
-                <p className="text-gray-900"><strong>Cost:</strong> PHP 8,000 - PHP 15,000</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Application Form */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Visa Assistance Application</h2>
 
-          {/* Customer Information */}
-          <div className="mb-6">
-            <h3 className="font-semibold text-gray-900 mb-3">Your Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-5">
+            {/* Complete Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Complete Name <span className="text-red-500">*</span>
+              </label>
               <input
                 type="text"
-                placeholder="Full Name"
-                value={customerInfo.name}
-                onChange={(e) => setCustomerInfo(prev => ({ ...prev, name: e.target.value }))}
+                value={formData.completeName}
+                onChange={(e) => handleChange('completeName', e.target.value)}
+                placeholder="Enter your complete name"
                 className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
               />
+            </div>
+
+            {/* Passport Number */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Passport Number <span className="text-red-500">*</span>
+              </label>
               <input
-                type="email"
-                placeholder="Email Address"
-                value={customerInfo.email}
-                onChange={(e) => setCustomerInfo(prev => ({ ...prev, email: e.target.value }))}
+                type="text"
+                value={formData.passportNumber}
+                onChange={(e) => handleChange('passportNumber', e.target.value)}
+                placeholder="Enter your passport number"
                 className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
               />
-              <input
-                type="tel"
-                placeholder="Phone Number"
-                value={customerInfo.phone}
-                onChange={(e) => setCustomerInfo(prev => ({ ...prev, phone: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
-              />
+            </div>
+
+            {/* Civil Status */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Civil Status <span className="text-red-500">*</span>
+              </label>
               <select
-                value={customerInfo.nationality}
-                onChange={(e) => setCustomerInfo(prev => ({ ...prev, nationality: e.target.value }))}
+                value={formData.civilStatus}
+                onChange={(e) => handleChange('civilStatus', e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
               >
-                <option value="Filipino">Filipino</option>
-                <option value="Other">Other</option>
+                <option value="">Select civil status</option>
+                <option value="Single">Single</option>
+                <option value="Married">Married</option>
+                <option value="Widowed">Widowed</option>
+                <option value="Separated">Separated</option>
+                <option value="Divorced">Divorced</option>
               </select>
             </div>
-          </div>
 
-          {/* Destination Country */}
-          <div className="mb-6">
-            <h3 className="font-semibold text-gray-900 mb-3">Destination Country</h3>
-            <select
-              value={selectedCountry}
-              onChange={(e) => setSelectedCountry(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
-            >
-              <option value="">Select destination country</option>
-              {tourCountries.map(country => (
-                <option key={country} value={country}>{country}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Visa Type */}
-          <div className="mb-6">
-            <h3 className="font-semibold text-gray-900 mb-3">Visa Type</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <label className="flex items-center gap-2 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 text-gray-900">
-                <input
-                  type="radio"
-                  name="visaType"
-                  value="tourist"
-                  checked={visaType === 'tourist'}
-                  onChange={(e) => setVisaType(e.target.value)}
-                  className="text-blue-600"
-                />
-                <span>Tourist Visa</span>
+            {/* Name of Business/Company */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Name of Business/Company You Are Working For
               </label>
-              <label className="flex items-center gap-2 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 text-gray-900">
-                <input
-                  type="radio"
-                  name="visaType"
-                  value="business"
-                  checked={visaType === 'business'}
-                  onChange={(e) => setVisaType(e.target.value)}
-                  className="text-blue-600"
-                />
-                <span>Business Visa</span>
-              </label>
-              <label className="flex items-center gap-2 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 text-gray-900">
-                <input
-                  type="radio"
-                  name="visaType"
-                  value="transit"
-                  checked={visaType === 'transit'}
-                  onChange={(e) => setVisaType(e.target.value)}
-                  className="text-blue-600"
-                />
-                <span>Transit Visa</span>
-              </label>
+              <input
+                type="text"
+                value={formData.companyName}
+                onChange={(e) => handleChange('companyName', e.target.value)}
+                placeholder="Enter business or company name"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
+              />
             </div>
-          </div>
 
-          {/* Document Upload */}
-          <div className="mb-6">
-            <h3 className="font-semibold text-gray-900 mb-3">Required Documents</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Object.entries({
-                passport: 'Passport Copy',
-                photo: 'Passport Photo',
-                bankStatement: 'Bank Statement',
-                employmentCertificate: 'Employment Certificate',
-                itr: 'Income Tax Return (ITR)'
-              }).map(([key, label]) => (
-                <div key={key} className="border border-gray-300 rounded-lg p-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {label} *
-                  </label>
-                  <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleFileUpload(key as keyof typeof documents, file);
-                    }}
-                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                  />
-                  {documents[key as keyof typeof documents] && (
-                    <div className="flex items-center gap-2 mt-2 text-green-600">
-                      <CheckCircle size={16} />
-                      <span className="text-sm">File uploaded</span>
-                    </div>
-                  )}
-                </div>
-              ))}
+            {/* Position/Job Title */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Position/Job Title
+              </label>
+              <input
+                type="text"
+                value={formData.jobTitle}
+                onChange={(e) => handleChange('jobTitle', e.target.value)}
+                placeholder="Enter your position or job title"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
+              />
             </div>
-          </div>
 
-          {/* Processing Urgency */}
-          <div className="mb-6">
-            <h3 className="font-semibold text-gray-900 mb-3">Processing Urgency</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <label className="flex items-center gap-2 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 text-gray-900">
-                <input
-                  type="radio"
-                  name="urgency"
-                  value="standard"
-                  checked={urgency === 'standard'}
-                  onChange={(e) => setUrgency(e.target.value)}
-                  className="text-blue-600"
-                />
-                <div>
-                  <span className="font-medium">Standard</span>
-                  <p className="text-sm text-gray-600">10-15 business days</p>
-                </div>
+            {/* Location of Business/Company */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Location of Business/Company
               </label>
-              <label className="flex items-center gap-2 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 text-gray-900">
-                <input
-                  type="radio"
-                  name="urgency"
-                  value="rush"
-                  checked={urgency === 'rush'}
-                  onChange={(e) => setUrgency(e.target.value)}
-                  className="text-blue-600"
-                />
-                <div>
-                  <span className="font-medium">Rush</span>
-                  <p className="text-sm text-gray-600">5-7 business days (+PHP 3,000)</p>
-                </div>
-              </label>
-              <label className="flex items-center gap-2 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 text-gray-900">
-                <input
-                  type="radio"
-                  name="urgency"
-                  value="emergency"
-                  checked={urgency === 'emergency'}
-                  onChange={(e) => setUrgency(e.target.value)}
-                  className="text-blue-600"
-                />
-                <div>
-                  <span className="font-medium">Emergency</span>
-                  <p className="text-sm text-gray-600">3-5 business days (+PHP 5,000)</p>
-                </div>
-              </label>
+              <input
+                type="text"
+                value={formData.companyLocation}
+                onChange={(e) => handleChange('companyLocation', e.target.value)}
+                placeholder="Enter business or company location"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
+              />
             </div>
-          </div>
 
-          {/* Additional Services */}
-          <div className="mb-6">
-            <h3 className="font-semibold text-gray-900 mb-3">Additional Services</h3>
-            <div className="space-y-2">
-              {services.map(service => (
-                <label key={service.id} className="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 text-gray-900">
-                  <input
-                    type="checkbox"
-                    checked={additionalServices.includes(service.id)}
-                    onChange={() => handleServiceToggle(service.id)}
-                    className="text-blue-600 rounded"
-                  />
-                  <div className="flex-1">
-                    <span className="font-medium">{service.name}</span>
-                  </div>
-                  <span className="text-blue-600 font-semibold">{service.price}</span>
-                </label>
-              ))}
+            {/* Date Hired / Business Started */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Date When You Were Hired / Business Started
+              </label>
+              <input
+                type="date"
+                value={formData.dateHiredOrStarted}
+                onChange={(e) => handleChange('dateHiredOrStarted', e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
+              />
+            </div>
+
+            {/* Contact Number */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contact Number <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="tel"
+                value={formData.contactNumber}
+                onChange={(e) => handleChange('contactNumber', e.target.value)}
+                placeholder="Enter your contact number"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
+              />
+            </div>
+
+            {/* Email Address */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email Address <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                value={formData.emailAddress}
+                onChange={(e) => handleChange('emailAddress', e.target.value)}
+                placeholder="Enter your email address"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
+              />
+            </div>
+
+            {/* Present Address */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Present Address <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={formData.presentAddress}
+                onChange={(e) => handleChange('presentAddress', e.target.value)}
+                placeholder="Enter your present address"
+                rows={3}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white resize-none"
+              />
+            </div>
+
+            {/* Travel History */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Travel History
+              </label>
+              <p className="text-xs text-gray-500 mb-2">List the countries you have visited</p>
+              <textarea
+                value={formData.travelHistory}
+                onChange={(e) => handleChange('travelHistory', e.target.value)}
+                placeholder="e.g. Japan (2022), South Korea (2023), Singapore (2024)"
+                rows={4}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white resize-none"
+              />
             </div>
           </div>
         </div>
