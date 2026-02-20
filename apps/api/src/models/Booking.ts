@@ -47,6 +47,10 @@ export interface IBooking extends Document {
   travelInsuranceRequested?: boolean;
   travelInsuranceFee?: number;
   insurancePaxDetails?: Array<{name: string; birthday: string}>;
+  // Passport assistance fields
+  passportAssistanceRequested?: boolean;
+  passportAssistanceFee?: number;
+  passportPaxDetails?: Array<{name: string; birthday: string}>;
   visaReadinessScore?: number;
   visaReadinessStatus?: 'ready' | 'attention' | 'not_ready';
   visaReadinessSnapshot?: {
@@ -127,6 +131,10 @@ const BookingSchema = new Schema<IBooking>({
   travelInsuranceRequested: { type: Boolean, default: false },
   travelInsuranceFee: { type: Number, default: 0 },
   insurancePaxDetails: [{ name: { type: String }, birthday: { type: String } }],
+  // Passport assistance fields
+  passportAssistanceRequested: { type: Boolean, default: false },
+  passportAssistanceFee: { type: Number, default: 0 },
+  passportPaxDetails: [{ name: { type: String }, birthday: { type: String } }],
   visaReadinessScore: { type: Number },
   visaReadinessStatus: {
     type: String,

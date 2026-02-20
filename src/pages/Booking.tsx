@@ -168,6 +168,8 @@ export default function Booking(): JSX.Element {
   const [needsTravelInsurance, setNeedsTravelInsurance] = useState<boolean>(false);
   const [insurancePaxDetails, setInsurancePaxDetails] = useState<Array<{name: string; birthday: string}>>([]);
   const [visaPaxDetails, setVisaPaxDetails] = useState<Array<{name: string; birthday: string}>>([]);
+  const [needsPassportAssistance, setNeedsPassportAssistance] = useState<boolean>(false);
+  const [passportPaxDetails, setPassportPaxDetails] = useState<Array<{name: string; birthday: string}>>([]);
 
   // Philippine passport validation
   const validatePassport = (value: string): boolean => {
@@ -305,6 +307,8 @@ export default function Booking(): JSX.Element {
   const [VISA_ASSISTANCE_ORIGINAL, setVisaOriginal] = useState<number>(20000);
   const [INSURANCE_FEE, setInsuranceFee] = useState<number>(3000);
   const [INSURANCE_ORIGINAL, setInsuranceOriginal] = useState<number>(6000);
+  const [PASSPORT_ASSISTANCE_FEE, setPassportFee] = useState<number>(5000);
+  const [PASSPORT_ASSISTANCE_ORIGINAL, setPassportOriginal] = useState<number>(10000);
 
   useEffect(() => {
     async function fetchAddonSettings() {
@@ -315,12 +319,17 @@ export default function Booking(): JSX.Element {
           success: boolean;
           visa: { fee: number; originalFee: number };
           insurance: { fee: number; originalFee: number };
+          passport: { fee: number; originalFee: number };
         };
         if (data.success) {
           setVisaFee(data.visa.fee);
           setVisaOriginal(data.visa.originalFee);
           setInsuranceFee(data.insurance.fee);
           setInsuranceOriginal(data.insurance.originalFee);
+          if (data.passport) {
+            setPassportFee(data.passport.fee);
+            setPassportOriginal(data.passport.originalFee);
+          }
         }
       } catch {
         // silently use defaults
@@ -334,8 +343,9 @@ export default function Booking(): JSX.Element {
     () =>
       combinedPerPerson * Math.max(1, passengers) +
       (needsVisaAssistance ? VISA_ASSISTANCE_FEE * Math.max(1, passengers) : 0) +
-      (needsTravelInsurance ? INSURANCE_FEE * Math.max(1, passengers) : 0),
-    [combinedPerPerson, passengers, needsVisaAssistance, needsTravelInsurance, VISA_ASSISTANCE_FEE, INSURANCE_FEE]
+      (needsTravelInsurance ? INSURANCE_FEE * Math.max(1, passengers) : 0) +
+      (needsPassportAssistance ? PASSPORT_ASSISTANCE_FEE * Math.max(1, passengers) : 0),
+    [combinedPerPerson, passengers, needsVisaAssistance, needsTravelInsurance, needsPassportAssistance, VISA_ASSISTANCE_FEE, INSURANCE_FEE, PASSPORT_ASSISTANCE_FEE]
   );
   
   // Calculate payment amounts based on payment type with safety checks
@@ -544,6 +554,12 @@ export default function Booking(): JSX.Element {
           travelInsuranceFee: INSURANCE_FEE,
           insurancePaxDetails,
         }),
+        // Include passport assistance if requested
+        ...(needsPassportAssistance && {
+          passportAssistanceRequested: true,
+          passportAssistanceFee: PASSPORT_ASSISTANCE_FEE,
+          passportPaxDetails,
+        }),
         // Include appointment details if user requested one
         ...(wantsAppointment && {
           appointmentDate,
@@ -648,6 +664,12 @@ export default function Booking(): JSX.Element {
                 travelInsuranceRequested: true,
                 travelInsuranceFee: INSURANCE_FEE,
                 travelInsurancePax: insurancePaxDetails,
+              }),
+              // Include passport assistance details if requested
+              ...(needsPassportAssistance && {
+                passportAssistanceRequested: true,
+                passportAssistanceFee: PASSPORT_ASSISTANCE_FEE,
+                passportPaxDetails,
               }),
             }),
           });
@@ -1073,10 +1095,16 @@ export default function Booking(): JSX.Element {
                         setNeedsTravelInsurance={setNeedsTravelInsurance}
                         insurancePaxDetails={insurancePaxDetails}
                         setInsurancePaxDetails={setInsurancePaxDetails}
+                        needsPassportAssistance={needsPassportAssistance}
+                        setNeedsPassportAssistance={setNeedsPassportAssistance}
+                        passportPaxDetails={passportPaxDetails}
+                        setPassportPaxDetails={setPassportPaxDetails}
                         visaFeePerPax={VISA_ASSISTANCE_FEE}
                         visaOriginalPerPax={VISA_ASSISTANCE_ORIGINAL}
                         insuranceFeePerPax={INSURANCE_FEE}
                         insuranceOriginalPerPax={INSURANCE_ORIGINAL}
+                        passportFeePerPax={PASSPORT_ASSISTANCE_FEE}
+                        passportOriginalPerPax={PASSPORT_ASSISTANCE_ORIGINAL}
                         onBack={handleBack}
                         onNext={handleNext}
                       />

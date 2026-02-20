@@ -22,7 +22,14 @@ router.get('/addons', async (req, res) => {
         : (settings?.insuranceFee ?? 3000),
       discountEnabled: settings?.insuranceDiscountEnabled ?? true,
     };
-    res.json({ success: true, visa, insurance });
+    const passport = {
+      fee: settings?.passportAssistanceFee ?? 5000,
+      originalFee: settings?.passportDiscountEnabled
+        ? (settings?.passportAssistanceOriginalFee ?? 10000)
+        : (settings?.passportAssistanceFee ?? 5000),
+      discountEnabled: settings?.passportDiscountEnabled ?? true,
+    };
+    res.json({ success: true, visa, insurance, passport });
   } catch (error) {
     console.error('Error fetching public addon settings:', error);
     // Return safe defaults so the booking page always works
@@ -30,6 +37,7 @@ router.get('/addons', async (req, res) => {
       success: true,
       visa: { fee: 10000, originalFee: 20000, discountEnabled: true },
       insurance: { fee: 3000, originalFee: 6000, discountEnabled: true },
+      passport: { fee: 5000, originalFee: 10000, discountEnabled: true },
     });
   }
 });

@@ -30,10 +30,16 @@ interface BookingStepDocumentsProps {
   setNeedsTravelInsurance: (value: boolean) => void;
   insurancePaxDetails: InsurancePax[];
   setInsurancePaxDetails: (value: InsurancePax[]) => void;
+  needsPassportAssistance: boolean;
+  setNeedsPassportAssistance: (value: boolean) => void;
+  passportPaxDetails: InsurancePax[];
+  setPassportPaxDetails: (value: InsurancePax[]) => void;
   visaFeePerPax: number;
   visaOriginalPerPax: number;
   insuranceFeePerPax: number;
   insuranceOriginalPerPax: number;
+  passportFeePerPax: number;
+  passportOriginalPerPax: number;
   onBack: () => void;
   onNext: () => void;
 }
@@ -62,10 +68,16 @@ export default function BookingStepDocuments({
   setNeedsTravelInsurance,
   insurancePaxDetails,
   setInsurancePaxDetails,
+  needsPassportAssistance,
+  setNeedsPassportAssistance,
+  passportPaxDetails,
+  setPassportPaxDetails,
   visaFeePerPax,
   visaOriginalPerPax,
   insuranceFeePerPax,
   insuranceOriginalPerPax,
+  passportFeePerPax,
+  passportOriginalPerPax,
   onBack,
   onNext,
 }: BookingStepDocumentsProps) {
@@ -150,6 +162,12 @@ export default function BookingStepDocuments({
     setInsurancePaxDetails(updated);
   }
 
+  function updatePassportPax(index: number, field: keyof InsurancePax, value: string) {
+    const updated = [...passportPaxDetails];
+    updated[index] = { ...updated[index], [field]: value };
+    setPassportPaxDetails(updated);
+  }
+
   function handleInsuranceToggle(checked: boolean) {
     setNeedsTravelInsurance(checked);
     if (checked && insurancePaxDetails.length !== paxCount) {
@@ -157,6 +175,17 @@ export default function BookingStepDocuments({
       setInsurancePaxDetails(
         Array.from({ length: paxCount }, (_, i) =>
           insurancePaxDetails[i] ?? { name: "", birthday: "" }
+        )
+      );
+    }
+  }
+
+  function handlePassportAssistanceToggle(checked: boolean) {
+    setNeedsPassportAssistance(checked);
+    if (checked && passportPaxDetails.length !== paxCount) {
+      setPassportPaxDetails(
+        Array.from({ length: paxCount }, (_, i) =>
+          passportPaxDetails[i] ?? { name: "", birthday: "" }
         )
       );
     }
@@ -170,13 +199,18 @@ export default function BookingStepDocuments({
     !needsTravelInsurance ||
     insurancePaxDetails.slice(0, paxCount).every((p) => p.name.trim() && p.birthday);
 
+  const passportAssistanceComplete =
+    !needsPassportAssistance ||
+    passportPaxDetails.slice(0, paxCount).every((p) => p.name.trim() && p.birthday);
+
   const canContinue =
     !!passportUrl &&
     !passportUploading &&
     !visaUploading &&
     (hasVisa === true ? !!visaUrl && !!visaExpiry : hasVisa !== null) &&
     visaComplete &&
-    insuranceComplete;
+    insuranceComplete &&
+    passportAssistanceComplete;
 
   return (
     <section aria-labelledby="passport-visa-heading">
@@ -227,6 +261,83 @@ export default function BookingStepDocuments({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
               <span className="text-sm">Passport uploaded: {passportFile?.name}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Passport Assistance Add-on (always visible) ── */}
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-3">Passport Assistance <span className="text-sm font-normal text-gray-500">(Optional)</span></h3>
+        <div className={`rounded-xl border-2 p-5 transition-all ${needsPassportAssistance ? "border-orange-500 bg-orange-50" : "border-gray-200 bg-white"}`}>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">🛂</span>
+              <div>
+                <div className="font-bold text-gray-900 text-base">Passport Processing Assistance</div>
+                <p className="text-sm text-gray-600 mt-0.5">
+                  We handle your passport application or renewal — forms, requirements, appointments &amp; follow-ups.
+                </p>
+                <div className="flex items-baseline gap-2 mt-2">
+                  <span className="text-xl font-bold text-orange-700">
+                    PHP {passportFeePerPax.toLocaleString()}
+                  </span>
+                  <span className="text-sm text-gray-400 line-through">
+                    PHP {passportOriginalPerPax.toLocaleString()}
+                  </span>
+                  <span className="text-sm text-gray-500">/ pax</span>
+                  <span className="ml-1 px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700 rounded-full">
+                    {Math.round((1 - passportFeePerPax / passportOriginalPerPax) * 100)}% OFF
+                  </span>
+                </div>
+                {paxCount > 1 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Total for {paxCount} pax: PHP {(passportFeePerPax * paxCount).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer flex-shrink-0 mt-1">
+              <input
+                type="checkbox"
+                checked={needsPassportAssistance}
+                onChange={(e) => handlePassportAssistanceToggle(e.target.checked)}
+                className="w-5 h-5 rounded accent-orange-600"
+              />
+              <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Add to booking</span>
+            </label>
+          </div>
+          {needsPassportAssistance && (
+            <div className="mt-4 space-y-3">
+              <p className="text-sm font-medium text-gray-700">Passenger details for passport assistance:</p>
+              {Array.from({ length: paxCount }).map((_, i) => (
+                <div key={i} className="p-3 bg-white border border-orange-200 rounded-lg">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Passenger {i + 1}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Full Name *</label>
+                      <input
+                        type="text"
+                        placeholder="Full legal name"
+                        value={passportPaxDetails[i]?.name ?? ""}
+                        onChange={(e) => updatePassportPax(i, "name", e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Date of Birth *</label>
+                      <input
+                        type="date"
+                        value={passportPaxDetails[i]?.birthday ?? ""}
+                        onChange={(e) => updatePassportPax(i, "birthday", e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

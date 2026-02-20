@@ -70,6 +70,9 @@ router.get('/addons', requireAuth, requireAdmin, async (req, res) => {
       insuranceFee: 3000,
       insuranceOriginalFee: 6000,
       insuranceDiscountEnabled: true,
+      passportAssistanceFee: 5000,
+      passportAssistanceOriginalFee: 10000,
+      passportDiscountEnabled: true,
     };
     res.json({ success: true, settings: settings ?? defaults });
   } catch (error) {
@@ -88,6 +91,9 @@ router.put('/addons', requireAuth, requireAdmin, async (req, res) => {
       insuranceFee,
       insuranceOriginalFee,
       insuranceDiscountEnabled,
+      passportAssistanceFee,
+      passportAssistanceOriginalFee,
+      passportDiscountEnabled,
     } = req.body as {
       visaAssistanceFee?: number;
       visaAssistanceOriginalFee?: number;
@@ -95,6 +101,9 @@ router.put('/addons', requireAuth, requireAdmin, async (req, res) => {
       insuranceFee?: number;
       insuranceOriginalFee?: number;
       insuranceDiscountEnabled?: boolean;
+      passportAssistanceFee?: number;
+      passportAssistanceOriginalFee?: number;
+      passportDiscountEnabled?: boolean;
     };
 
     const update: Partial<{
@@ -104,6 +113,9 @@ router.put('/addons', requireAuth, requireAdmin, async (req, res) => {
       insuranceFee: number;
       insuranceOriginalFee: number;
       insuranceDiscountEnabled: boolean;
+      passportAssistanceFee: number;
+      passportAssistanceOriginalFee: number;
+      passportDiscountEnabled: boolean;
     }> = {};
 
     if (typeof visaAssistanceFee === 'number') update.visaAssistanceFee = visaAssistanceFee;
@@ -112,6 +124,9 @@ router.put('/addons', requireAuth, requireAdmin, async (req, res) => {
     if (typeof insuranceFee === 'number') update.insuranceFee = insuranceFee;
     if (typeof insuranceOriginalFee === 'number') update.insuranceOriginalFee = insuranceOriginalFee;
     if (typeof insuranceDiscountEnabled === 'boolean') update.insuranceDiscountEnabled = insuranceDiscountEnabled;
+    if (typeof passportAssistanceFee === 'number') update.passportAssistanceFee = passportAssistanceFee;
+    if (typeof passportAssistanceOriginalFee === 'number') update.passportAssistanceOriginalFee = passportAssistanceOriginalFee;
+    if (typeof passportDiscountEnabled === 'boolean') update.passportDiscountEnabled = passportDiscountEnabled;
 
     const settings = await Settings.findOneAndUpdate(
       { key: 'global' },

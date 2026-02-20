@@ -42,6 +42,9 @@ export async function createBooking(bookingData: {
   travelInsuranceRequested?: boolean;
   travelInsuranceFee?: number;
   insurancePaxDetails?: Array<{name: string; birthday: string}>;
+  passportAssistanceRequested?: boolean;
+  passportAssistanceFee?: number;
+  passportPaxDetails?: Array<{name: string; birthday: string}>;
   passportUrl?: string;
   visaUrl?: string;
 }): Promise<Booking> {
@@ -49,7 +52,8 @@ export async function createBooking(bookingData: {
   const baseTotalAmount = bookingData.perPerson * bookingData.passengers;
   const visaFee = bookingData.visaAssistanceRequested ? (bookingData.visaAssistanceFee ?? 10000) * bookingData.passengers : 0;
   const insuranceFee = bookingData.travelInsuranceRequested ? (bookingData.travelInsuranceFee ?? 3000) * bookingData.passengers : 0;
-  const totalAmount = baseTotalAmount + visaFee + insuranceFee;
+  const passportFee = bookingData.passportAssistanceRequested ? (bookingData.passportAssistanceFee ?? 5000) * bookingData.passengers : 0;
+  const totalAmount = baseTotalAmount + visaFee + insuranceFee + passportFee;
   const paidAmount = bookingData.paymentType === 'full' 
     ? totalAmount 
     : Math.round(totalAmount * 0.3); // 30% downpayment
@@ -81,6 +85,9 @@ export async function createBooking(bookingData: {
     travelInsuranceRequested: bookingData.travelInsuranceRequested || false,
     travelInsuranceFee: bookingData.travelInsuranceRequested ? (bookingData.travelInsuranceFee ?? 3000) : 0,
     insurancePaxDetails: bookingData.insurancePaxDetails || [],
+    passportAssistanceRequested: bookingData.passportAssistanceRequested || false,
+    passportAssistanceFee: bookingData.passportAssistanceRequested ? (bookingData.passportAssistanceFee ?? 5000) : 0,
+    passportPaxDetails: bookingData.passportPaxDetails || [],
     passportUrl: bookingData.passportUrl || undefined,
     visaUrl: bookingData.visaUrl || undefined,
   };

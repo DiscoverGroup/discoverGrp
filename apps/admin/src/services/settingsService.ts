@@ -40,6 +40,9 @@ export interface AddonSettings {
   insuranceFee: number;
   insuranceOriginalFee: number;
   insuranceDiscountEnabled: boolean;
+  passportAssistanceFee: number;
+  passportAssistanceOriginalFee: number;
+  passportDiscountEnabled: boolean;
 }
 
 export async function getAddonSettings(): Promise<AddonSettings> {

@@ -9,6 +9,10 @@ export interface ISettings extends Document {
   insuranceFee: number;
   insuranceOriginalFee: number;
   insuranceDiscountEnabled: boolean;
+  // Passport assistance pricing
+  passportAssistanceFee: number;
+  passportAssistanceOriginalFee: number;
+  passportDiscountEnabled: boolean;
 }
 
 const SettingsSchema = new Schema<ISettings>(
@@ -22,6 +26,10 @@ const SettingsSchema = new Schema<ISettings>(
     insuranceFee: { type: Number, default: 3000 },
     insuranceOriginalFee: { type: Number, default: 6000 },
     insuranceDiscountEnabled: { type: Boolean, default: true },
+    // Passport assistance pricing
+    passportAssistanceFee: { type: Number, default: 5000 },
+    passportAssistanceOriginalFee: { type: Number, default: 10000 },
+    passportDiscountEnabled: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

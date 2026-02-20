@@ -157,6 +157,9 @@ const Settings: React.FC = () => {
     insuranceFee: 3000,
     insuranceOriginalFee: 6000,
     insuranceDiscountEnabled: true,
+    passportAssistanceFee: 5000,
+    passportAssistanceOriginalFee: 10000,
+    passportDiscountEnabled: true,
   });
   const [addonSaving, setAddonSaving] = useState(false);
   const [addonSaved, setAddonSaved] = useState(false);
@@ -1409,6 +1412,80 @@ const Settings: React.FC = () => {
             <CheckCircle className="h-4 w-4 flex-shrink-0" />
             <span>
               Showing <strong>{Math.round((1 - addonSettings.insuranceFee / addonSettings.insuranceOriginalFee) * 100)}% OFF</strong> badge — customers pay PHP {addonSettings.insuranceFee.toLocaleString()} instead of PHP {addonSettings.insuranceOriginalFee.toLocaleString()}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Passport Assistance */}
+      <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5">
+        <div className="flex items-center gap-3 border-b pb-4">
+          <div className="p-2 bg-orange-50 rounded-lg">
+            <DollarSign className="h-5 w-5 text-orange-600" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900">Passport Assistance</h3>
+            <p className="text-xs text-gray-500">Charged per passenger who opts in</p>
+          </div>
+        </div>
+
+        {/* Discount toggle */}
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-700">Show Discount Badge</p>
+            <p className="text-xs text-gray-500">
+              When ON, original price is shown as strikethrough and a % OFF badge appears.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAddonSettings(p => ({ ...p, passportDiscountEnabled: !p.passportDiscountEnabled }))}
+            className="flex items-center gap-2"
+          >
+            {addonSettings.passportDiscountEnabled ? (
+              <ToggleRight className="h-8 w-8 text-green-500" />
+            ) : (
+              <ToggleLeft className="h-8 w-8 text-gray-400" />
+            )}
+            <span className={`text-sm font-semibold ${addonSettings.passportDiscountEnabled ? 'text-green-600' : 'text-gray-400'}`}>
+              {addonSettings.passportDiscountEnabled ? 'ON' : 'OFF'}
+            </span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Discounted Price (PHP) <span className="text-gray-400 font-normal">— what customers pay</span>
+            </label>
+            <input
+              type="number"
+              min={0}
+              value={addonSettings.passportAssistanceFee}
+              onChange={e => setAddonSettings(p => ({ ...p, passportAssistanceFee: Number(e.target.value) }))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Original Price (PHP) <span className="text-gray-400 font-normal">— shown as strikethrough</span>
+            </label>
+            <input
+              type="number"
+              min={0}
+              disabled={!addonSettings.passportDiscountEnabled}
+              value={addonSettings.passportAssistanceOriginalFee}
+              onChange={e => setAddonSettings(p => ({ ...p, passportAssistanceOriginalFee: Number(e.target.value) }))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-400"
+            />
+          </div>
+        </div>
+
+        {addonSettings.passportDiscountEnabled && addonSettings.passportAssistanceOriginalFee > addonSettings.passportAssistanceFee && (
+          <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+            <CheckCircle className="h-4 w-4 flex-shrink-0" />
+            <span>
+              Showing <strong>{Math.round((1 - addonSettings.passportAssistanceFee / addonSettings.passportAssistanceOriginalFee) * 100)}% OFF</strong> badge — customers pay PHP {addonSettings.passportAssistanceFee.toLocaleString()} instead of PHP {addonSettings.passportAssistanceOriginalFee.toLocaleString()}
             </span>
           </div>
         )}
