@@ -52,7 +52,7 @@ export async function fetchCsrfToken(): Promise<string> {
     
     return csrfToken;
   } catch (error) {
-    if (error.name === 'AbortError') {
+    if (error instanceof Error && error.name === 'AbortError') {
       console.error('CSRF token fetch timed out - API server may be sleeping');
     } else {
       console.error('Failed to fetch CSRF token:', error);

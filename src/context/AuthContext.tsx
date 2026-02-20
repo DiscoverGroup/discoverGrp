@@ -12,7 +12,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const authData = validateStoredAuth();
     
     if (authData) {
-      setUser(authData.user);
+      setUser(authData.user as unknown as User);
     } else {
       // Clear any stale data
       localStorage.removeItem("user");

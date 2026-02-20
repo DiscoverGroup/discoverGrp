@@ -19,6 +19,40 @@ import {
   Globe
 } from 'lucide-react';
 import { getAdminApiBaseUrl } from '../config/apiBase';
+import FileUpload from '../components/FileUpload';
+import { HomepageUploads } from '../utils/uploadHelpers';
+
+function extractFilePathFromUrl(url: string, bucket: string): string | null {
+  if (!url || url.startsWith('/') || !bucket) return null;
+  try {
+    return new URL(url).pathname.replace(/^\//, '');
+  } catch {
+    return null;
+  }
+}
+
+async function deleteFile(_bucket: string, path: string): Promise<void> {
+  const token = localStorage.getItem('token');
+  await fetch(`${getAdminApiBaseUrl()}/api/upload/delete`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ path }),
+  });
+}
+
+async function uploadLogo(
+  file: File,
+  onProgress: (progress: number) => void
+): Promise<{ success: boolean; url?: string; error?: string }> {
+  try {
+    onProgress(0);
+    const url = await HomepageUploads.uploadLogo(file);
+    onProgress(100);
+    return { success: true, url };
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : 'Upload failed' };
+  }
+}
 
 interface HomepageSettings {
   logo: {

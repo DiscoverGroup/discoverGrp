@@ -55,6 +55,8 @@ export default function PaymentModal({
   const [step, setStep] = useState<"select" | "pay">("select");
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [, setPaymentFingerprint] = useState<string>('');
+  const [, setPaymentRedirectUrl] = useState<string>('');
 
   // Get provider status
   const providerStatus = useMemo(() => getProviderStatus(), []);
