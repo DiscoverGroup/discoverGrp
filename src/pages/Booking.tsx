@@ -165,6 +165,7 @@ export default function Booking(): JSX.Element {
   const [needsVisaAssistance, setNeedsVisaAssistance] = useState<boolean>(false);
   const [needsTravelInsurance, setNeedsTravelInsurance] = useState<boolean>(false);
   const [insurancePaxDetails, setInsurancePaxDetails] = useState<Array<{name: string; birthday: string}>>([]);
+  const [visaPaxDetails, setVisaPaxDetails] = useState<Array<{name: string; birthday: string}>>([]);
 
   // Philippine passport validation
   const validatePassport = (value: string): boolean => {
@@ -503,6 +504,7 @@ export default function Booking(): JSX.Element {
         ...(needsVisaAssistance && {
           visaAssistanceRequested: true,
           visaAssistanceFee: VISA_ASSISTANCE_FEE,
+          visaPaxDetails,
         }),
         // Include travel insurance if requested
         ...(needsTravelInsurance && {
@@ -607,6 +609,7 @@ export default function Booking(): JSX.Element {
               ...(needsVisaAssistance && {
                 visaAssistanceRequested: true,
                 visaAssistanceFee: VISA_ASSISTANCE_FEE,
+                visaPaxDetails,
               }),
               // Include travel insurance details if requested
               ...(needsTravelInsurance && {
@@ -1028,6 +1031,8 @@ export default function Booking(): JSX.Element {
                         setVisaExpiry={setVisaExpiry}
                         needsVisaAssistance={needsVisaAssistance}
                         setNeedsVisaAssistance={setNeedsVisaAssistance}
+                        visaPaxDetails={visaPaxDetails}
+                        setVisaPaxDetails={setVisaPaxDetails}
                         needsTravelInsurance={needsTravelInsurance}
                         setNeedsTravelInsurance={setNeedsTravelInsurance}
                         insurancePaxDetails={insurancePaxDetails}
@@ -1036,9 +1041,6 @@ export default function Booking(): JSX.Element {
                         visaOriginalPerPax={VISA_ASSISTANCE_ORIGINAL}
                         insuranceFeePerPax={INSURANCE_FEE}
                         insuranceOriginalPerPax={INSURANCE_ORIGINAL}
-                        customerName={customerName}
-                        customerEmail={customerEmail}
-                        customerPhone={customerPhone}
                         onBack={handleBack}
                         onNext={handleNext}
                       />

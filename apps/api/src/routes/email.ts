@@ -25,6 +25,7 @@ interface BookingEmailRequest {
   paymentGateway?: string;
   visaAssistanceRequested?: boolean;
   visaAssistanceFee?: number;
+  visaPaxDetails?: Array<{name: string; birthday: string}>;
   travelInsuranceRequested?: boolean;
   travelInsuranceFee?: number;
   travelInsurancePax?: Array<{name: string; birthday: string}>;
@@ -55,6 +56,7 @@ router.post('/send-booking-email', async (req: Request, res: Response) => {
       paymentGateway,
       visaAssistanceRequested,
       visaAssistanceFee,
+      visaPaxDetails,
       travelInsuranceRequested,
       travelInsuranceFee,
       travelInsurancePax,
@@ -99,6 +101,7 @@ router.post('/send-booking-email', async (req: Request, res: Response) => {
       paymentGateway,
       visaAssistanceRequested,
       visaAssistanceFee,
+      visaPaxDetails,
       travelInsuranceRequested,
       travelInsuranceFee,
       travelInsurancePax,

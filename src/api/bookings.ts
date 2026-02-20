@@ -38,6 +38,7 @@ export async function createBooking(bookingData: {
   installmentPlan?: unknown;
   visaAssistanceRequested?: boolean;
   visaAssistanceFee?: number;
+  visaPaxDetails?: Array<{name: string; birthday: string}>;
   travelInsuranceRequested?: boolean;
   travelInsuranceFee?: number;
   insurancePaxDetails?: Array<{name: string; birthday: string}>;
@@ -74,6 +75,7 @@ export async function createBooking(bookingData: {
     customRoutes: bookingData.customRoutes || [],
     visaAssistanceRequested: bookingData.visaAssistanceRequested || false,
     visaAssistanceFee: bookingData.visaAssistanceRequested ? (bookingData.visaAssistanceFee ?? 10000) : 0,
+    visaPaxDetails: bookingData.visaPaxDetails || [],
     travelInsuranceRequested: bookingData.travelInsuranceRequested || false,
     travelInsuranceFee: bookingData.travelInsuranceRequested ? (bookingData.travelInsuranceFee ?? 3000) : 0,
     insurancePaxDetails: bookingData.insurancePaxDetails || [],

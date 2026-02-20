@@ -47,6 +47,7 @@ interface BookingDetails {
   // Visa assistance fields
   visaAssistanceRequested?: boolean;
   visaAssistanceFee?: number;
+  visaPaxDetails?: Array<{name: string; birthday: string}>;
   visaDocumentsProvided?: boolean;
   // Travel insurance fields
   travelInsuranceRequested?: boolean;
@@ -203,6 +204,10 @@ const generateBookingConfirmationEmail = (booking: BookingDetails): string => {
         <div class="booking-card" style="border-left: 4px solid #3b82f6;">
             <h3>🛂 Visa Assistance Included</h3>
             <p>Your booking includes our <strong>Visa Assistance Service</strong> (PHP ${(booking.visaAssistanceFee ?? 10000).toLocaleString()}/pax). Our visa team will contact you to guide you through the required documents and application process.</p>
+            ${booking.visaPaxDetails && booking.visaPaxDetails.length > 0 ? `
+            <ul style="margin-top:10px; padding-left:16px;">
+              ${booking.visaPaxDetails.map((p: {name: string; birthday: string}) => `<li><strong>${p.name}</strong> — DOB: ${p.birthday}</li>`).join('')}
+            </ul>` : ''}
             <p style="margin-top:8px;">For questions, email <a href="mailto:visa@discovergroup.com">visa@discovergroup.com</a>.</p>
         </div>` : ''}
         ${booking.travelInsuranceRequested ? `
@@ -396,6 +401,7 @@ export const sendBookingConfirmationEmail = async (booking: BookingDetails): Pro
         // Visa assistance data
         visaAssistanceRequested: booking.visaAssistanceRequested || false,
         visaAssistanceFee: booking.visaAssistanceRequested ? formatCurrency(booking.visaAssistanceFee ?? 10000) : undefined,
+        visaPaxDetails: booking.visaPaxDetails || [],
         visaDocumentsProvided: booking.visaDocumentsProvided || false,
         travelInsuranceRequested: booking.travelInsuranceRequested || false,
         travelInsuranceFee: booking.travelInsuranceRequested ? formatCurrency(booking.travelInsuranceFee ?? 3000) : undefined,

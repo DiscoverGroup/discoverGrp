@@ -19,6 +19,8 @@ interface BookingStepDocumentsProps {
   setVisaExpiry: (value: string) => void;
   needsVisaAssistance: boolean;
   setNeedsVisaAssistance: (value: boolean) => void;
+  visaPaxDetails: InsurancePax[];
+  setVisaPaxDetails: (value: InsurancePax[]) => void;
   needsTravelInsurance: boolean;
   setNeedsTravelInsurance: (value: boolean) => void;
   insurancePaxDetails: InsurancePax[];
@@ -27,9 +29,6 @@ interface BookingStepDocumentsProps {
   visaOriginalPerPax: number;
   insuranceFeePerPax: number;
   insuranceOriginalPerPax: number;
-  customerName: string;
-  customerEmail: string;
-  customerPhone: string;
   onBack: () => void;
   onNext: () => void;
 }
@@ -48,6 +47,8 @@ export default function BookingStepDocuments({
   setVisaExpiry,
   needsVisaAssistance,
   setNeedsVisaAssistance,
+  visaPaxDetails,
+  setVisaPaxDetails,
   needsTravelInsurance,
   setNeedsTravelInsurance,
   insurancePaxDetails,
@@ -60,6 +61,23 @@ export default function BookingStepDocuments({
   onNext,
 }: BookingStepDocumentsProps) {
   const paxCount = Math.max(1, passengers);
+
+  function updateVisaPax(index: number, field: keyof InsurancePax, value: string) {
+    const updated = [...visaPaxDetails];
+    updated[index] = { ...updated[index], [field]: value };
+    setVisaPaxDetails(updated);
+  }
+
+  function handleVisaToggle(checked: boolean) {
+    setNeedsVisaAssistance(checked);
+    if (checked && visaPaxDetails.length !== paxCount) {
+      setVisaPaxDetails(
+        Array.from({ length: paxCount }, (_, i) =>
+          visaPaxDetails[i] ?? { name: "", birthday: "" }
+        )
+      );
+    }
+  }
 
   function updateInsurancePax(index: number, field: keyof InsurancePax, value: string) {
     const updated = [...insurancePaxDetails];
@@ -79,6 +97,10 @@ export default function BookingStepDocuments({
     }
   }
 
+  const visaComplete =
+    !needsVisaAssistance ||
+    visaPaxDetails.slice(0, paxCount).every((p) => p.name.trim() && p.birthday);
+
   const insuranceComplete =
     !needsTravelInsurance ||
     insurancePaxDetails.slice(0, paxCount).every((p) => p.name.trim() && p.birthday);
@@ -86,6 +108,7 @@ export default function BookingStepDocuments({
   const canContinue =
     !!passportFile &&
     (hasVisa === true ? !!visaFile && !!visaExpiry : hasVisa !== null) &&
+    visaComplete &&
     insuranceComplete;
 
   return (
@@ -220,16 +243,43 @@ export default function BookingStepDocuments({
                 <input
                   type="checkbox"
                   checked={needsVisaAssistance}
-                  onChange={(e) => setNeedsVisaAssistance(e.target.checked)}
+                  onChange={(e) => handleVisaToggle(e.target.checked)}
                   className="w-5 h-5 rounded accent-blue-600"
                 />
                 <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Add to booking</span>
               </label>
             </div>
             {needsVisaAssistance && (
-              <div className="mt-3 flex items-center gap-2 p-3 bg-blue-100 rounded-lg text-blue-800 text-sm">
-                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                Visa assistance added! Our team will contact you with next steps.
+              <div className="mt-4 space-y-3">
+                <p className="text-sm font-medium text-gray-700">Passenger details for visa application:</p>
+                {Array.from({ length: paxCount }).map((_, i) => (
+                  <div key={i} className="p-3 bg-white border border-blue-200 rounded-lg">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Passenger {i + 1}</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Full Name *</label>
+                        <input
+                          type="text"
+                          placeholder="Full legal name"
+                          value={visaPaxDetails[i]?.name ?? ""}
+                          onChange={(e) => updateVisaPax(i, "name", e.target.value)}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Date of Birth *</label>
+                        <input
+                          type="date"
+                          value={visaPaxDetails[i]?.birthday ?? ""}
+                          onChange={(e) => updateVisaPax(i, "birthday", e.target.value)}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
             {!needsVisaAssistance && (

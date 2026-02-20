@@ -54,10 +54,14 @@ router.post("/", async (req, res) => {
       appointmentPurpose,
       customRoutes,
       visaAssistanceRequested,
+      visaPaxDetails,
       visaDocumentsProvided,
       visaDestinationCountries,
       visaAssistanceStatus,
       visaAssistanceNotes,
+      travelInsuranceRequested,
+      travelInsuranceFee,
+      insurancePaxDetails,
       nationality
     } = req.body;
 
@@ -133,10 +137,15 @@ router.post("/", async (req, res) => {
       appointmentPurpose,
       customRoutes: customRoutes || [],
       visaAssistanceRequested: visaAssistanceRequested || false,
+      visaAssistanceFee: visaAssistanceRequested ? 10000 : 0,
+      visaPaxDetails: visaPaxDetails || [],
       visaDocumentsProvided: visaDocumentsProvided || false,
       visaDestinationCountries,
       visaAssistanceStatus: visaAssistanceRequested ? (visaAssistanceStatus || 'pending') : 'not-needed',
       visaAssistanceNotes,
+      travelInsuranceRequested: travelInsuranceRequested || false,
+      travelInsuranceFee: travelInsuranceRequested ? (travelInsuranceFee ?? 3000) : 0,
+      insurancePaxDetails: insurancePaxDetails || [],
       visaReadinessScore,
       visaReadinessStatus,
       visaReadinessSnapshot
@@ -189,10 +198,15 @@ router.post("/", async (req, res) => {
         appointmentPurpose,
         customRoutes: customRoutes || [],
         visaAssistanceRequested: visaAssistanceRequested || false,
+        visaAssistanceFee: visaAssistanceRequested ? 10000 : undefined,
+        visaPaxDetails: visaPaxDetails || [],
         visaDocumentsProvided: visaDocumentsProvided || false,
         visaDestinationCountries,
         visaAssistanceStatus: visaAssistanceRequested ? (visaAssistanceStatus || 'pending') : 'not-needed',
-        visaAssistanceNotes
+        visaAssistanceNotes,
+        travelInsuranceRequested: travelInsuranceRequested || false,
+        travelInsuranceFee: travelInsuranceRequested ? (travelInsuranceFee ?? 3000) : undefined,
+        travelInsurancePax: insurancePaxDetails || [],
       });
 
       if (emailResult.success) {

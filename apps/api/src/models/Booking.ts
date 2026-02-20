@@ -35,10 +35,16 @@ export interface IBooking extends Document {
   customRoutes?: ICustomRoute[]; // Custom routes added to base tour
   // Visa assistance fields
   visaAssistanceRequested?: boolean;
+  visaAssistanceFee?: number;
+  visaPaxDetails?: Array<{name: string; birthday: string}>;
   visaDocumentsProvided?: boolean;
   visaDestinationCountries?: string;
   visaAssistanceStatus?: 'pending' | 'in-progress' | 'completed' | 'not-needed';
   visaAssistanceNotes?: string;
+  // Travel insurance fields
+  travelInsuranceRequested?: boolean;
+  travelInsuranceFee?: number;
+  insurancePaxDetails?: Array<{name: string; birthday: string}>;
   visaReadinessScore?: number;
   visaReadinessStatus?: 'ready' | 'attention' | 'not_ready';
   visaReadinessSnapshot?: {
@@ -103,6 +109,8 @@ const BookingSchema = new Schema<IBooking>({
   }],
   // Visa assistance fields
   visaAssistanceRequested: { type: Boolean, default: false },
+  visaAssistanceFee: { type: Number, default: 0 },
+  visaPaxDetails: [{ name: { type: String }, birthday: { type: String } }],
   visaDocumentsProvided: { type: Boolean, default: false },
   visaDestinationCountries: { type: String },
   visaAssistanceStatus: { 
@@ -111,6 +119,10 @@ const BookingSchema = new Schema<IBooking>({
     default: 'not-needed'
   },
   visaAssistanceNotes: { type: String },
+  // Travel insurance fields
+  travelInsuranceRequested: { type: Boolean, default: false },
+  travelInsuranceFee: { type: Number, default: 0 },
+  insurancePaxDetails: [{ name: { type: String }, birthday: { type: String } }],
   visaReadinessScore: { type: Number },
   visaReadinessStatus: {
     type: String,
