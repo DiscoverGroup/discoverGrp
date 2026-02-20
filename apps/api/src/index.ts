@@ -28,6 +28,7 @@ import publicToursRouter from "./routes/public/tours";
 import emailRouter from "./routes/email";
 import authRouter from "./routes/auth";
 import { connectDB } from "./db";
+import { seedDemoAccounts } from "./utils/seedDemoAccounts";
 import path from "path";
 import uploadsRouter from "./routes/uploads";
 import uploadRouter from "./routes/upload";
@@ -300,6 +301,7 @@ async function initializeServer() {
     // Connect to database before starting server
     await connectDB();
     logger.info("✅ Database connection successful");
+    await seedDemoAccounts();
     
     const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
     app.listen(PORT, '0.0.0.0', () => {
