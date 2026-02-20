@@ -1,6 +1,7 @@
 
 import express from "express";
 import Booking from "../../models/Booking";
+import VisaApplication from "../../models/VisaApplication";
 import { sendBookingConfirmationEmail } from "../../services/emailService";
 import { evaluateVisaReadiness } from "../../services/visa-readiness";
 
@@ -142,6 +143,30 @@ router.post("/", async (req, res) => {
     });
 
     console.log('✅ Booking created successfully:', bookingId);
+
+    // Auto-create a visa application record if visa assistance was requested
+    if (visaAssistanceRequested) {
+      try {
+        const count = await VisaApplication.countDocuments();
+        const applicationId = `VA-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
+        await VisaApplication.create({
+          applicationId,
+          applicationDate: new Date().toISOString().split('T')[0],
+          status: 'pending',
+          source: 'booking',
+          completeName: customerName,
+          contactNumber: customerPhone,
+          emailAddress: customerEmail,
+          destinationCountries: visaDestinationCountries || '',
+          tourTitle: tourSlug,
+          bookingId,
+          notes: visaAssistanceNotes || '',
+        });
+        console.log('✅ Visa application record created for booking:', bookingId);
+      } catch (visaErr) {
+        console.warn('⚠️ Could not create visa application record (non-critical):', visaErr);
+      }
+    }
 
     // Send confirmation email to customer and booking department
     try {

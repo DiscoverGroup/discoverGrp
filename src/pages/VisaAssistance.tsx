@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Globe, Phone, Mail, Clock } from 'lucide-react';
+import { buildApiUrl } from '../config/apiBase';
 
 interface VisaAssistanceProps {
   tourCountries?: string[];
@@ -30,14 +31,40 @@ export default function VisaAssistance() {
 
   const tourCountries = state?.tourCountries || [];
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+
   const handleChange = (field: keyof typeof formData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSubmitApplication = async () => {
-    console.log('Visa assistance application:', formData);
-    alert('Visa assistance application submitted! We will contact you within 24 hours.');
-    navigate(-1);
+    if (!formData.completeName || !formData.contactNumber || !formData.emailAddress || !formData.presentAddress) {
+      setSubmitError('Please fill in all required fields.');
+      return;
+    }
+    setSubmitError('');
+    setIsSubmitting(true);
+    try {
+      const res = await fetch(buildApiUrl('/api/visa-applications'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          destinationCountries: tourCountries.join(', '),
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Submission failed');
+      }
+      alert('Visa assistance application submitted! We will contact you within 24 hours.');
+      navigate(-1);
+    } catch (err: unknown) {
+      setSubmitError(err instanceof Error ? err.message : 'Failed to submit. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -269,19 +296,27 @@ export default function VisaAssistance() {
         </div>
 
         {/* Submit Button */}
-        <div className="flex justify-between items-center">
-          <button
-            onClick={() => navigate(-1)}
-            className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmitApplication}
-            className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-          >
-            Submit Application
-          </button>
+        <div className="space-y-3">
+          {submitError && (
+            <div className="bg-red-50 border border-red-300 text-red-700 rounded-lg px-4 py-3 text-sm">
+              {submitError}
+            </div>
+          )}
+          <div className="flex justify-between items-center">
+            <button
+              onClick={() => navigate(-1)}
+              className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmitApplication}
+              disabled={isSubmitting}
+              className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? 'Submitting…' : 'Submit Application'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

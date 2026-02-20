@@ -1,97 +1,49 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   FileText, 
-  Download, 
   Eye, 
   CheckCircle, 
   Clock, 
   AlertTriangle, 
   User, 
-  Phone, 
-  Mail, 
   Globe,
   Calendar,
   Filter,
   Search,
   Plus,
   X,
-  Save
+  Save,
+  RefreshCw
 } from 'lucide-react';
+import { authFetch } from '../utils/tokenStorage';
+import { getAdminApiBaseUrl } from '../config/apiBase';
+
+const API_BASE_URL = getAdminApiBaseUrl();
 
 interface VisaApplication {
-  id: string;
-  customerName: string;
-  customerEmail: string;
-  customerPhone: string;
-  nationality: string;
-  destinationCountry: string;
-  visaType: string;
-  urgency: 'standard' | 'rush' | 'emergency';
+  _id: string;
+  applicationId: string;
   status: 'pending' | 'under_review' | 'documents_requested' | 'approved' | 'rejected' | 'completed';
   applicationDate: string;
-  submittedDocuments: {
-    passport: string;
-    photo: string;
-    bankStatement: string;
-    employmentCertificate: string;
-    itr: string;
-  };
-  additionalServices: string[];
-  estimatedCost: number;
-  notes: string;
+  source: 'booking' | 'direct';
+  completeName: string;
+  passportNumber?: string;
+  civilStatus?: string;
+  contactNumber?: string;
+  emailAddress?: string;
+  presentAddress?: string;
+  travelHistory?: string;
+  companyName?: string;
+  jobTitle?: string;
+  companyLocation?: string;
+  dateHiredOrStarted?: string;
+  bookingId?: string;
+  tourTitle?: string;
+  destinationCountries?: string;
+  notes?: string;
   assignedTo?: string;
-  tourReference?: string;
+  createdAt?: string;
 }
-
-const mockApplications: VisaApplication[] = [
-  {
-    id: 'VA-2024-001',
-    customerName: 'Juan Dela Cruz',
-    customerEmail: 'juan.delacruz@email.com',
-    customerPhone: '+63 912 345 6789',
-    nationality: 'Filipino',
-    destinationCountry: 'France',
-    visaType: 'tourist',
-    urgency: 'standard',
-    status: 'under_review',
-    applicationDate: '2024-11-20',
-    submittedDocuments: {
-      passport: 'passport_juan_001.pdf',
-      photo: 'photo_juan_001.jpg',
-      bankStatement: 'bank_juan_001.pdf',
-      employmentCertificate: 'employment_juan_001.pdf',
-      itr: 'itr_juan_001.pdf'
-    },
-    additionalServices: ['document-review', 'appointment-booking'],
-    estimatedCost: 8500,
-    notes: 'Customer traveling for European tour package',
-    assignedTo: 'Maria Santos',
-    tourReference: 'TR-2024-EU-045'
-  },
-  {
-    id: 'VA-2024-002',
-    customerName: 'Maria Rodriguez',
-    customerEmail: 'maria.r@email.com',
-    customerPhone: '+63 917 555 8888',
-    nationality: 'Filipino',
-    destinationCountry: 'USA',
-    visaType: 'tourist',
-    urgency: 'rush',
-    status: 'documents_requested',
-    applicationDate: '2024-11-25',
-    submittedDocuments: {
-      passport: 'passport_maria_002.pdf',
-      photo: 'photo_maria_002.jpg',
-      bankStatement: 'bank_maria_002.pdf',
-      employmentCertificate: '',
-      itr: ''
-    },
-    additionalServices: ['document-review', 'form-assistance', 'interview-prep'],
-    estimatedCost: 15000,
-    notes: 'Missing employment certificate and ITR',
-    assignedTo: 'John Reyes'
-  }
-];
 
 const statusConfig = {
   pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
@@ -102,128 +54,112 @@ const statusConfig = {
   completed: { color: 'bg-gray-100 text-gray-800', label: 'Completed' }
 };
 
-const urgencyConfig = {
-  standard: { color: 'bg-gray-100 text-gray-800', label: 'Standard', fee: 0 },
-  rush: { color: 'bg-yellow-100 text-yellow-800', label: 'Rush', fee: 3000 },
-  emergency: { color: 'bg-red-100 text-red-800', label: 'Emergency', fee: 5000 }
-};
-
 export default function VisaAssistanceManagement() {
-  const [applications, setApplications] = useState<VisaApplication[]>(mockApplications);
-  const [filteredApplications, setFilteredApplications] = useState<VisaApplication[]>(mockApplications);
+  const [applications, setApplications] = useState<VisaApplication[]>([]);
+  const [filteredApplications, setFilteredApplications] = useState<VisaApplication[]>([]);
   const [selectedApplication, setSelectedApplication] = useState<VisaApplication | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
   const [isNewApplicationModalOpen, setIsNewApplicationModalOpen] = useState(false);
   const [newApplicationForm, setNewApplicationForm] = useState({
-    customerName: '',
-    customerEmail: '',
-    customerPhone: '',
-    nationality: 'Filipino',
-    destinationCountry: '',
-    visaType: 'Tourist',
-    urgency: 'standard' as 'standard' | 'rush' | 'emergency',
-    additionalServices: [] as string[],
-    tourReference: '',
-    notes: ''
+    completeName: '',
+    passportNumber: '',
+    civilStatus: '',
+    contactNumber: '',
+    emailAddress: '',
+    presentAddress: '',
+    travelHistory: '',
+    companyName: '',
+    jobTitle: '',
+    companyLocation: '',
+    dateHiredOrStarted: '',
+    destinationCountries: '',
+    tourTitle: '',
+    bookingId: '',
+    notes: '',
   });
+
+  const fetchApplications = useCallback(async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const res = await authFetch(`${API_BASE_URL}/admin/visa-applications`);
+      if (!res.ok) throw new Error('Failed to fetch visa applications');
+      const data = await res.json();
+      setApplications(data.applications || []);
+    } catch (err) {
+      setError('Could not load visa applications. Please try again.');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchApplications();
+  }, [fetchApplications]);
 
   useEffect(() => {
     let filtered = applications;
-
     if (filterStatus !== 'all') {
       filtered = filtered.filter(app => app.status === filterStatus);
     }
-
     if (searchTerm) {
-      filtered = filtered.filter(app => 
-        app.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        app.customerEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        app.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        app.destinationCountry.toLowerCase().includes(searchTerm.toLowerCase())
+      const q = searchTerm.toLowerCase();
+      filtered = filtered.filter(app =>
+        app.completeName.toLowerCase().includes(q) ||
+        (app.emailAddress || '').toLowerCase().includes(q) ||
+        app.applicationId.toLowerCase().includes(q) ||
+        (app.destinationCountries || '').toLowerCase().includes(q) ||
+        (app.bookingId || '').toLowerCase().includes(q)
       );
     }
-
     setFilteredApplications(filtered);
   }, [applications, filterStatus, searchTerm]);
 
-  const updateApplicationStatus = (id: string, newStatus: VisaApplication['status']) => {
-    setApplications(prev => 
-      prev.map(app => app.id === id ? { ...app, status: newStatus } : app)
-    );
+  const updateApplicationStatus = async (id: string, newStatus: VisaApplication['status']) => {
+    try {
+      const res = await authFetch(`${API_BASE_URL}/admin/visa-applications/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error('Failed to update status');
+      setApplications(prev =>
+        prev.map(app => app._id === id ? { ...app, status: newStatus } : app)
+      );
+    } catch {
+      alert('Failed to update status. Please try again.');
+    }
   };
 
-  const handleCreateNewApplication = () => {
-    // Generate new application ID
-    const newId = `VA-${new Date().getFullYear()}-${String(applications.length + 1).padStart(3, '0')}`;
-    
-    const newApplication: VisaApplication = {
-      id: newId,
-      ...newApplicationForm,
-      status: 'pending',
-      applicationDate: new Date().toISOString().split('T')[0],
-      submittedDocuments: {
-        passport: '',
-        photo: '',
-        bankStatement: '',
-        employmentCertificate: '',
-        itr: ''
-      },
-      estimatedCost: calculateEstimatedCost(newApplicationForm.destinationCountry, newApplicationForm.visaType, newApplicationForm.urgency),
-      assignedTo: 'Visa Team'
-    };
-    
-    setApplications(prev => [newApplication, ...prev]);
-    setIsNewApplicationModalOpen(false);
-    resetNewApplicationForm();
-  };
-
-  const calculateEstimatedCost = (country: string, visaType: string, urgency: string): number => {
-    let baseCost = 8500; // Base processing fee
-    
-    // Country multiplier
-    const countryMultipliers: Record<string, number> = {
-      'USA': 1.8, 'Canada': 1.6, 'UK': 1.5, 'Australia': 1.4,
-      'Germany': 1.3, 'France': 1.3, 'Italy': 1.2, 'Spain': 1.2,
-      'Japan': 1.4, 'South Korea': 1.2
-    };
-    baseCost *= countryMultipliers[country] || 1.0;
-    
-    // Visa type multiplier
-    const visaMultipliers: Record<string, number> = {
-      'Tourist': 1.0, 'Business': 1.3, 'Student': 1.5, 'Work': 2.0, 'Transit': 0.6
-    };
-    baseCost *= visaMultipliers[visaType] || 1.0;
-    
-    // Urgency multiplier
-    const urgencyMultipliers: Record<string, number> = {
-      'standard': 1.0, 'rush': 1.5, 'emergency': 2.0
-    };
-    baseCost *= urgencyMultipliers[urgency] || 1.0;
-    
-    return Math.round(baseCost);
+  const handleCreateNewApplication = async () => {
+    try {
+      const res = await authFetch(`${API_BASE_URL}/admin/visa-applications`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newApplicationForm),
+      });
+      if (!res.ok) throw new Error('Failed to create application');
+      const data = await res.json();
+      setApplications(prev => [data.application, ...prev]);
+      setIsNewApplicationModalOpen(false);
+      resetNewApplicationForm();
+    } catch {
+      alert('Failed to create application. Please try again.');
+    }
   };
 
   const resetNewApplicationForm = () => {
     setNewApplicationForm({
-      customerName: '',
-      customerEmail: '',
-      customerPhone: '',
-      nationality: 'Filipino',
-      destinationCountry: '',
-      visaType: 'Tourist',
-      urgency: 'standard',
-      additionalServices: [],
-      tourReference: '',
-      notes: ''
+      completeName: '', passportNumber: '', civilStatus: '', contactNumber: '',
+      emailAddress: '', presentAddress: '', travelHistory: '', companyName: '',
+      jobTitle: '', companyLocation: '', dateHiredOrStarted: '',
+      destinationCountries: '', tourTitle: '', bookingId: '', notes: '',
     });
-  };
-
-  const downloadDocument = (filename: string) => {
-    // In real implementation, this would download the actual file
-    console.log('Downloading document:', filename);
-    alert(`Downloading ${filename}`);
   };
 
   const handleViewDetails = (application: VisaApplication) => {
@@ -233,20 +169,13 @@ export default function VisaAssistanceManagement() {
 
   const getStatusIcon = (status: VisaApplication['status']) => {
     switch (status) {
-      case 'pending':
-        return <Clock size={16} className="text-yellow-600" />;
-      case 'under_review':
-        return <Eye size={16} className="text-blue-600" />;
-      case 'documents_requested':
-        return <AlertTriangle size={16} className="text-orange-600" />;
-      case 'approved':
-        return <CheckCircle size={16} className="text-green-600" />;
-      case 'rejected':
-        return <AlertTriangle size={16} className="text-red-600" />;
-      case 'completed':
-        return <CheckCircle size={16} className="text-gray-600" />;
-      default:
-        return <Clock size={16} className="text-gray-600" />;
+      case 'pending': return <Clock size={16} className="text-yellow-600" />;
+      case 'under_review': return <Eye size={16} className="text-blue-600" />;
+      case 'documents_requested': return <AlertTriangle size={16} className="text-orange-600" />;
+      case 'approved': return <CheckCircle size={16} className="text-green-600" />;
+      case 'rejected': return <AlertTriangle size={16} className="text-red-600" />;
+      case 'completed': return <CheckCircle size={16} className="text-gray-600" />;
+      default: return <Clock size={16} className="text-gray-600" />;
     }
   };
 
@@ -260,7 +189,14 @@ export default function VisaAssistanceManagement() {
             <p className="text-gray-600 mt-2">Manage visa applications and customer assistance requests</p>
           </div>
           <div className="flex items-center gap-3">
-            <button 
+            <button
+              onClick={fetchApplications}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors flex items-center gap-2"
+            >
+              <RefreshCw size={16} />
+              Refresh
+            </button>
+            <button
               onClick={() => setIsNewApplicationModalOpen(true)}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
             >
@@ -279,51 +215,40 @@ export default function VisaAssistanceManagement() {
               <p className="text-sm font-medium text-gray-600">Total Applications</p>
               <p className="text-2xl font-bold text-gray-900">{applications.length}</p>
             </div>
-            <div className="bg-blue-100 p-3 rounded-xl">
-              <FileText className="text-blue-600" size={24} />
-            </div>
+            <div className="bg-blue-100 p-3 rounded-xl"><FileText className="text-blue-600" size={24} /></div>
           </div>
         </div>
-        
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Under Review</p>
               <p className="text-2xl font-bold text-blue-600">
-                {applications.filter(app => app.status === 'under_review').length}
+                {applications.filter(a => a.status === 'under_review').length}
               </p>
             </div>
-            <div className="bg-blue-100 p-3 rounded-xl">
-              <Eye className="text-blue-600" size={24} />
-            </div>
+            <div className="bg-blue-100 p-3 rounded-xl"><Eye className="text-blue-600" size={24} /></div>
           </div>
         </div>
-
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Approved</p>
               <p className="text-2xl font-bold text-green-600">
-                {applications.filter(app => app.status === 'approved').length}
+                {applications.filter(a => a.status === 'approved').length}
               </p>
             </div>
-            <div className="bg-green-100 p-3 rounded-xl">
-              <CheckCircle className="text-green-600" size={24} />
-            </div>
+            <div className="bg-green-100 p-3 rounded-xl"><CheckCircle className="text-green-600" size={24} /></div>
           </div>
         </div>
-
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Pending Documents</p>
               <p className="text-2xl font-bold text-orange-600">
-                {applications.filter(app => app.status === 'documents_requested').length}
+                {applications.filter(a => a.status === 'documents_requested').length}
               </p>
             </div>
-            <div className="bg-orange-100 p-3 rounded-xl">
-              <AlertTriangle className="text-orange-600" size={24} />
-            </div>
+            <div className="bg-orange-100 p-3 rounded-xl"><AlertTriangle className="text-orange-600" size={24} /></div>
           </div>
         </div>
       </div>
@@ -335,7 +260,7 @@ export default function VisaAssistanceManagement() {
             <Search size={20} className="text-gray-400" />
             <input
               type="text"
-              placeholder="Search by name, email, ID, or destination..."
+              placeholder="Search by name, email, ID, destination, or booking..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -362,239 +287,202 @@ export default function VisaAssistanceManagement() {
 
       {/* Applications Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left py-4 px-6 font-semibold text-gray-900">Application</th>
-                <th className="text-left py-4 px-6 font-semibold text-gray-900">Customer</th>
-                <th className="text-left py-4 px-6 font-semibold text-gray-900">Destination</th>
-                <th className="text-left py-4 px-6 font-semibold text-gray-900">Urgency</th>
-                <th className="text-left py-4 px-6 font-semibold text-gray-900">Status</th>
-                <th className="text-left py-4 px-6 font-semibold text-gray-900">Cost</th>
-                <th className="text-left py-4 px-6 font-semibold text-gray-900">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredApplications.map((application) => (
-                <tr key={application.id} className="hover:bg-gray-50">
-                  <td className="py-4 px-6">
-                    <div>
-                      <p className="font-medium text-gray-900">{application.id}</p>
-                      <p className="text-sm text-gray-600">{application.applicationDate}</p>
-                      {application.tourReference && (
-                        <p className="text-xs text-blue-600">Tour: {application.tourReference}</p>
-                      )}
-                    </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-gray-100 rounded-full p-2">
-                        <User size={16} className="text-gray-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{application.customerName}</p>
-                        <p className="text-sm text-gray-600">{application.customerEmail}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-2">
-                      <Globe size={16} className="text-gray-400" />
-                      <div>
-                        <p className="font-medium text-gray-900">{application.destinationCountry}</p>
-                        <p className="text-sm text-gray-600 capitalize">{application.visaType} visa</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${urgencyConfig[application.urgency].color}`}>
-                      {urgencyConfig[application.urgency].label}
-                    </span>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(application.status)}
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig[application.status].color}`}>
-                        {statusConfig[application.status].label}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <p className="font-medium text-gray-900">₱{application.estimatedCost.toLocaleString()}</p>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleViewDetails(application)}
-                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                        title="View Details"
-                      >
-                        <Eye size={16} />
-                      </button>
-                      <select
-                        value={application.status}
-                        onChange={(e) => updateApplicationStatus(application.id, e.target.value as VisaApplication['status'])}
-                        className="text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="under_review">Under Review</option>
-                        <option value="documents_requested">Documents Requested</option>
-                        <option value="approved">Approved</option>
-                        <option value="rejected">Rejected</option>
-                        <option value="completed">Completed</option>
-                      </select>
-                    </div>
-                  </td>
+        {isLoading ? (
+          <div className="flex items-center justify-center p-16 text-gray-500">
+            <RefreshCw size={24} className="animate-spin mr-3" /> Loading visa applications…
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center p-16 text-red-600">
+            <AlertTriangle size={24} className="mr-3" /> {error}
+          </div>
+        ) : filteredApplications.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-16 text-gray-500">
+            <FileText size={48} className="mb-4 text-gray-300" />
+            <p className="text-lg font-medium">No visa applications found</p>
+            <p className="text-sm">Applications will appear here when customers submit via booking or the visa assistance form.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="text-left py-4 px-6 font-semibold text-gray-900">Application</th>
+                  <th className="text-left py-4 px-6 font-semibold text-gray-900">Customer</th>
+                  <th className="text-left py-4 px-6 font-semibold text-gray-900">Destination</th>
+                  <th className="text-left py-4 px-6 font-semibold text-gray-900">Source</th>
+                  <th className="text-left py-4 px-6 font-semibold text-gray-900">Status</th>
+                  <th className="text-left py-4 px-6 font-semibold text-gray-900">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filteredApplications.map((application) => (
+                  <tr key={application._id} className="hover:bg-gray-50">
+                    <td className="py-4 px-6">
+                      <div>
+                        <p className="font-medium text-gray-900">{application.applicationId}</p>
+                        <p className="text-sm text-gray-600">{application.applicationDate}</p>
+                        {application.bookingId && (
+                          <p className="text-xs text-blue-600">Booking: {application.bookingId}</p>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-gray-100 rounded-full p-2">
+                          <User size={16} className="text-gray-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{application.completeName}</p>
+                          <p className="text-sm text-gray-600">{application.emailAddress}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-2">
+                        <Globe size={16} className="text-gray-400" />
+                        <p className="text-gray-900">{application.destinationCountries || '—'}</p>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        application.source === 'booking'
+                          ? 'bg-purple-100 text-purple-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {application.source === 'booking' ? 'From Booking' : 'Direct'}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-2">
+                        {getStatusIcon(application.status)}
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig[application.status].color}`}>
+                          {statusConfig[application.status].label}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleViewDetails(application)}
+                          className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                          title="View Details"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        <select
+                          value={application.status}
+                          onChange={(e) => updateApplicationStatus(application._id, e.target.value as VisaApplication['status'])}
+                          className="text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="under_review">Under Review</option>
+                          <option value="documents_requested">Documents Requested</option>
+                          <option value="approved">Approved</option>
+                          <option value="rejected">Rejected</option>
+                          <option value="completed">Completed</option>
+                        </select>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Application Details Modal */}
       {showDetails && selectedApplication && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Visa Application Details</h2>
-                  <p className="text-gray-600">{selectedApplication.id}</p>
-                </div>
-                <button
-                  onClick={() => setShowDetails(false)}
-                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-                >
-                  ✕
-                </button>
+          <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Visa Application Details</h2>
+                <p className="text-gray-600">{selectedApplication.applicationId}</p>
               </div>
+              <button onClick={() => setShowDetails(false)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+                <X size={20} />
+              </button>
             </div>
 
             <div className="p-6 space-y-6">
-              {/* Customer Information */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Customer Information</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <User size={16} className="text-gray-400" />
-                      <span className="font-medium">{selectedApplication.customerName}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Mail size={16} className="text-gray-400" />
-                      <span>{selectedApplication.customerEmail}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Phone size={16} className="text-gray-400" />
-                      <span>{selectedApplication.customerPhone}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Globe size={16} className="text-gray-400" />
-                      <span>Nationality: {selectedApplication.nationality}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Application Details</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <Calendar size={16} className="text-gray-400" />
-                      <span>Applied: {selectedApplication.applicationDate}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Globe size={16} className="text-gray-400" />
-                      <span>Destination: {selectedApplication.destinationCountry}</span>
-                    </div>
-                    <div>
-                      <span className="text-sm text-gray-600">Visa Type:</span>
-                      <span className="ml-2 capitalize font-medium">{selectedApplication.visaType}</span>
-                    </div>
-                    <div>
-                      <span className="text-sm text-gray-600">Urgency:</span>
-                      <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${urgencyConfig[selectedApplication.urgency].color}`}>
-                        {urgencyConfig[selectedApplication.urgency].label}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+              {/* Source badge */}
+              <div className="flex items-center gap-3">
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                  selectedApplication.source === 'booking'
+                    ? 'bg-purple-100 text-purple-800'
+                    : 'bg-gray-100 text-gray-800'
+                }`}>
+                  {selectedApplication.source === 'booking' ? '📋 Generated from Booking' : '📝 Direct Submission'}
+                </span>
+                {selectedApplication.bookingId && (
+                  <span className="text-sm text-blue-600 font-medium">Booking ID: {selectedApplication.bookingId}</span>
+                )}
               </div>
 
-              {/* Documents */}
+              {/* Personal Information */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Submitted Documents</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <User size={18} /> Personal Information
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Object.entries(selectedApplication.submittedDocuments).map(([key, filename]) => (
-                    <div key={key} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <FileText size={16} className="text-gray-400" />
-                        <div>
-                          <p className="font-medium text-gray-900 capitalize">{key.replace(/([A-Z])/g, ' $1')}</p>
-                          {filename ? (
-                            <p className="text-sm text-gray-600">{filename}</p>
-                          ) : (
-                            <p className="text-sm text-red-600">Not submitted</p>
-                          )}
-                        </div>
-                      </div>
-                      {filename && (
-                        <button
-                          onClick={() => downloadDocument(filename)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
-                          title="Download"
-                        >
-                          <Download size={16} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
+                  <DetailRow label="Complete Name" value={selectedApplication.completeName} />
+                  <DetailRow label="Passport Number" value={selectedApplication.passportNumber} />
+                  <DetailRow label="Civil Status" value={selectedApplication.civilStatus} />
+                  <DetailRow label="Contact Number" value={selectedApplication.contactNumber} />
+                  <DetailRow label="Email Address" value={selectedApplication.emailAddress} />
                 </div>
+                {selectedApplication.presentAddress && (
+                  <div className="mt-4">
+                    <p className="text-sm font-medium text-gray-500">Present Address</p>
+                    <p className="text-gray-900 mt-1">{selectedApplication.presentAddress}</p>
+                  </div>
+                )}
               </div>
 
-              {/* Additional Services */}
-              {selectedApplication.additionalServices.length > 0 && (
+              {/* Employment Information */}
+              {(selectedApplication.companyName || selectedApplication.jobTitle) && (
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Additional Services</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedApplication.additionalServices.map(service => (
-                      <span key={service} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                        {service.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                      </span>
-                    ))}
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Employment / Business</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <DetailRow label="Company / Business" value={selectedApplication.companyName} />
+                    <DetailRow label="Position / Job Title" value={selectedApplication.jobTitle} />
+                    <DetailRow label="Company Location" value={selectedApplication.companyLocation} />
+                    <DetailRow label="Date Hired / Started" value={selectedApplication.dateHiredOrStarted} />
                   </div>
                 </div>
               )}
 
-              {/* Cost Breakdown */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Cost Breakdown</h3>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>Base Processing Fee:</span>
-                      <span>₱{(selectedApplication.estimatedCost - urgencyConfig[selectedApplication.urgency].fee).toLocaleString()}</span>
-                    </div>
-                    {urgencyConfig[selectedApplication.urgency].fee > 0 && (
-                      <div className="flex justify-between">
-                        <span>Urgency Fee ({urgencyConfig[selectedApplication.urgency].label}):</span>
-                        <span>₱{urgencyConfig[selectedApplication.urgency].fee.toLocaleString()}</span>
-                      </div>
-                    )}
-                    <div className="border-t pt-2 flex justify-between font-semibold">
-                      <span>Total Estimated Cost:</span>
-                      <span>₱{selectedApplication.estimatedCost.toLocaleString()}</span>
-                    </div>
+              {/* Travel History */}
+              {selectedApplication.travelHistory && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                    <Globe size={18} /> Travel History
+                  </h3>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-gray-700 whitespace-pre-wrap">{selectedApplication.travelHistory}</p>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {/* Tour / Destination */}
+              {(selectedApplication.destinationCountries || selectedApplication.tourTitle) && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <Calendar size={18} /> Tour / Destination
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <DetailRow label="Destination Countries" value={selectedApplication.destinationCountries} />
+                    <DetailRow label="Tour" value={selectedApplication.tourTitle} />
+                  </div>
+                </div>
+              )}
 
               {/* Notes */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Notes</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Notes</h3>
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-gray-700 whitespace-pre-wrap">{selectedApplication.notes || 'No notes added yet.'}</p>
+                  <p className="text-gray-700 whitespace-pre-wrap">{selectedApplication.notes || 'No notes yet.'}</p>
                 </div>
               </div>
             </div>
@@ -606,9 +494,22 @@ export default function VisaAssistanceManagement() {
               >
                 Close
               </button>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">
-                Add Note
-              </button>
+              <select
+                value={selectedApplication.status}
+                onChange={(e) => {
+                  const newStatus = e.target.value as VisaApplication['status'];
+                  updateApplicationStatus(selectedApplication._id, newStatus);
+                  setSelectedApplication(prev => prev ? { ...prev, status: newStatus } : prev);
+                }}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="pending">Pending</option>
+                <option value="under_review">Under Review</option>
+                <option value="documents_requested">Documents Requested</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="completed">Completed</option>
+              </select>
             </div>
           </div>
         </div>
@@ -621,249 +522,86 @@ export default function VisaAssistanceManagement() {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">New Visa Application</h2>
-                <button
-                  onClick={() => {
-                    setIsNewApplicationModalOpen(false);
-                    resetNewApplicationForm();
-                  }}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
+                <button onClick={() => { setIsNewApplicationModalOpen(false); resetNewApplicationForm(); }} className="text-gray-400 hover:text-gray-600">
                   <X size={24} />
                 </button>
               </div>
 
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                handleCreateNewApplication();
-              }} className="space-y-6">
-                {/* Customer Information */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <User size={20} />
-                    Customer Information
-                  </h3>
+              <form onSubmit={(e) => { e.preventDefault(); handleCreateNewApplication(); }} className="space-y-4">
+                {/* Personal */}
+                <div className="bg-gray-50 rounded-lg p-4 space-y-4">
+                  <h3 className="font-semibold text-gray-900 flex items-center gap-2"><User size={18} /> Personal Information</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Full Name *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={newApplicationForm.customerName}
-                        onChange={(e) => setNewApplicationForm(prev => ({ ...prev, customerName: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter full name"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Email Address *
-                      </label>
-                      <input
-                        type="email"
-                        required
-                        value={newApplicationForm.customerEmail}
-                        onChange={(e) => setNewApplicationForm(prev => ({ ...prev, customerEmail: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter email address"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Phone Number *
-                      </label>
-                      <input
-                        type="tel"
-                        required
-                        value={newApplicationForm.customerPhone}
-                        onChange={(e) => setNewApplicationForm(prev => ({ ...prev, customerPhone: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="+63 912 345 6789"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Nationality *
-                      </label>
-                      <select
-                        value={newApplicationForm.nationality}
-                        onChange={(e) => setNewApplicationForm(prev => ({ ...prev, nationality: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="Filipino">Filipino</option>
-                        <option value="American">American</option>
-                        <option value="Canadian">Canadian</option>
-                        <option value="Australian">Australian</option>
-                        <option value="British">British</option>
-                        <option value="Other">Other</option>
+                    <FormField label="Complete Name *" required>
+                      <input type="text" required value={newApplicationForm.completeName} onChange={e => setNewApplicationForm(p => ({ ...p, completeName: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Full name" />
+                    </FormField>
+                    <FormField label="Passport Number">
+                      <input type="text" value={newApplicationForm.passportNumber} onChange={e => setNewApplicationForm(p => ({ ...p, passportNumber: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Passport number" />
+                    </FormField>
+                    <FormField label="Civil Status">
+                      <select value={newApplicationForm.civilStatus} onChange={e => setNewApplicationForm(p => ({ ...p, civilStatus: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">Select</option>
+                        <option>Single</option><option>Married</option><option>Widowed</option><option>Separated</option><option>Divorced</option>
                       </select>
-                    </div>
+                    </FormField>
+                    <FormField label="Contact Number">
+                      <input type="tel" value={newApplicationForm.contactNumber} onChange={e => setNewApplicationForm(p => ({ ...p, contactNumber: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="+63 9xx xxx xxxx" />
+                    </FormField>
+                    <FormField label="Email Address">
+                      <input type="email" value={newApplicationForm.emailAddress} onChange={e => setNewApplicationForm(p => ({ ...p, emailAddress: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Email" />
+                    </FormField>
+                  </div>
+                  <FormField label="Present Address">
+                    <textarea value={newApplicationForm.presentAddress} onChange={e => setNewApplicationForm(p => ({ ...p, presentAddress: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows={2} placeholder="Present address" />
+                  </FormField>
+                  <FormField label="Travel History (countries visited)">
+                    <textarea value={newApplicationForm.travelHistory} onChange={e => setNewApplicationForm(p => ({ ...p, travelHistory: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows={2} placeholder="e.g. Japan (2022), Singapore (2023)" />
+                  </FormField>
+                </div>
+
+                {/* Employment */}
+                <div className="bg-blue-50 rounded-lg p-4 space-y-4">
+                  <h3 className="font-semibold text-gray-900">Employment / Business</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField label="Company / Business Name">
+                      <input type="text" value={newApplicationForm.companyName} onChange={e => setNewApplicationForm(p => ({ ...p, companyName: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Company name" />
+                    </FormField>
+                    <FormField label="Position / Job Title">
+                      <input type="text" value={newApplicationForm.jobTitle} onChange={e => setNewApplicationForm(p => ({ ...p, jobTitle: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Job title" />
+                    </FormField>
+                    <FormField label="Company Location">
+                      <input type="text" value={newApplicationForm.companyLocation} onChange={e => setNewApplicationForm(p => ({ ...p, companyLocation: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Location" />
+                    </FormField>
+                    <FormField label="Date Hired / Business Started">
+                      <input type="date" value={newApplicationForm.dateHiredOrStarted} onChange={e => setNewApplicationForm(p => ({ ...p, dateHiredOrStarted: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                    </FormField>
                   </div>
                 </div>
 
-                {/* Visa Information */}
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <Globe size={20} />
-                    Visa Information
-                  </h3>
+                {/* Tour details */}
+                <div className="bg-green-50 rounded-lg p-4 space-y-4">
+                  <h3 className="font-semibold text-gray-900">Tour / Destination</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Destination Country *
-                      </label>
-                      <select
-                        required
-                        value={newApplicationForm.destinationCountry}
-                        onChange={(e) => setNewApplicationForm(prev => ({ ...prev, destinationCountry: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="">Select destination country</option>
-                        <option value="USA">United States</option>
-                        <option value="Canada">Canada</option>
-                        <option value="UK">United Kingdom</option>
-                        <option value="Australia">Australia</option>
-                        <option value="Germany">Germany</option>
-                        <option value="France">France</option>
-                        <option value="Italy">Italy</option>
-                        <option value="Spain">Spain</option>
-                        <option value="Japan">Japan</option>
-                        <option value="South Korea">South Korea</option>
-                        <option value="Singapore">Singapore</option>
-                        <option value="Thailand">Thailand</option>
-                        <option value="Malaysia">Malaysia</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Visa Type *
-                      </label>
-                      <select
-                        value={newApplicationForm.visaType}
-                        onChange={(e) => setNewApplicationForm(prev => ({ ...prev, visaType: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="Tourist">Tourist/Visitor</option>
-                        <option value="Business">Business</option>
-                        <option value="Student">Student</option>
-                        <option value="Work">Work/Employment</option>
-                        <option value="Transit">Transit</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Processing Urgency *
-                      </label>
-                      <select
-                        value={newApplicationForm.urgency}
-                        onChange={(e) => setNewApplicationForm(prev => ({ ...prev, urgency: e.target.value as 'standard' | 'rush' | 'emergency' }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="standard">Standard (10-15 business days)</option>
-                        <option value="rush">Rush (5-7 business days)</option>
-                        <option value="emergency">Emergency (1-3 business days)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Tour Reference (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        value={newApplicationForm.tourReference}
-                        onChange={(e) => setNewApplicationForm(prev => ({ ...prev, tourReference: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Tour booking reference"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Additional Services */}
-                <div className="bg-green-50 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Additional Services (Optional)
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {[
-                      'Document Translation',
-                      'Passport Photo Service', 
-                      'Embassy Appointment Booking',
-                      'Travel Insurance',
-                      'Hotel Booking Assistance',
-                      'Flight Booking Assistance'
-                    ].map((service) => (
-                      <label key={service} className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={newApplicationForm.additionalServices.includes(service)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setNewApplicationForm(prev => ({
-                                ...prev,
-                                additionalServices: [...prev.additionalServices, service]
-                              }));
-                            } else {
-                              setNewApplicationForm(prev => ({
-                                ...prev,
-                                additionalServices: prev.additionalServices.filter(s => s !== service)
-                              }));
-                            }
-                          }}
-                          className="rounded text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-gray-700">{service}</span>
-                      </label>
-                    ))}
+                    <FormField label="Destination Countries">
+                      <input type="text" value={newApplicationForm.destinationCountries} onChange={e => setNewApplicationForm(p => ({ ...p, destinationCountries: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g. France, Italy" />
+                    </FormField>
+                    <FormField label="Booking ID (optional)">
+                      <input type="text" value={newApplicationForm.bookingId} onChange={e => setNewApplicationForm(p => ({ ...p, bookingId: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="BK-XXXXXXX" />
+                    </FormField>
                   </div>
                 </div>
 
                 {/* Notes */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Additional Notes (Optional)
-                  </label>
-                  <textarea
-                    value={newApplicationForm.notes}
-                    onChange={(e) => setNewApplicationForm(prev => ({ ...prev, notes: e.target.value }))}
-                    rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Any special requirements or additional information..."
-                  />
-                </div>
+                <FormField label="Notes">
+                  <textarea value={newApplicationForm.notes} onChange={e => setNewApplicationForm(p => ({ ...p, notes: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows={3} placeholder="Additional notes..." />
+                </FormField>
 
-                {/* Estimated Cost Display */}
-                {newApplicationForm.destinationCountry && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-yellow-800 mb-2">Estimated Processing Cost</h4>
-                    <p className="text-2xl font-bold text-yellow-900">
-                      ₱{calculateEstimatedCost(newApplicationForm.destinationCountry, newApplicationForm.visaType, newApplicationForm.urgency).toLocaleString()}
-                    </p>
-                    <p className="text-sm text-yellow-700 mt-1">
-                      * Final cost may vary based on embassy fees and additional requirements
-                    </p>
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="flex justify-end space-x-3 pt-6 border-t">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsNewApplicationModalOpen(false);
-                      resetNewApplicationForm();
-                    }}
-                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
+                <div className="flex justify-end gap-3 pt-4 border-t">
+                  <button type="button" onClick={() => { setIsNewApplicationModalOpen(false); resetNewApplicationForm(); }} className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
                     Cancel
                   </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-                  >
-                    <Save size={16} />
-                    Create Application
+                  <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                    <Save size={16} /> Create Application
                   </button>
                 </div>
               </form>
@@ -871,6 +609,25 @@ export default function VisaAssistanceManagement() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Small helpers ──────────────────────────────────────────────────────────────
+function DetailRow({ label, value }: { label: string; value?: string }) {
+  return (
+    <div>
+      <p className="text-sm font-medium text-gray-500">{label}</p>
+      <p className="text-gray-900 mt-0.5">{value || '—'}</p>
+    </div>
+  );
+}
+
+function FormField({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">{label}{required && <span className="text-red-500 ml-1">*</span>}</label>
+      {children}
     </div>
   );
 }
