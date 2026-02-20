@@ -38,11 +38,15 @@ export async function createBooking(bookingData: {
   installmentPlan?: unknown;
   visaAssistanceRequested?: boolean;
   visaAssistanceFee?: number;
+  travelInsuranceRequested?: boolean;
+  travelInsuranceFee?: number;
+  insurancePaxDetails?: Array<{name: string; birthday: string}>;
 }): Promise<Booking> {
   const bookingId = generateBookingId();
   const baseTotalAmount = bookingData.perPerson * bookingData.passengers;
-  const visaFee = bookingData.visaAssistanceRequested ? (bookingData.visaAssistanceFee ?? 2500) : 0;
-  const totalAmount = baseTotalAmount + visaFee;
+  const visaFee = bookingData.visaAssistanceRequested ? (bookingData.visaAssistanceFee ?? 10000) * bookingData.passengers : 0;
+  const insuranceFee = bookingData.travelInsuranceRequested ? (bookingData.travelInsuranceFee ?? 3000) * bookingData.passengers : 0;
+  const totalAmount = baseTotalAmount + visaFee + insuranceFee;
   const paidAmount = bookingData.paymentType === 'full' 
     ? totalAmount 
     : Math.round(totalAmount * 0.3); // 30% downpayment
@@ -69,7 +73,10 @@ export async function createBooking(bookingData: {
     appointmentPurpose: bookingData.appointmentPurpose,
     customRoutes: bookingData.customRoutes || [],
     visaAssistanceRequested: bookingData.visaAssistanceRequested || false,
-    visaAssistanceFee: bookingData.visaAssistanceRequested ? (bookingData.visaAssistanceFee ?? 2500) : 0,
+    visaAssistanceFee: bookingData.visaAssistanceRequested ? (bookingData.visaAssistanceFee ?? 10000) : 0,
+    travelInsuranceRequested: bookingData.travelInsuranceRequested || false,
+    travelInsuranceFee: bookingData.travelInsuranceRequested ? (bookingData.travelInsuranceFee ?? 3000) : 0,
+    insurancePaxDetails: bookingData.insurancePaxDetails || [],
   };
 
   const res = await fetch(buildApiUrl('/api/bookings'), {

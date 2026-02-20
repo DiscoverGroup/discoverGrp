@@ -48,6 +48,10 @@ interface BookingDetails {
   visaAssistanceRequested?: boolean;
   visaAssistanceFee?: number;
   visaDocumentsProvided?: boolean;
+  // Travel insurance fields
+  travelInsuranceRequested?: boolean;
+  travelInsuranceFee?: number;
+  travelInsurancePax?: Array<{name: string; birthday: string}>;
   visaDestinationCountries?: string;
   visaAssistanceStatus?: string;
   visaAssistanceNotes?: string;
@@ -182,8 +186,13 @@ const generateBookingConfirmationEmail = (booking: BookingDetails): string => {
             </div>
             ${booking.visaAssistanceRequested ? `
             <div class="detail-row">
-                <span><strong>Visa Assistance Fee:</strong></span>
-                <span>PHP ${(booking.visaAssistanceFee ?? 2500).toLocaleString()}</span>
+                <span><strong>Visa Assistance (${booking.passengers} pax):</strong></span>
+                <span>PHP ${((booking.visaAssistanceFee ?? 10000) * booking.passengers).toLocaleString()}</span>
+            </div>` : ''}
+            ${booking.travelInsuranceRequested ? `
+            <div class="detail-row">
+                <span><strong>Travel Insurance (${booking.passengers} pax):</strong></span>
+                <span>PHP ${((booking.travelInsuranceFee ?? 3000) * booking.passengers).toLocaleString()}</span>
             </div>` : ''}
             <div class="detail-row total">
                 <span><strong>Total Amount:</strong></span>
@@ -193,8 +202,17 @@ const generateBookingConfirmationEmail = (booking: BookingDetails): string => {
         ${booking.visaAssistanceRequested ? `
         <div class="booking-card" style="border-left: 4px solid #3b82f6;">
             <h3>🛂 Visa Assistance Included</h3>
-            <p>Your booking includes our <strong>Visa Assistance Service</strong>. Our visa team will contact you to guide you through the required documents and application process.</p>
+            <p>Your booking includes our <strong>Visa Assistance Service</strong> (PHP ${(booking.visaAssistanceFee ?? 10000).toLocaleString()}/pax). Our visa team will contact you to guide you through the required documents and application process.</p>
             <p style="margin-top:8px;">For questions, email <a href="mailto:visa@discovergroup.com">visa@discovergroup.com</a>.</p>
+        </div>` : ''}
+        ${booking.travelInsuranceRequested ? `
+        <div class="booking-card" style="border-left: 4px solid #10b981;">
+            <h3>🛡️ Travel Insurance Included</h3>
+            <p>Your booking includes <strong>Travel Insurance</strong> (PHP ${(booking.travelInsuranceFee ?? 3000).toLocaleString()}/pax). Coverage includes trip cancellation, medical emergencies, lost baggage &amp; delays.</p>
+            ${booking.travelInsurancePax && booking.travelInsurancePax.length > 0 ? `
+            <ul style="margin-top:10px; padding-left:16px;">
+              ${booking.travelInsurancePax.map((p: {name: string; birthday: string}) => `<li><strong>${p.name}</strong> — DOB: ${p.birthday}</li>`).join('')}
+            </ul>` : ''}
         </div>` : ''}
         
         <div class="booking-card">
@@ -377,8 +395,11 @@ export const sendBookingConfirmationEmail = async (booking: BookingDetails): Pro
         }),
         // Visa assistance data
         visaAssistanceRequested: booking.visaAssistanceRequested || false,
-        visaAssistanceFee: booking.visaAssistanceRequested ? formatCurrency(booking.visaAssistanceFee ?? 2500) : undefined,
+        visaAssistanceFee: booking.visaAssistanceRequested ? formatCurrency(booking.visaAssistanceFee ?? 10000) : undefined,
         visaDocumentsProvided: booking.visaDocumentsProvided || false,
+        travelInsuranceRequested: booking.travelInsuranceRequested || false,
+        travelInsuranceFee: booking.travelInsuranceRequested ? formatCurrency(booking.travelInsuranceFee ?? 3000) : undefined,
+        travelInsurancePax: booking.travelInsurancePax || [],
         visaDestinationCountries: booking.visaDestinationCountries || '',
         visaAssistanceStatus: booking.visaAssistanceStatus || 'not-needed',
         tourDestinationCountries: booking.country || booking.tourTitle || 'your destination',

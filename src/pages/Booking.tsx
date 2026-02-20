@@ -163,6 +163,8 @@ export default function Booking(): JSX.Element {
   const [visaType, setVisaType] = useState<string>("");
   const [visaExpiry, setVisaExpiry] = useState<string>("");
   const [needsVisaAssistance, setNeedsVisaAssistance] = useState<boolean>(false);
+  const [needsTravelInsurance, setNeedsTravelInsurance] = useState<boolean>(false);
+  const [insurancePaxDetails, setInsurancePaxDetails] = useState<Array<{name: string; birthday: string}>>([]);
 
   // Philippine passport validation
   const validatePassport = (value: string): boolean => {
@@ -295,13 +297,19 @@ export default function Booking(): JSX.Element {
     [perPerson, customRoutesTotalPerPerson]
   );
   
-  // Visa assistance fee (fixed processing fee per booking)
-  const VISA_ASSISTANCE_FEE = 2500;
+  // Add-on pricing (discounted / original per pax)
+  const VISA_ASSISTANCE_FEE = 10000;     // discounted price per pax
+  const VISA_ASSISTANCE_ORIGINAL = 20000; // original price per pax (display only)
+  const INSURANCE_FEE = 3000;            // discounted price per pax
+  const INSURANCE_ORIGINAL = 6000;       // original price per pax (display only)
 
-  // Total for all passengers (+ visa assistance fee if requested)
+  // Total for all passengers + selected add-ons
   const total = useMemo(
-    () => combinedPerPerson * Math.max(1, passengers) + (needsVisaAssistance ? VISA_ASSISTANCE_FEE : 0),
-    [combinedPerPerson, passengers, needsVisaAssistance]
+    () =>
+      combinedPerPerson * Math.max(1, passengers) +
+      (needsVisaAssistance ? VISA_ASSISTANCE_FEE * Math.max(1, passengers) : 0) +
+      (needsTravelInsurance ? INSURANCE_FEE * Math.max(1, passengers) : 0),
+    [combinedPerPerson, passengers, needsVisaAssistance, needsTravelInsurance]
   );
   
   // Calculate payment amounts based on payment type with safety checks
@@ -496,6 +504,12 @@ export default function Booking(): JSX.Element {
           visaAssistanceRequested: true,
           visaAssistanceFee: VISA_ASSISTANCE_FEE,
         }),
+        // Include travel insurance if requested
+        ...(needsTravelInsurance && {
+          travelInsuranceRequested: true,
+          travelInsuranceFee: INSURANCE_FEE,
+          insurancePaxDetails,
+        }),
         // Include appointment details if user requested one
         ...(wantsAppointment && {
           appointmentDate,
@@ -593,6 +607,12 @@ export default function Booking(): JSX.Element {
               ...(needsVisaAssistance && {
                 visaAssistanceRequested: true,
                 visaAssistanceFee: VISA_ASSISTANCE_FEE,
+              }),
+              // Include travel insurance details if requested
+              ...(needsTravelInsurance && {
+                travelInsuranceRequested: true,
+                travelInsuranceFee: INSURANCE_FEE,
+                travelInsurancePax: insurancePaxDetails,
               }),
             }),
           });
@@ -995,7 +1015,7 @@ export default function Booking(): JSX.Element {
                   {step === 2 && (
                     <Suspense fallback={<div className="py-6 text-center text-gray-700">Loading documents step...</div>}>
                       <BookingStepDocuments
-                        tour={tour}
+                        passengers={passengers}
                         passportFile={passportFile}
                         setPassportFile={setPassportFile}
                         visaFile={visaFile}
@@ -1008,6 +1028,14 @@ export default function Booking(): JSX.Element {
                         setVisaExpiry={setVisaExpiry}
                         needsVisaAssistance={needsVisaAssistance}
                         setNeedsVisaAssistance={setNeedsVisaAssistance}
+                        needsTravelInsurance={needsTravelInsurance}
+                        setNeedsTravelInsurance={setNeedsTravelInsurance}
+                        insurancePaxDetails={insurancePaxDetails}
+                        setInsurancePaxDetails={setInsurancePaxDetails}
+                        visaFeePerPax={VISA_ASSISTANCE_FEE}
+                        visaOriginalPerPax={VISA_ASSISTANCE_ORIGINAL}
+                        insuranceFeePerPax={INSURANCE_FEE}
+                        insuranceOriginalPerPax={INSURANCE_ORIGINAL}
                         customerName={customerName}
                         customerEmail={customerEmail}
                         customerPhone={customerPhone}
