@@ -298,11 +298,34 @@ export default function Booking(): JSX.Element {
     [perPerson, customRoutesTotalPerPerson]
   );
   
-  // Add-on pricing (discounted / original per pax)
-  const VISA_ASSISTANCE_FEE = 10000;     // discounted price per pax
-  const VISA_ASSISTANCE_ORIGINAL = 20000; // original price per pax (display only)
-  const INSURANCE_FEE = 3000;            // discounted price per pax
-  const INSURANCE_ORIGINAL = 6000;       // original price per pax (display only)
+  // Add-on pricing — fetched from admin settings (falls back to defaults)
+  const [VISA_ASSISTANCE_FEE, setVisaFee] = useState<number>(10000);
+  const [VISA_ASSISTANCE_ORIGINAL, setVisaOriginal] = useState<number>(20000);
+  const [INSURANCE_FEE, setInsuranceFee] = useState<number>(3000);
+  const [INSURANCE_ORIGINAL, setInsuranceOriginal] = useState<number>(6000);
+
+  useEffect(() => {
+    async function fetchAddonSettings() {
+      try {
+        const res = await fetch(buildApiUrl('/api/settings/addons'));
+        if (!res.ok) return;
+        const data = await res.json() as {
+          success: boolean;
+          visa: { fee: number; originalFee: number };
+          insurance: { fee: number; originalFee: number };
+        };
+        if (data.success) {
+          setVisaFee(data.visa.fee);
+          setVisaOriginal(data.visa.originalFee);
+          setInsuranceFee(data.insurance.fee);
+          setInsuranceOriginal(data.insurance.originalFee);
+        }
+      } catch {
+        // silently use defaults
+      }
+    }
+    void fetchAddonSettings();
+  }, []);
 
   // Total for all passengers + selected add-ons
   const total = useMemo(
@@ -310,7 +333,7 @@ export default function Booking(): JSX.Element {
       combinedPerPerson * Math.max(1, passengers) +
       (needsVisaAssistance ? VISA_ASSISTANCE_FEE * Math.max(1, passengers) : 0) +
       (needsTravelInsurance ? INSURANCE_FEE * Math.max(1, passengers) : 0),
-    [combinedPerPerson, passengers, needsVisaAssistance, needsTravelInsurance]
+    [combinedPerPerson, passengers, needsVisaAssistance, needsTravelInsurance, VISA_ASSISTANCE_FEE, INSURANCE_FEE]
   );
   
   // Calculate payment amounts based on payment type with safety checks
@@ -345,7 +368,11 @@ export default function Booking(): JSX.Element {
       return null;
     }
     if (current === 2) {
-      // Appointment step - validate if user wants appointment OR if cash payment is selected
+      // Passport & Visa step — documents are optional, no blocking validation
+      return null;
+    }
+    if (current === 3) {
+      // Appointment step — validate if user wants appointment OR if cash payment is selected
       if (paymentType === "cash-appointment" && !wantsAppointment) {
         return "Please schedule an appointment to pay cash on hand at our office.";
       }
@@ -355,8 +382,8 @@ export default function Booking(): JSX.Element {
       if (paymentType === "cash-appointment" && !appointmentTime) return "Please select an appointment time for cash payment.";
       return null;
     }
-    if (current === 3) {
-      // Payment step - Skip validation if cash-appointment is selected
+    if (current === 4) {
+      // Payment step — skip validation if cash-appointment is selected
       if (paymentType === "cash-appointment") {
         return null; // No online payment needed
       }
@@ -694,7 +721,7 @@ export default function Booking(): JSX.Element {
             <div className="rounded-3xl card-glass p-3 md:p-5 shadow-sm overflow-x-auto">
               <ProgressIndicator 
                 steps={bookingSteps}
-                currentStep={step + 1}
+                currentStep={step}
                 className="mb-0 min-w-max"
               />
             </div>
@@ -1047,7 +1074,7 @@ export default function Booking(): JSX.Element {
                     </Suspense>
                   )}
 
-                  {step === 4 && (
+                  {step === 3 && (
                     <section aria-labelledby="appointment-heading">
                       <div className="mb-6">
                         <h2 id="appointment-heading" className="text-lg font-semibold mb-2 text-gray-900">

@@ -1,5 +1,6 @@
 import express from 'express';
 import { requireAuth, requireAdmin } from '../../middleware/auth';
+import { Settings } from '../../models/Settings';
 
 const router = express.Router();
 
@@ -55,6 +56,74 @@ router.put('/', requireAuth, requireAdmin, async (req, res) => {
       success: false,
       error: 'Failed to update settings'
     });
+  }
+});
+
+// GET /admin/settings/addons - Get add-on pricing & discount toggles
+router.get('/addons', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const settings = await Settings.findOne({ key: 'global' });
+    const defaults = {
+      visaAssistanceFee: 10000,
+      visaAssistanceOriginalFee: 20000,
+      visaDiscountEnabled: true,
+      insuranceFee: 3000,
+      insuranceOriginalFee: 6000,
+      insuranceDiscountEnabled: true,
+    };
+    res.json({ success: true, settings: settings ?? defaults });
+  } catch (error) {
+    console.error('Error fetching addon settings:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch addon settings' });
+  }
+});
+
+// PUT /admin/settings/addons - Update add-on pricing & discount toggles
+router.put('/addons', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const {
+      visaAssistanceFee,
+      visaAssistanceOriginalFee,
+      visaDiscountEnabled,
+      insuranceFee,
+      insuranceOriginalFee,
+      insuranceDiscountEnabled,
+    } = req.body as {
+      visaAssistanceFee?: number;
+      visaAssistanceOriginalFee?: number;
+      visaDiscountEnabled?: boolean;
+      insuranceFee?: number;
+      insuranceOriginalFee?: number;
+      insuranceDiscountEnabled?: boolean;
+    };
+
+    const update: Partial<{
+      visaAssistanceFee: number;
+      visaAssistanceOriginalFee: number;
+      visaDiscountEnabled: boolean;
+      insuranceFee: number;
+      insuranceOriginalFee: number;
+      insuranceDiscountEnabled: boolean;
+    }> = {};
+
+    if (typeof visaAssistanceFee === 'number') update.visaAssistanceFee = visaAssistanceFee;
+    if (typeof visaAssistanceOriginalFee === 'number') update.visaAssistanceOriginalFee = visaAssistanceOriginalFee;
+    if (typeof visaDiscountEnabled === 'boolean') update.visaDiscountEnabled = visaDiscountEnabled;
+    if (typeof insuranceFee === 'number') update.insuranceFee = insuranceFee;
+    if (typeof insuranceOriginalFee === 'number') update.insuranceOriginalFee = insuranceOriginalFee;
+    if (typeof insuranceDiscountEnabled === 'boolean') update.insuranceDiscountEnabled = insuranceDiscountEnabled;
+
+    const settings = await Settings.findOneAndUpdate(
+      { key: 'global' },
+      { $set: update },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    console.log('✅ Addon settings updated:', settings);
+    res.json({ success: true, settings });
+  } catch (error) {
+    console.error('Error updating addon settings:', error);
+    res.status(500).json({ success: false, error: 'Failed to update addon settings' });
   }
 });
 

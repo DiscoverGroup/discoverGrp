@@ -241,6 +241,7 @@ const PUBLIC_API_PATHS = [
   '/security',
   '/monitoring',
   '/visa-readiness',
+  '/settings',
 ];
 
 app.use('/api/', (req: Request, res: Response, next: NextFunction) => {
@@ -278,6 +279,7 @@ import adminFeaturedVideosRouter from "./routes/admin/featured-videos";
 import adminVisaApplicationsRouter from "./routes/admin/visa-applications";
 import apiBookingsRouter from "./routes/api/bookings";
 import apiReviewsRouter from "./routes/api/reviews";
+import apiSettingsRouter from "./routes/api/settings";
 import apiVisaApplicationsRouter from "./routes/api/visa-applications";
 import favoritesRouter from "./routes/favorites";
 import securityStatusRouter from "./routes/security-status";
@@ -312,6 +314,7 @@ app.use("/api/featured-videos", featuredVideosRouter);
 app.use("/api/security", securityStatusRouter);
 app.use("/api/monitoring", monitoringRouter);
 app.use("/api/visa-readiness", visaReadinessRouter);
+app.use("/api/settings", apiSettingsRouter);
 app.use("/api", emailRouter);
 app.use("/auth", authRouter);
 

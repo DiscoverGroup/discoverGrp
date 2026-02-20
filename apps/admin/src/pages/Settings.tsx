@@ -23,9 +23,13 @@ import {
   Activity,
   Download,
   Upload,
-  Trash2
+  Trash2,
+  DollarSign,
+  Tag,
+  ToggleLeft,
+  ToggleRight,
 } from 'lucide-react';
-import { getEmailSettings, updateEmailSettings } from '../services/settingsService';
+import { getEmailSettings, updateEmailSettings, getAddonSettings, updateAddonSettings, AddonSettings } from '../services/settingsService';
 
 interface SystemSettings {
   // General Settings
@@ -145,6 +149,19 @@ const Settings: React.FC = () => {
   const [saved, setSaved] = useState(true); // Start as saved
   const [showPassword, setShowPassword] = useState(false);
 
+  // Add-on pricing state
+  const [addonSettings, setAddonSettings] = useState<AddonSettings>({
+    visaAssistanceFee: 10000,
+    visaAssistanceOriginalFee: 20000,
+    visaDiscountEnabled: true,
+    insuranceFee: 3000,
+    insuranceOriginalFee: 6000,
+    insuranceDiscountEnabled: true,
+  });
+  const [addonSaving, setAddonSaving] = useState(false);
+  const [addonSaved, setAddonSaved] = useState(false);
+  const [addonError, setAddonError] = useState<string | null>(null);
+
   // Load settings from localStorage and API on component mount
   useEffect(() => {
     const savedSettings = localStorage.getItem('discovergroup-admin-settings');
@@ -182,6 +199,17 @@ const Settings: React.FC = () => {
       });
   }, []);
 
+  // Load addon pricing settings from API
+  useEffect(() => {
+    getAddonSettings()
+      .then(data => {
+        setAddonSettings(data);
+      })
+      .catch(err => {
+        console.warn('Could not load addon settings:', err);
+      });
+  }, []);
+
   const tabs = [
     { id: 'general', name: 'General', icon: Globe },
     { id: 'security', name: 'Security', icon: Shield },
@@ -189,6 +217,7 @@ const Settings: React.FC = () => {
     { id: 'email', name: 'Email', icon: Mail },
     { id: 'notifications', name: 'Notifications', icon: Bell },
     { id: 'business', name: 'Business', icon: FileText },
+    { id: 'addons', name: 'Add-on Pricing', icon: Tag },
     { id: 'system', name: 'System', icon: Database },
     { id: 'appearance', name: 'Appearance', icon: Palette },
   ];
@@ -1205,11 +1234,211 @@ const Settings: React.FC = () => {
       case 'email': return renderEmailSettings();
       case 'notifications': return renderNotificationSettings();
       case 'business': return renderBusinessSettings();
+      case 'addons': return renderAddonSettings();
       case 'system': return renderSystemSettings();
       case 'appearance': return renderAppearanceSettings();
       default: return renderGeneralSettings();
     }
   };
+
+  const handleSaveAddon = async () => {
+    setAddonSaving(true);
+    setAddonError(null);
+    try {
+      const saved = await updateAddonSettings(addonSettings);
+      setAddonSettings(saved);
+      setAddonSaved(true);
+      setTimeout(() => setAddonSaved(false), 3000);
+    } catch {
+      setAddonError('Failed to save add-on pricing. Please try again.');
+    } finally {
+      setAddonSaving(false);
+    }
+  };
+
+  const renderAddonSettings = () => (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 mb-1">Add-on Pricing</h2>
+        <p className="text-sm text-gray-500">
+          Configure the prices and discount toggles for Visa Assistance and Travel Insurance shown during booking.
+          When a discount is <strong>disabled</strong>, the original price is shown without any strikethrough.
+        </p>
+      </div>
+
+      {/* Visa Assistance */}
+      <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5">
+        <div className="flex items-center gap-3 border-b pb-4">
+          <div className="p-2 bg-blue-50 rounded-lg">
+            <DollarSign className="h-5 w-5 text-blue-600" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900">Visa Assistance</h3>
+            <p className="text-xs text-gray-500">Charged per passenger who opts in</p>
+          </div>
+        </div>
+
+        {/* Discount toggle */}
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-700">Show Discount Badge</p>
+            <p className="text-xs text-gray-500">
+              When ON, original price is shown as strikethrough and a % OFF badge appears.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAddonSettings(p => ({ ...p, visaDiscountEnabled: !p.visaDiscountEnabled }))}
+            className="flex items-center gap-2"
+          >
+            {addonSettings.visaDiscountEnabled ? (
+              <ToggleRight className="h-8 w-8 text-green-500" />
+            ) : (
+              <ToggleLeft className="h-8 w-8 text-gray-400" />
+            )}
+            <span className={`text-sm font-semibold ${addonSettings.visaDiscountEnabled ? 'text-green-600' : 'text-gray-400'}`}>
+              {addonSettings.visaDiscountEnabled ? 'ON' : 'OFF'}
+            </span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Discounted Price (PHP) <span className="text-gray-400 font-normal">— what customers pay</span>
+            </label>
+            <input
+              type="number"
+              min={0}
+              value={addonSettings.visaAssistanceFee}
+              onChange={e => setAddonSettings(p => ({ ...p, visaAssistanceFee: Number(e.target.value) }))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Original Price (PHP) <span className="text-gray-400 font-normal">— shown as strikethrough</span>
+            </label>
+            <input
+              type="number"
+              min={0}
+              disabled={!addonSettings.visaDiscountEnabled}
+              value={addonSettings.visaAssistanceOriginalFee}
+              onChange={e => setAddonSettings(p => ({ ...p, visaAssistanceOriginalFee: Number(e.target.value) }))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-400"
+            />
+          </div>
+        </div>
+
+        {addonSettings.visaDiscountEnabled && addonSettings.visaAssistanceOriginalFee > addonSettings.visaAssistanceFee && (
+          <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+            <CheckCircle className="h-4 w-4 flex-shrink-0" />
+            <span>
+              Showing <strong>{Math.round((1 - addonSettings.visaAssistanceFee / addonSettings.visaAssistanceOriginalFee) * 100)}% OFF</strong> badge — customers pay PHP {addonSettings.visaAssistanceFee.toLocaleString()} instead of PHP {addonSettings.visaAssistanceOriginalFee.toLocaleString()}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Travel Insurance */}
+      <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5">
+        <div className="flex items-center gap-3 border-b pb-4">
+          <div className="p-2 bg-purple-50 rounded-lg">
+            <DollarSign className="h-5 w-5 text-purple-600" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900">Travel Insurance</h3>
+            <p className="text-xs text-gray-500">Charged per passenger who opts in</p>
+          </div>
+        </div>
+
+        {/* Discount toggle */}
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-700">Show Discount Badge</p>
+            <p className="text-xs text-gray-500">
+              When ON, original price is shown as strikethrough and a % OFF badge appears.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAddonSettings(p => ({ ...p, insuranceDiscountEnabled: !p.insuranceDiscountEnabled }))}
+            className="flex items-center gap-2"
+          >
+            {addonSettings.insuranceDiscountEnabled ? (
+              <ToggleRight className="h-8 w-8 text-green-500" />
+            ) : (
+              <ToggleLeft className="h-8 w-8 text-gray-400" />
+            )}
+            <span className={`text-sm font-semibold ${addonSettings.insuranceDiscountEnabled ? 'text-green-600' : 'text-gray-400'}`}>
+              {addonSettings.insuranceDiscountEnabled ? 'ON' : 'OFF'}
+            </span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Discounted Price (PHP) <span className="text-gray-400 font-normal">— what customers pay</span>
+            </label>
+            <input
+              type="number"
+              min={0}
+              value={addonSettings.insuranceFee}
+              onChange={e => setAddonSettings(p => ({ ...p, insuranceFee: Number(e.target.value) }))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Original Price (PHP) <span className="text-gray-400 font-normal">— shown as strikethrough</span>
+            </label>
+            <input
+              type="number"
+              min={0}
+              disabled={!addonSettings.insuranceDiscountEnabled}
+              value={addonSettings.insuranceOriginalFee}
+              onChange={e => setAddonSettings(p => ({ ...p, insuranceOriginalFee: Number(e.target.value) }))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-400"
+            />
+          </div>
+        </div>
+
+        {addonSettings.insuranceDiscountEnabled && addonSettings.insuranceOriginalFee > addonSettings.insuranceFee && (
+          <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+            <CheckCircle className="h-4 w-4 flex-shrink-0" />
+            <span>
+              Showing <strong>{Math.round((1 - addonSettings.insuranceFee / addonSettings.insuranceOriginalFee) * 100)}% OFF</strong> badge — customers pay PHP {addonSettings.insuranceFee.toLocaleString()} instead of PHP {addonSettings.insuranceOriginalFee.toLocaleString()}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Save Button */}
+      <div className="flex items-center gap-4">
+        <button
+          onClick={handleSaveAddon}
+          disabled={addonSaving}
+          className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {addonSaving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          {addonSaving ? 'Saving…' : 'Save Pricing'}
+        </button>
+        {addonSaved && (
+          <div className="flex items-center gap-1 text-green-600 text-sm">
+            <CheckCircle className="h-4 w-4" />
+            Saved successfully
+          </div>
+        )}
+        {addonError && (
+          <div className="flex items-center gap-1 text-red-600 text-sm">
+            <AlertCircle className="h-4 w-4" />
+            {addonError}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
