@@ -282,13 +282,17 @@ export default function BookingStepDocuments({
                   <span className="text-xl font-bold text-orange-700">
                     PHP {passportFeePerPax.toLocaleString()}
                   </span>
-                  <span className="text-sm text-gray-400 line-through">
-                    PHP {passportOriginalPerPax.toLocaleString()}
-                  </span>
+                  {passportOriginalPerPax > passportFeePerPax && (
+                    <span className="text-sm text-gray-400 line-through">
+                      PHP {passportOriginalPerPax.toLocaleString()}
+                    </span>
+                  )}
                   <span className="text-sm text-gray-500">/ pax</span>
-                  <span className="ml-1 px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700 rounded-full">
-                    {Math.round((1 - passportFeePerPax / passportOriginalPerPax) * 100)}% OFF
-                  </span>
+                  {passportOriginalPerPax > passportFeePerPax && (
+                    <span className="ml-1 px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700 rounded-full">
+                      {Math.round((1 - passportFeePerPax / passportOriginalPerPax) * 100)}% OFF
+                    </span>
+                  )}
                 </div>
                 {paxCount > 1 && (
                   <p className="text-xs text-gray-500 mt-1">
@@ -436,13 +440,17 @@ export default function BookingStepDocuments({
                     <span className="text-xl font-bold text-blue-700">
                       PHP {visaFeePerPax.toLocaleString()}
                     </span>
-                    <span className="text-sm text-gray-400 line-through">
-                      PHP {visaOriginalPerPax.toLocaleString()}
-                    </span>
+                    {visaOriginalPerPax > visaFeePerPax && (
+                      <span className="text-sm text-gray-400 line-through">
+                        PHP {visaOriginalPerPax.toLocaleString()}
+                      </span>
+                    )}
                     <span className="text-sm text-gray-500">/ pax</span>
-                    <span className="ml-1 px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700 rounded-full">
-                      {Math.round((1 - visaFeePerPax / visaOriginalPerPax) * 100)}% OFF
-                    </span>
+                    {visaOriginalPerPax > visaFeePerPax && (
+                      <span className="ml-1 px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700 rounded-full">
+                        {Math.round((1 - visaFeePerPax / visaOriginalPerPax) * 100)}% OFF
+                      </span>
+                    )}
                   </div>
                   {paxCount > 1 && (
                     <p className="text-xs text-gray-500 mt-1">
@@ -523,13 +531,17 @@ export default function BookingStepDocuments({
                   <span className="text-xl font-bold text-emerald-700">
                     PHP {insuranceFeePerPax.toLocaleString()}
                   </span>
-                  <span className="text-sm text-gray-400 line-through">
-                    PHP {insuranceOriginalPerPax.toLocaleString()}
-                  </span>
+                  {insuranceOriginalPerPax > insuranceFeePerPax && (
+                    <span className="text-sm text-gray-400 line-through">
+                      PHP {insuranceOriginalPerPax.toLocaleString()}
+                    </span>
+                  )}
                   <span className="text-sm text-gray-500">/ pax</span>
-                  <span className="ml-1 px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700 rounded-full">
-                    {Math.round((1 - insuranceFeePerPax / insuranceOriginalPerPax) * 100)}% OFF
-                  </span>
+                  {insuranceOriginalPerPax > insuranceFeePerPax && (
+                    <span className="ml-1 px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700 rounded-full">
+                      {Math.round((1 - insuranceFeePerPax / insuranceOriginalPerPax) * 100)}% OFF
+                    </span>
+                  )}
                 </div>
                 {paxCount > 1 && (
                   <p className="text-xs text-gray-500 mt-1">
