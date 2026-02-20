@@ -46,6 +46,7 @@ interface BookingDetails {
   customRoutes?: CustomRoute[];
   // Visa assistance fields
   visaAssistanceRequested?: boolean;
+  visaAssistanceFee?: number;
   visaDocumentsProvided?: boolean;
   visaDestinationCountries?: string;
   visaAssistanceStatus?: string;
@@ -179,11 +180,22 @@ const generateBookingConfirmationEmail = (booking: BookingDetails): string => {
                 <span><strong>Price per person:</strong></span>
                 <span>PHP ${booking.pricePerPerson.toLocaleString()}</span>
             </div>
+            ${booking.visaAssistanceRequested ? `
+            <div class="detail-row">
+                <span><strong>Visa Assistance Fee:</strong></span>
+                <span>PHP ${(booking.visaAssistanceFee ?? 2500).toLocaleString()}</span>
+            </div>` : ''}
             <div class="detail-row total">
                 <span><strong>Total Amount:</strong></span>
                 <span>PHP ${booking.totalAmount.toLocaleString()}</span>
             </div>
         </div>
+        ${booking.visaAssistanceRequested ? `
+        <div class="booking-card" style="border-left: 4px solid #3b82f6;">
+            <h3>🛂 Visa Assistance Included</h3>
+            <p>Your booking includes our <strong>Visa Assistance Service</strong>. Our visa team will contact you to guide you through the required documents and application process.</p>
+            <p style="margin-top:8px;">For questions, email <a href="mailto:visa@discovergroup.com">visa@discovergroup.com</a>.</p>
+        </div>` : ''}
         
         <div class="booking-card">
             <h3>📍 What's Next?</h3>
@@ -365,6 +377,7 @@ export const sendBookingConfirmationEmail = async (booking: BookingDetails): Pro
         }),
         // Visa assistance data
         visaAssistanceRequested: booking.visaAssistanceRequested || false,
+        visaAssistanceFee: booking.visaAssistanceRequested ? formatCurrency(booking.visaAssistanceFee ?? 2500) : undefined,
         visaDocumentsProvided: booking.visaDocumentsProvided || false,
         visaDestinationCountries: booking.visaDestinationCountries || '',
         visaAssistanceStatus: booking.visaAssistanceStatus || 'not-needed',

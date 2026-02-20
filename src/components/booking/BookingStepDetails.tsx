@@ -13,6 +13,7 @@ interface BookingStepDetailsProps {
   setPassportError: (value: string) => void;
   handlePassportChange: (value: string) => void;
   validatePassport: (value: string) => boolean;
+  isLoggedIn?: boolean;
   onBack: () => void;
   onNext: () => void;
 }
@@ -29,8 +30,7 @@ export default function BookingStepDetails({
   passportError,
   setPassportError,
   handlePassportChange,
-  validatePassport,
-  onBack,
+  validatePassport,  isLoggedIn = false,  onBack,
   onNext,
 }: BookingStepDetailsProps) {
   return (
@@ -55,6 +55,9 @@ export default function BookingStepDetails({
             className="w-full rounded-xl px-4 py-3"
             required
           />
+          {isLoggedIn && customerName && (
+            <p className="text-xs text-green-600 mt-1 ml-1">✓ Auto-filled from your account</p>
+          )}
         </div>
         <div className="form-field">
           <input
@@ -65,6 +68,9 @@ export default function BookingStepDetails({
             className="w-full rounded-xl px-4 py-3"
             required
           />
+          {isLoggedIn && customerEmail && (
+            <p className="text-xs text-green-600 mt-1 ml-1">✓ Auto-filled from your account</p>
+          )}
         </div>
         <div className="form-field">
           <input

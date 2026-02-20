@@ -141,9 +141,17 @@ export default function Booking(): JSX.Element {
   const [step, setStep] = useState<number>(0); // 0: review, 1: details, 2: passport/visa, 3: appointment, 4: payment
   const [error, setError] = useState<string | null>(null);
 
-  // Customer information state
-  const [customerName, setCustomerName] = useState<string>("");
-  const [customerEmail, setCustomerEmail] = useState<string>("");
+  // Auto-fill customer info from logged-in user account
+  const [customerName, setCustomerName] = useState<string>(() => user?.fullName ?? "");
+  const [customerEmail, setCustomerEmail] = useState<string>(() => user?.email ?? "");
+
+  // Sync if user logs in after component mounts (e.g. mid-session)
+  useEffect(() => {
+    if (user) {
+      setCustomerName((prev) => prev || user.fullName || "");
+      setCustomerEmail((prev) => prev || user.email || "");
+    }
+  }, [user]);
   const [customerPhone, setCustomerPhone] = useState<string>("");
   const [customerPassport, setCustomerPassport] = useState<string>("");
   const [passportError, setPassportError] = useState<string>("");
@@ -287,10 +295,13 @@ export default function Booking(): JSX.Element {
     [perPerson, customRoutesTotalPerPerson]
   );
   
-  // Total for all passengers
+  // Visa assistance fee (fixed processing fee per booking)
+  const VISA_ASSISTANCE_FEE = 2500;
+
+  // Total for all passengers (+ visa assistance fee if requested)
   const total = useMemo(
-    () => combinedPerPerson * Math.max(1, passengers),
-    [combinedPerPerson, passengers]
+    () => combinedPerPerson * Math.max(1, passengers) + (needsVisaAssistance ? VISA_ASSISTANCE_FEE : 0),
+    [combinedPerPerson, passengers, needsVisaAssistance]
   );
   
   // Calculate payment amounts based on payment type with safety checks
@@ -480,6 +491,11 @@ export default function Booking(): JSX.Element {
         paymentIntentId: confirmationId,
         customRoutes: customRoutes.length > 0 ? customRoutes : undefined,
         installmentPlan, // Add installment plan
+        // Include visa assistance if requested
+        ...(needsVisaAssistance && {
+          visaAssistanceRequested: true,
+          visaAssistanceFee: VISA_ASSISTANCE_FEE,
+        }),
         // Include appointment details if user requested one
         ...(wantsAppointment && {
           appointmentDate,
@@ -572,6 +588,11 @@ export default function Booking(): JSX.Element {
                 appointmentDate,
                 appointmentTime,
                 appointmentPurpose,
+              }),
+              // Include visa assistance details if requested
+              ...(needsVisaAssistance && {
+                visaAssistanceRequested: true,
+                visaAssistanceFee: VISA_ASSISTANCE_FEE,
               }),
             }),
           });
@@ -964,6 +985,7 @@ export default function Booking(): JSX.Element {
                         setPassportError={setPassportError}
                         handlePassportChange={handlePassportChange}
                         validatePassport={validatePassport}
+                        isLoggedIn={!!user}
                         onBack={handleBack}
                         onNext={handleNext}
                       />

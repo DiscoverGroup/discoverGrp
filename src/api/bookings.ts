@@ -35,9 +35,14 @@ export async function createBooking(bookingData: {
   appointmentTime?: string;
   appointmentPurpose?: string;
   customRoutes?: CustomRoute[];
+  installmentPlan?: unknown;
+  visaAssistanceRequested?: boolean;
+  visaAssistanceFee?: number;
 }): Promise<Booking> {
   const bookingId = generateBookingId();
-  const totalAmount = bookingData.perPerson * bookingData.passengers;
+  const baseTotalAmount = bookingData.perPerson * bookingData.passengers;
+  const visaFee = bookingData.visaAssistanceRequested ? (bookingData.visaAssistanceFee ?? 2500) : 0;
+  const totalAmount = baseTotalAmount + visaFee;
   const paidAmount = bookingData.paymentType === 'full' 
     ? totalAmount 
     : Math.round(totalAmount * 0.3); // 30% downpayment
@@ -63,6 +68,8 @@ export async function createBooking(bookingData: {
     appointmentTime: bookingData.appointmentTime,
     appointmentPurpose: bookingData.appointmentPurpose,
     customRoutes: bookingData.customRoutes || [],
+    visaAssistanceRequested: bookingData.visaAssistanceRequested || false,
+    visaAssistanceFee: bookingData.visaAssistanceRequested ? (bookingData.visaAssistanceFee ?? 2500) : 0,
   };
 
   const res = await fetch(buildApiUrl('/api/bookings'), {
