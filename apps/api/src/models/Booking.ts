@@ -21,6 +21,8 @@ export interface IBooking extends Document {
   customerEmail: string;
   customerPhone: string;
   customerPassport?: string;
+  passportUrl?: string;  // R2 URL of uploaded passport file
+  visaUrl?: string;     // R2 URL of uploaded visa file
   selectedDate: string;
   perPerson: number;
   paidAmount: number;
@@ -88,6 +90,8 @@ const BookingSchema = new Schema<IBooking>({
   customerEmail: { type: String, required: true },
   customerPhone: { type: String, required: true },
   customerPassport: { type: String },
+  passportUrl: { type: String },
+  visaUrl: { type: String },
   selectedDate: { type: String, required: true },
   perPerson: { type: Number, required: true },
   paidAmount: { type: Number, required: true },

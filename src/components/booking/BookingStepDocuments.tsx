@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
+import { buildApiUrl } from "../../config/apiBase";
 
 export interface InsurancePax {
   name: string;
@@ -9,8 +10,12 @@ interface BookingStepDocumentsProps {
   passengers: number;
   passportFile: File | null;
   setPassportFile: (file: File | null) => void;
+  passportUrl: string | null;
+  setPassportUrl: (url: string | null) => void;
   visaFile: File | null;
   setVisaFile: (file: File | null) => void;
+  visaUrl: string | null;
+  setVisaUrl: (url: string | null) => void;
   hasVisa: boolean | null;
   setHasVisa: (value: boolean) => void;
   visaType: string;
@@ -37,8 +42,12 @@ export default function BookingStepDocuments({
   passengers,
   passportFile,
   setPassportFile,
+  passportUrl,
+  setPassportUrl,
   visaFile,
   setVisaFile,
+  visaUrl,
+  setVisaUrl,
   hasVisa,
   setHasVisa,
   visaType,
@@ -61,6 +70,62 @@ export default function BookingStepDocuments({
   onNext,
 }: BookingStepDocumentsProps) {
   const paxCount = Math.max(1, passengers);
+  const [passportUploading, setPassportUploading] = useState(false);
+  const [passportUploadError, setPassportUploadError] = useState<string | null>(null);
+  const [visaUploading, setVisaUploading] = useState(false);
+  const [visaUploadError, setVisaUploadError] = useState<string | null>(null);
+
+  async function uploadDocument(file: File, type: 'passport' | 'visa'): Promise<string> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', type);
+    const token = localStorage.getItem('token');
+    const res = await fetch(buildApiUrl('/api/upload/document'), {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error((err as { message?: string }).message || 'Upload failed');
+    }
+    const data = await res.json() as { url: string };
+    return data.url;
+  }
+
+  async function handlePassportChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] || null;
+    setPassportFile(file);
+    setPassportUrl(null);
+    setPassportUploadError(null);
+    if (!file) return;
+    setPassportUploading(true);
+    try {
+      const url = await uploadDocument(file, 'passport');
+      setPassportUrl(url);
+    } catch (err) {
+      setPassportUploadError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setPassportUploading(false);
+    }
+  }
+
+  async function handleVisaChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] || null;
+    setVisaFile(file);
+    setVisaUrl(null);
+    setVisaUploadError(null);
+    if (!file) return;
+    setVisaUploading(true);
+    try {
+      const url = await uploadDocument(file, 'visa');
+      setVisaUrl(url);
+    } catch (err) {
+      setVisaUploadError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setVisaUploading(false);
+    }
+  }
 
   function updateVisaPax(index: number, field: keyof InsurancePax, value: string) {
     const updated = [...visaPaxDetails];
@@ -106,8 +171,10 @@ export default function BookingStepDocuments({
     insurancePaxDetails.slice(0, paxCount).every((p) => p.name.trim() && p.birthday);
 
   const canContinue =
-    !!passportFile &&
-    (hasVisa === true ? !!visaFile && !!visaExpiry : hasVisa !== null) &&
+    !!passportUrl &&
+    !passportUploading &&
+    !visaUploading &&
+    (hasVisa === true ? !!visaUrl && !!visaExpiry : hasVisa !== null) &&
     visaComplete &&
     insuranceComplete;
 
@@ -133,16 +200,33 @@ export default function BookingStepDocuments({
           <input
             type="file"
             accept=".pdf,.jpg,.jpeg,.png"
-            onChange={(e) => setPassportFile(e.target.files?.[0] || null)}
+            onChange={handlePassportChange}
             className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
             required
           />
-          {passportFile && (
+          {passportUploading && (
+            <div className="flex items-center gap-2 mt-2 text-blue-600">
+              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+              <span className="text-sm">Uploading to secure storage…</span>
+            </div>
+          )}
+          {passportUploadError && (
+            <div className="flex items-center gap-2 mt-2 text-red-600">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              <span className="text-sm">{passportUploadError}</span>
+            </div>
+          )}
+          {passportUrl && !passportUploading && (
             <div className="flex items-center gap-2 mt-2 text-green-600">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              <span className="text-sm">Passport uploaded: {passportFile.name}</span>
+              <span className="text-sm">Passport uploaded: {passportFile?.name}</span>
             </div>
           )}
         </div>
@@ -176,14 +260,31 @@ export default function BookingStepDocuments({
               <input
                 type="file"
                 accept=".pdf,.jpg,.jpeg,.png"
-                onChange={(e) => setVisaFile(e.target.files?.[0] || null)}
+                onChange={handleVisaChange}
                 className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
                 required
               />
-              {visaFile && (
+              {visaUploading && (
+                <div className="flex items-center gap-2 mt-2 text-blue-600">
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  <span className="text-sm">Uploading to secure storage…</span>
+                </div>
+              )}
+              {visaUploadError && (
+                <div className="flex items-center gap-2 mt-2 text-red-600">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  <span className="text-sm">{visaUploadError}</span>
+                </div>
+              )}
+              {visaUrl && !visaUploading && (
                 <div className="flex items-center gap-2 mt-2 text-green-600">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                  <span className="text-sm">Visa uploaded: {visaFile.name}</span>
+                  <span className="text-sm">Visa uploaded: {visaFile?.name}</span>
                 </div>
               )}
             </div>

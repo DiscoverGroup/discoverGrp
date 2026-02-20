@@ -242,6 +242,7 @@ const PUBLIC_API_PATHS = [
   '/monitoring',
   '/visa-readiness',
   '/settings',
+  '/upload',
 ];
 
 app.use('/api/', (req: Request, res: Response, next: NextFunction) => {

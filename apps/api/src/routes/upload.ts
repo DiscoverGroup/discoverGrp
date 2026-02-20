@@ -24,7 +24,7 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Upload failed';
 }
 
-// Configure multer for memory storage
+// Configure multer for memory storage (images + videos — admin only)
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -47,6 +47,26 @@ const upload = multer({
       cb(null, true);
     } else {
       cb(new Error('Invalid file type. Only images and videos are allowed.'));
+    }
+  },
+});
+
+// Configure multer for document uploads (PDF + images — any authenticated user)
+const uploadDocument = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (_req, file, cb) => {
+    const allowedMimes = [
+      'application/pdf',
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/webp',
+    ];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only PDF and images are allowed.'));
     }
   },
 });
@@ -180,6 +200,66 @@ router.post(
       });
     } catch (error: unknown) {
       console.error('[R2 Upload Multiple] Error:', error);
+      res.status(500).json({
+        error: 'Upload failed',
+        message: getErrorMessage(error),
+      });
+    }
+  }
+);
+
+/**
+ * Upload a travel document (passport / visa copy) to Cloudflare R2.
+ * Accessible to ANY authenticated user (not just admins).
+ * Accepts: PDF, JPEG, PNG, WebP — max 10 MB.
+ * Files go to: documents/{type}/{userId}/{timestamp}-{random}.ext
+ */
+router.post(
+  '/document',
+  requireAuth,
+  uploadDocument.single('file'),
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.file) {
+        res.status(400).json({ error: 'No file uploaded' });
+        return;
+      }
+
+      // type: 'passport' | 'visa' (defaults to 'passport')
+      const docType = (req.body.type as string) || 'passport';
+      if (!['passport', 'visa'].includes(docType)) {
+        res.status(400).json({ error: 'Invalid document type. Use "passport" or "visa".' });
+        return;
+      }
+
+      const userId = req.user?.id || 'guest';
+      const fileExt = path.extname(req.file.originalname);
+      const randomName = crypto.randomBytes(16).toString('hex');
+      const timestamp = Date.now();
+      const fileName = `documents/${docType}s/${userId}/${timestamp}-${randomName}${fileExt}`;
+
+      const command = new PutObjectCommand({
+        Bucket: R2_BUCKET,
+        Key: fileName,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype,
+      });
+
+      await r2Client.send(command);
+
+      const publicUrl = `${R2_PUBLIC_URL}/${fileName}`;
+
+      console.log('[R2 Document Upload] Success:', { docType, fileName, userId, size: req.file.size });
+
+      res.json({
+        success: true,
+        url: publicUrl,
+        fileName,
+        size: req.file.size,
+        type: req.file.mimetype,
+      });
+    } catch (error: unknown) {
+      console.error('[R2 Document Upload] Error:', error);
       res.status(500).json({
         error: 'Upload failed',
         message: getErrorMessage(error),

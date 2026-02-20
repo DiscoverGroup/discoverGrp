@@ -62,7 +62,9 @@ router.post("/", async (req, res) => {
       travelInsuranceRequested,
       travelInsuranceFee,
       insurancePaxDetails,
-      nationality
+      nationality,
+      passportUrl,
+      visaUrl,
     } = req.body;
 
     // Note: Tours are served from JSON files, not MongoDB
@@ -146,6 +148,8 @@ router.post("/", async (req, res) => {
       travelInsuranceRequested: travelInsuranceRequested || false,
       travelInsuranceFee: travelInsuranceRequested ? (travelInsuranceFee ?? 3000) : 0,
       insurancePaxDetails: insurancePaxDetails || [],
+      passportUrl: passportUrl || undefined,
+      visaUrl: visaUrl || undefined,
       visaReadinessScore,
       visaReadinessStatus,
       visaReadinessSnapshot

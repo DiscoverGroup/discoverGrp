@@ -159,6 +159,8 @@ export default function Booking(): JSX.Element {
   // Passport and visa document states
   const [passportFile, setPassportFile] = useState<File | null>(null);
   const [visaFile, setVisaFile] = useState<File | null>(null);
+  const [passportUrl, setPassportUrl] = useState<string | null>(null);
+  const [visaUrl, setVisaUrl] = useState<string | null>(null);
   const [hasVisa, setHasVisa] = useState<boolean | null>(null);
   const [visaType, setVisaType] = useState<string>("");
   const [visaExpiry, setVisaExpiry] = useState<string>("");
@@ -527,6 +529,9 @@ export default function Booking(): JSX.Element {
         paymentIntentId: confirmationId,
         customRoutes: customRoutes.length > 0 ? customRoutes : undefined,
         installmentPlan, // Add installment plan
+        // Include passport/visa document URLs if uploaded
+        ...(passportUrl && { passportUrl }),
+        ...(visaUrl && { visaUrl }),
         // Include visa assistance if requested
         ...(needsVisaAssistance && {
           visaAssistanceRequested: true,
@@ -1050,6 +1055,10 @@ export default function Booking(): JSX.Element {
                         setPassportFile={setPassportFile}
                         visaFile={visaFile}
                         setVisaFile={setVisaFile}
+                        passportUrl={passportUrl}
+                        setPassportUrl={setPassportUrl}
+                        visaUrl={visaUrl}
+                        setVisaUrl={setVisaUrl}
                         hasVisa={hasVisa}
                         setHasVisa={setHasVisa}
                         visaType={visaType}

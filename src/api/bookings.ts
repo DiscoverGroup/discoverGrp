@@ -42,6 +42,8 @@ export async function createBooking(bookingData: {
   travelInsuranceRequested?: boolean;
   travelInsuranceFee?: number;
   insurancePaxDetails?: Array<{name: string; birthday: string}>;
+  passportUrl?: string;
+  visaUrl?: string;
 }): Promise<Booking> {
   const bookingId = generateBookingId();
   const baseTotalAmount = bookingData.perPerson * bookingData.passengers;
@@ -79,6 +81,8 @@ export async function createBooking(bookingData: {
     travelInsuranceRequested: bookingData.travelInsuranceRequested || false,
     travelInsuranceFee: bookingData.travelInsuranceRequested ? (bookingData.travelInsuranceFee ?? 3000) : 0,
     insurancePaxDetails: bookingData.insurancePaxDetails || [],
+    passportUrl: bookingData.passportUrl || undefined,
+    visaUrl: bookingData.visaUrl || undefined,
   };
 
   const res = await fetch(buildApiUrl('/api/bookings'), {
