@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import SecureForm from '../components/SecureForm';
 import { 
   Plus, 
   Edit3,
@@ -478,7 +479,12 @@ const UserManagement: React.FC = () => {
                 </div>
               )}
 
-              <form onSubmit={handleCreateUser} className="space-y-4">
+              <SecureForm onSubmit={handleCreateUser} className="space-y-4">
+                {/* Canary tokens — bot/crawler detection, do NOT remove */}
+                <div aria-hidden="true" style={{ display: 'none' }}>
+                  <input name="website" tabIndex={-1} autoComplete="off" value="" readOnly />
+                  <input name="phone_number_2" tabIndex={-1} autoComplete="off" value="" readOnly />
+                </div>
                 {/* Profile Image */}
                 <div className="flex flex-col items-center mb-4">
                   <div className="relative">
@@ -681,7 +687,7 @@ const UserManagement: React.FC = () => {
                     )}
                   </button>
                 </div>
-              </form>
+              </SecureForm>
             </div>
           </div>
         </div>
@@ -708,7 +714,7 @@ const UserManagement: React.FC = () => {
                 </div>
               )}
 
-              <form onSubmit={(e) => {
+              <SecureForm onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
                 const updatedData = {
@@ -719,6 +725,11 @@ const UserManagement: React.FC = () => {
                 };
                 handleUpdateUser(updatedData);
               }} className="space-y-4">
+                {/* Canary tokens — bot/crawler detection, do NOT remove */}
+                <div aria-hidden="true" style={{ display: 'none' }}>
+                  <input name="website" tabIndex={-1} autoComplete="off" value="" readOnly />
+                  <input name="phone_number_2" tabIndex={-1} autoComplete="off" value="" readOnly />
+                </div>
                 
                 {/* Profile Display */}
                 <div className="flex flex-col items-center mb-4">
@@ -820,7 +831,7 @@ const UserManagement: React.FC = () => {
                     )}
                   </button>
                 </div>
-              </form>
+              </SecureForm>
             </div>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import SecureForm from './SecureForm';
 import { UserCheck, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { LoginCredentials } from '../types/auth';
 import { authService } from '../services/authService';
@@ -42,7 +43,12 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, isLoading, error }) => {
             </div>
           )}
 
-          <form onSubmit={handleLoginSubmit} className="space-y-4">
+          <SecureForm onSubmit={handleLoginSubmit} className="space-y-4">
+            {/* Canary tokens — bot/crawler detection, do NOT remove */}
+            <div aria-hidden="true" style={{ display: 'none' }}>
+              <input name="website" tabIndex={-1} autoComplete="off" value="" readOnly />
+              <input name="phone_number_2" tabIndex={-1} autoComplete="off" value="" readOnly />
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Email Address
@@ -107,7 +113,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, isLoading, error }) => {
             >
               {isLoading ? 'Signing In...' : 'Sign In'}
             </button>
-          </form>
+          </SecureForm>
 
           {/* Admin Note */}
           <div className="mt-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">

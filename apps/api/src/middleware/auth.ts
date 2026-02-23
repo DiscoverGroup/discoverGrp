@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
 import User from "../models/User";
 import logger from "../utils/logger";
+import { verifyToken } from "./jwtHardening";
 
 // Type for authenticated request - use intersection to ensure proper inheritance
 export type AuthenticatedRequest = Request & {
@@ -14,16 +14,11 @@ export type AuthenticatedRequest = Request & {
   };
 }
 
-interface JWTPayload {
-  id: string;
-  role: string;
-  iat: number;
-  exp: number;
-}
-
 /**
- * Middleware to require authentication via JWT token
- * Verifies JWT token from Authorization header and attaches user to request
+ * Middleware to require authentication via JWT token.
+ * Uses hardened JWT verification (algorithm whitelist, blacklist, device
+ * fingerprint, iss/aud/sub enforcement) — replaces the raw jwt.verify call.
+ * All 65+ route usages are automatically hardened by this single change.
  */
 export async function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   try {
@@ -35,11 +30,25 @@ export async function requireAuth(req: AuthenticatedRequest, res: Response, next
     
     const token = authHeader.split(' ')[1];
     
-    // Verify JWT token - will throw if invalid
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
+    // ─ Hardened verification: algorithm whitelist + blacklist + iss/aud/sub + device FP
+    const result = verifyToken(token, 'access', req);
+
+    if (!result.valid || !result.payload) {
+      const reason = result.reason ?? 'VERIFICATION_FAILED';
+      if (reason === 'TOKEN_EXPIRED') {
+        logger.warn('Expired JWT token attempt');
+        return res.status(401).json({ error: 'Token expired. Please login again.', code: reason });
+      }
+      logger.warn('Invalid JWT token attempt', { reason });
+      return res.status(401).json({ error: 'Invalid token. Please login again.', code: reason });
+    }
+
+    const decoded = result.payload;
     
     // Fetch user from database to ensure they still exist and are active
-    const user = await User.findById(decoded.id);
+    // decoded.sub holds the userId (set by issueAccessToken as payload.sub)
+    const userId = decoded.sub ?? (decoded as Record<string, unknown>)['id'];
+    const user = await User.findById(userId);
     
     if (!user) {
       return res.status(401).json({ error: 'User not found. Token invalid.' });
@@ -54,7 +63,7 @@ export async function requireAuth(req: AuthenticatedRequest, res: Response, next
     }
     
     // Attach user info to request
- req.user = {
+    req.user = {
       id: user._id.toString(),
       email: user.email,
       fullName: user.fullName,
@@ -64,14 +73,6 @@ export async function requireAuth(req: AuthenticatedRequest, res: Response, next
     
     next();
   } catch (error) {
-    if (error instanceof jwt.JsonWebTokenError) {
-      logger.warn('Invalid JWT token attempt');
-      return res.status(401).json({ error: 'Invalid token. Please login again.' });
-    }
-    if (error instanceof jwt.TokenExpiredError) {
-      logger.warn('Expired JWT token attempt');
-      return res.status(401).json({ error: 'Token expired. Please login again.' });
-    }
     logger.error('Authentication error:', error);
     return res.status(500).json({ error: 'Authentication failed. Please try again.' });
   }

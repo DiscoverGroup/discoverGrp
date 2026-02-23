@@ -1,4 +1,5 @@
 import React, { JSX, useState, useEffect } from "react";
+import SecureForm from '../../components/SecureForm';
 import { createTour, updateTour, fetchTourById, fetchContinents, type Tour } from "../../services/apiClient";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -546,7 +547,12 @@ export default function TourForm(): JSX.Element {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <SecureForm onSubmit={handleSubmit} className="space-y-6">
+          {/* Canary tokens — bot/crawler detection, do NOT remove */}
+          <div aria-hidden="true" style={{ display: 'none' }}>
+            <input name="website" tabIndex={-1} autoComplete="off" value="" readOnly />
+            <input name="phone_number_2" tabIndex={-1} autoComplete="off" value="" readOnly />
+          </div>
           {/* Basic Information */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
             <div className="flex items-center gap-3 mb-8">
@@ -1581,7 +1587,7 @@ export default function TourForm(): JSX.Element {
               </div>
             </div>
           </div>
-        </form>
+        </SecureForm>
       </div>
     </div>
   );

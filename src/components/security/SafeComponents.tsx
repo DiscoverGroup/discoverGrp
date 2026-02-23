@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import SecureForm from '../SecureForm';
 import { sanitizeHtml, sanitizeText, useSanitizedHtml } from '../../utils/sanitize';
 
 /**
@@ -117,7 +118,12 @@ export const SafeFormExample: React.FC = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <SecureForm onSubmit={handleSubmit} className="space-y-4">
+      {/* Canary tokens — bot/crawler detection, do NOT remove */}
+      <div aria-hidden="true" style={{ display: 'none' }}>
+        <input name="website" tabIndex={-1} autoComplete="off" value="" readOnly />
+        <input name="phone_number_2" tabIndex={-1} autoComplete="off" value="" readOnly />
+      </div>
       <div>
         <label className="block mb-2">Name</label>
         <SafeTextInput
@@ -154,6 +160,6 @@ export const SafeFormExample: React.FC = () => {
       >
         Submit
       </button>
-    </form>
+    </SecureForm>
   );
 };

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SecureForm from '../components/SecureForm';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -398,7 +399,12 @@ export default function Register() {
                   </motion.div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <SecureForm onSubmit={handleSubmit} className="space-y-5">
+                  {/* Canary tokens — bot/crawler detection, do NOT remove */}
+                  <div aria-hidden="true" style={{ display: 'none' }}>
+                    <input name="website" tabIndex={-1} autoComplete="off" value="" readOnly />
+                    <input name="phone_number_2" tabIndex={-1} autoComplete="off" value="" readOnly />
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
                     {/* Full Name */}
                     <motion.div
@@ -844,7 +850,7 @@ export default function Register() {
                       )}
                     </span>
                   </motion.button>
-                </form>
+                </SecureForm>
 
                 {/* Login Link */}
                 <motion.div

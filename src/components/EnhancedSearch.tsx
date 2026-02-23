@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import SecureForm from './SecureForm';
 import { MapPin, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -120,7 +121,12 @@ export const EnhancedSearch: React.FC<EnhancedSearchProps> = ({
 
   return (
     <div className={`relative ${className}`}>
-      <form onSubmit={handleSubmit} className="flex items-stretch bg-white rounded-full shadow-2xl overflow-hidden">
+      <SecureForm onSubmit={handleSubmit} className="flex items-stretch bg-white rounded-full shadow-2xl overflow-hidden">
+        {/* Canary tokens — bot/crawler detection, do NOT remove */}
+        <div aria-hidden="true" style={{ display: 'none' }}>
+          <input name="website" tabIndex={-1} autoComplete="off" value="" readOnly />
+          <input name="phone_number_2" tabIndex={-1} autoComplete="off" value="" readOnly />
+        </div>
         <div className="relative flex-1">
           <input
             ref={inputRef}
@@ -223,7 +229,7 @@ export const EnhancedSearch: React.FC<EnhancedSearchProps> = ({
         >
           Explore
         </button>
-      </form>
+      </SecureForm>
     </div>
   );
 };

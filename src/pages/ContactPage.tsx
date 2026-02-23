@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import SecureForm from '../components/SecureForm';
 import { motion } from "framer-motion";
 import { Mail, Phone, MapPin, Send, Clock, MessageCircle, Facebook, Instagram, Users, FileText, Headphones } from "lucide-react";
 
@@ -319,7 +320,12 @@ export default function ContactPage() {
                 </motion.div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <SecureForm onSubmit={handleSubmit} className="space-y-6">
+                {/* Canary tokens — bot/crawler detection, do NOT remove */}
+                <div aria-hidden="true" style={{ display: 'none' }}>
+                  <input name="website" tabIndex={-1} autoComplete="off" value="" readOnly />
+                  <input name="phone_number_2" tabIndex={-1} autoComplete="off" value="" readOnly />
+                </div>
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
                     <label htmlFor="name" className="block text-gray-700 font-semibold mb-2">
@@ -424,7 +430,7 @@ export default function ContactPage() {
                     </>
                   )}
                 </button>
-              </form>
+              </SecureForm>
             </motion.div>
           </div>
         </div>

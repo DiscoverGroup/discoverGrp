@@ -1,4 +1,5 @@
 import React, { JSX, useState } from "react";
+import SecureForm from '../../components/SecureForm';
 import { createTour, TourPayload } from "../../services/apiClient";
 import { useNavigate } from "react-router-dom";
 
@@ -178,7 +179,12 @@ export default function CreateTour(): JSX.Element {
       {error && <div style={{ background: "#ffe0e0", color: "#b00", padding: "10px 14px", borderRadius: 6, marginBottom: 14 }}>{error}</div>}
       {success && <div style={{ background: "#e6ffe4", color: "#208030", padding: "10px 14px", borderRadius: 6, marginBottom: 14 }}>Tour created!</div>}
 
-      <form onSubmit={handleSave} autoComplete="off">
+      <SecureForm onSubmit={handleSave} autoComplete="off">
+        {/* Canary tokens — bot/crawler detection, do NOT remove */}
+        <div aria-hidden="true" style={{ display: 'none' }}>
+          <input name="website" tabIndex={-1} autoComplete="off" value="" readOnly />
+          <input name="phone_number_2" tabIndex={-1} autoComplete="off" value="" readOnly />
+        </div>
         {/* Basic fields */}
         <div style={{ marginBottom: 16 }}>
           <label style={labelStyle}>Title
@@ -433,7 +439,7 @@ export default function CreateTour(): JSX.Element {
         >
           {saving ? "Saving…" : "Create tour"}
         </button>
-      </form>
+      </SecureForm>
     </div>
   );
 }

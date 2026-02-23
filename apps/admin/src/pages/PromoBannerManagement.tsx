@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SecureForm from '../components/SecureForm';
 import { Plus, Edit2, Trash2, Power, Tag } from 'lucide-react';
 import { buildAdminApiUrl, getAdminApiBaseUrl } from '../config/apiBase';
 import { authFetch } from '../utils/tokenStorage';
@@ -350,7 +351,12 @@ export default function PromoBannerManagement() {
               </h2>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6">
+            <SecureForm onSubmit={handleSubmit} className="p-6">
+              {/* Canary tokens — bot/crawler detection, do NOT remove */}
+              <div aria-hidden="true" style={{ display: 'none' }}>
+                <input name="website" tabIndex={-1} autoComplete="off" value="" readOnly />
+                <input name="phone_number_2" tabIndex={-1} autoComplete="off" value="" readOnly />
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 {/* Title */}
                 <div>
@@ -569,7 +575,7 @@ export default function PromoBannerManagement() {
                   {editingBanner ? 'Update Banner' : 'Create Banner'}
                 </button>
               </div>
-            </form>
+            </SecureForm>
           </div>
         </div>
       )}

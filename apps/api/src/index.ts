@@ -22,6 +22,14 @@ import {
   conditionalCsrfProtection,
 } from "./middleware/csrf";
 import auditLog from "./middleware/auditLog";
+import { advancedWaf, prototypePollutionGuard } from "./middleware/advancedWaf";
+import { penaltyBoxGuard } from "./middleware/advancedRateLimiter";
+import {
+  behaviouralAnalysis,
+  canaryTokenGuard,
+  ipReputationGuard,
+  mountHoneypots,
+} from "./middleware/honeypotAndThreatIntel";
 
 import adminToursRouter from "./routes/admin/tours";
 import publicToursRouter from "./routes/public/tours";
@@ -95,6 +103,18 @@ app.set('trust proxy', 1);
 // Disable X-Powered-By header for security
 app.disable('x-powered-by');
 
+// ── LAYER 0: IP reputation check (AbuseIPDB) ──────────────────────────────────
+app.use(ipReputationGuard);
+
+// ── LAYER 0b: Penalty-box guard (blocks IPs that tripped rate limits repeatedly)
+app.use(penaltyBoxGuard);
+
+// ── LAYER 0c: Behavioural analysis (tracks 404s, auth failures, scanning) ─────
+app.use(behaviouralAnalysis);
+
+// ── LAYER 1: Prototype pollution guard (before body parsing) ──────────────────
+app.use(prototypePollutionGuard);
+
 // Security middleware - Applied in order of importance
 app.use(helmet({
   contentSecurityPolicy: {
@@ -126,7 +146,10 @@ app.use(requestSizeLimiter);
 // Suspicious activity logger
 app.use(suspiciousActivityLogger);
 
-// SQL injection protection
+// ── LAYER 2: Advanced WAF (multi-layer with anomaly scoring) ────────────────
+app.use(advancedWaf);
+
+// SQL injection protection (kept as secondary layer)
 app.use(sqlInjectionProtection);
 
 // NoSQL injection protection (sanitize MongoDB queries)
@@ -137,6 +160,9 @@ app.use(preventParameterPollution);
 
 // Speed limiter (progressive delay)
 app.use(speedLimiter);
+
+// ── LAYER 3: Canary token guard (bot form-fill detection) ─────────────────────
+app.use(canaryTokenGuard);
 
 // CORS configuration
 const allowedOrigins = [
@@ -256,6 +282,9 @@ app.use('/api/', (req: Request, res: Response, next: NextFunction) => {
 // Apply audit logging to all admin routes
 app.use('/admin/', auditLog);
 
+// ── LAYER 4: Honeypot routes (mount before real routes so traps are hit first)
+mountHoneypots(app as unknown as import('express').Router);
+
 app.use("/uploads", express.static(path.join(__dirname, "../public/uploads")));
 app.use("/api/uploads", uploadsRouter);
 app.use("/api/upload", uploadRouter);
@@ -283,6 +312,7 @@ import apiReviewsRouter from "./routes/api/reviews";
 import apiSettingsRouter from "./routes/api/settings";
 import apiVisaApplicationsRouter from "./routes/api/visa-applications";
 import favoritesRouter from "./routes/favorites";
+import totpRouter from "./routes/auth/totp";
 import securityStatusRouter from "./routes/security-status";
 import monitoringRouter from "./routes/monitoring";
 import visaReadinessRouter from "./routes/visa-readiness";
@@ -318,6 +348,8 @@ app.use("/api/visa-readiness", visaReadinessRouter);
 app.use("/api/settings", apiSettingsRouter);
 app.use("/api", emailRouter);
 app.use("/auth", authRouter);
+// 2FA / TOTP routes (nested under /auth/2fa)
+app.use("/auth/2fa", totpRouter);
 
 // Health check routes
 app.use("/health", healthRouter);

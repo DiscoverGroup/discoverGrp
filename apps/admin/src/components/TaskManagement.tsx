@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import SecureForm from './SecureForm';
 import {
   X,
   Calendar,
@@ -224,7 +225,12 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ customerId, onClose, on
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <SecureForm onSubmit={handleSubmit} className="space-y-4">
+            {/* Canary tokens — bot/crawler detection, do NOT remove */}
+            <div aria-hidden="true" style={{ display: 'none' }}>
+              <input name="website" tabIndex={-1} autoComplete="off" value="" readOnly />
+              <input name="phone_number_2" tabIndex={-1} autoComplete="off" value="" readOnly />
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -351,7 +357,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ customerId, onClose, on
                 {editingTask ? 'Update Task' : 'Create Task'}
               </button>
             </div>
-          </form>
+          </SecureForm>
         </div>
       )}
 

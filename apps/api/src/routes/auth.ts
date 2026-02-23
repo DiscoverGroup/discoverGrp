@@ -1,6 +1,6 @@
 import express from 'express';
 import User from '../models/User';
-import bcrypt from 'bcryptjs';
+import { hashPassword, verifyPassword } from '../utils/passwordService';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { sendVerificationEmail } from '../services/emailService';
@@ -21,7 +21,7 @@ router.post('/register', async (req, res) => {
     return res.status(409).json({ error: 'Email already registered' });
   }
   
-  const hashed = await bcrypt.hash(password, 12);
+  const hashed = await hashPassword(password);
   
   // Generate email verification token
   const verificationToken = crypto.randomBytes(32).toString('hex');
@@ -226,10 +226,20 @@ router.post('/login', async (req, res) => {
     return res.status(401).json({ error: 'Invalid email or password' });
   }
   
-  const isMatch = await bcrypt.compare(password, user.password);
+  const { valid: isMatch, needsRehash } = await verifyPassword(password, user.password);
   if (!isMatch) {
     logger.warn(`Failed login attempt for email: ${email}`);
     return res.status(401).json({ error: 'Invalid email or password' });
+  }
+  // Transparent upgrade: if stored hash is bcrypt, silently migrate to argon2id
+  if (needsRehash) {
+    try {
+      user.password = await hashPassword(password);
+      await user.save();
+      logger.info(`[Auth] Password migrated to Argon2id for: ${email}`);
+    } catch (rehashErr) {
+      logger.warn('[Auth] Failed to migrate password hash — continuing login', { error: rehashErr });
+    }
   }
 
   // Check if email is verified (only for client role)
@@ -339,8 +349,8 @@ router.post('/reset-password/:token', async (req, res) => {
       return res.status(400).json({ error: 'Invalid or expired reset token' });
     }
 
-    // Hash new password
-    const hashedPassword = await bcrypt.hash(password, 12);
+    // Hash new password with Argon2id
+    const hashedPassword = await hashPassword(password);
 
     // Update password and clear reset token
     user.password = hashedPassword;

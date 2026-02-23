@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SecureForm from '../components/SecureForm';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { motion } from 'framer-motion';
@@ -107,7 +108,12 @@ export default function ForgotPassword() {
             )}
 
             {!success ? (
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <SecureForm onSubmit={handleSubmit} className="space-y-6">
+                {/* Canary tokens — bot/crawler detection, do NOT remove */}
+                <div aria-hidden="true" style={{ display: 'none' }}>
+                  <input name="website" tabIndex={-1} autoComplete="off" value="" readOnly />
+                  <input name="phone_number_2" tabIndex={-1} autoComplete="off" value="" readOnly />
+                </div>
                 {/* Email Field */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -173,7 +179,7 @@ export default function ForgotPassword() {
                     )}
                   </span>
                 </motion.button>
-              </form>
+              </SecureForm>
             ) : (
               <motion.div
                 initial={{ opacity: 0 }}

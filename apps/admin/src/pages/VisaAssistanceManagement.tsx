@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import SecureForm from '../components/SecureForm';
 import { 
   FileText, 
   Eye, 
@@ -527,7 +528,12 @@ export default function VisaAssistanceManagement() {
                 </button>
               </div>
 
-              <form onSubmit={(e) => { e.preventDefault(); handleCreateNewApplication(); }} className="space-y-4">
+              <SecureForm onSubmit={(e) => { e.preventDefault(); handleCreateNewApplication(); }} className="space-y-4">
+                {/* Canary tokens — bot/crawler detection, do NOT remove */}
+                <div aria-hidden="true" style={{ display: 'none' }}>
+                  <input name="website" tabIndex={-1} autoComplete="off" value="" readOnly />
+                  <input name="phone_number_2" tabIndex={-1} autoComplete="off" value="" readOnly />
+                </div>
                 {/* Personal */}
                 <div className="bg-gray-50 rounded-lg p-4 space-y-4">
                   <h3 className="font-semibold text-gray-900 flex items-center gap-2"><User size={18} /> Personal Information</h3>
@@ -604,7 +610,7 @@ export default function VisaAssistanceManagement() {
                     <Save size={16} /> Create Application
                   </button>
                 </div>
-              </form>
+              </SecureForm>
             </div>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import * as React from "react";
+import SecureForm from '../components/SecureForm';
 import { submitReview, fetchApprovedReviews } from "../api/reviews";
 import type { Review } from "../api/reviews";
 import { Link } from "react-router-dom";
@@ -288,7 +289,12 @@ export default function Home() {
               exit={{ opacity: 0, height: 0 }}
               className="max-w-2xl mx-auto mb-12"
             >
-              <form onSubmit={handleReviewSubmit} className="bg-gradient-to-br from-white/95 to-white/90 backdrop-blur-lg border border-gray-200 rounded-2xl p-8 shadow-2xl">
+              <SecureForm onSubmit={handleReviewSubmit} className="bg-gradient-to-br from-white/95 to-white/90 backdrop-blur-lg border border-gray-200 rounded-2xl p-8 shadow-2xl">
+                {/* Canary tokens — bot/crawler detection, do NOT remove */}
+                <div aria-hidden="true" style={{ display: 'none' }}>
+                  <input name="website" tabIndex={-1} autoComplete="off" value="" readOnly />
+                  <input name="phone_number_2" tabIndex={-1} autoComplete="off" value="" readOnly />
+                </div>
                 <div className="mb-6">
                   <label className="block text-gray-900 font-semibold mb-2">Your Name</label>
                   <input
@@ -344,7 +350,7 @@ export default function Home() {
                 >
                   {reviewSubmitting ? 'Submitting...' : 'Submit Review'}
                 </button>
-              </form>
+              </SecureForm>
             </motion.div>
           )}
 
