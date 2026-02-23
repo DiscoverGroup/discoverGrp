@@ -21,7 +21,10 @@
  *   totpVerified:     Boolean (default: false — set true after first code confirm)
  */
 
-import { authenticator } from 'otplib';
+// otplib exports differ between CJS and ESM / version to version.
+// Namespace import then destructure is the most compatible pattern.
+import * as otplib from 'otplib';
+const { authenticator } = otplib;
 import QRCode from 'qrcode';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';

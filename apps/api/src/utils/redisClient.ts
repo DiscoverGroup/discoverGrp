@@ -111,7 +111,9 @@ class InMemoryRedis implements RedisLike {
 
 // ─── Singleton ────────────────────────────────────────────────────────────────
 
-let _client: Redis | InMemoryRedis | null = null;
+// Typed as RedisLike to avoid ioredis overload conflicts while still
+// allowing real Redis or in-memory fallback to be used interchangeably.
+let _client: RedisLike | null = null;
 let _isReal = false;
 
 export function getRedis(): RedisLike {
@@ -142,7 +144,9 @@ export function getRedis(): RedisLike {
         logger.warn('[Redis] Connection closed');
       });
 
-      _client = real;
+      // Cast to RedisLike: ioredis Redis satisfies our interface at runtime;
+      // the type mismatch is due to overloaded signatures in @types/ioredis.
+      _client = real as unknown as RedisLike;
       return _client;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
