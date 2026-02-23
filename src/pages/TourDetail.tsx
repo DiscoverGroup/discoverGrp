@@ -773,6 +773,7 @@ useEffect(() => {
                     alt={`${tour.title!} image ${carouselIndex! + 1}`}
                     className="w-full h-full object-cover transition-all duration-700 ease-out transform hover:scale-105"
                     loading="lazy"
+                    crossOrigin="anonymous"
                     onClick={() => openGallery(carouselIndex)}
                     style={{ cursor: "zoom-in" }}
                   />
@@ -1065,6 +1066,7 @@ useEffect(() => {
                                   src={day.image} 
                                   alt={`Itinerary Day ${day.day}`} 
                                   className="w-full max-w-2xl h-48 object-cover rounded-lg border-2 border-gray-200 shadow-md hover:scale-105 transition-transform duration-300" 
+                                  crossOrigin="anonymous"
                                 />
                               </div>
                             )}
@@ -1168,7 +1170,7 @@ useEffect(() => {
                     {(tour.additionalInfo as AdditionalInfo).countries!.slice(0, 3).map((c: CountryEntry, i: number) => (
                       <div key={i} className="w-20 h-12 overflow-hidden rounded border bg-black/5">
                         {c.image && isSafeImageUrl(c.image) ? (
-                          <img src={c.image} alt={c.name ?? "Country"} className="w-full h-full object-cover" />
+                          <img src={c.image} alt={c.name ?? "Country"} className="w-full h-full object-cover" crossOrigin="anonymous" />
                         ) : (
                           <div className="text-xs text-slate-300 p-2">{c.name ?? "—"}</div>
                         )}

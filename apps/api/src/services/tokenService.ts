@@ -10,6 +10,10 @@ import logger from '../utils/logger';
 const ACCESS_TOKEN_EXPIRY = '1h'; // Short-lived access token
 const REFRESH_TOKEN_EXPIRY_DAYS = 7; // Refresh token lasts 7 days
 
+// Match jwtHardening.ts constants so verifyToken() accepts tokens from this service
+const ISSUER   = process.env.JWT_ISSUER   || 'discovergrp-api';
+const AUDIENCE  = process.env.JWT_AUDIENCE || 'discovergrp-client';
+
 export interface TokenPair {
   accessToken: string;
   refreshToken: string;
@@ -24,9 +28,20 @@ export function generateAccessToken(userId: string, role: string): string {
   }
 
   return jwt.sign(
-    { id: userId, role },
+    {
+      // sub is the standard JWT subject claim; keep legacy `id` for backward compat
+      sub: userId,
+      id: userId,
+      role,
+      // `type` checked by verifyToken() in jwtHardening.ts
+      type: 'access',
+    },
     process.env.JWT_SECRET,
-    { expiresIn: ACCESS_TOKEN_EXPIRY }
+    {
+      expiresIn: ACCESS_TOKEN_EXPIRY,
+      issuer: ISSUER,
+      audience: AUDIENCE,
+    }
   );
 }
 

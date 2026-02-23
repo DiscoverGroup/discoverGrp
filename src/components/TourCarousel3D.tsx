@@ -84,6 +84,7 @@ const TourCard3D: React.FC<{
           src={tour.image}
           alt={tour.title}
           className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+          crossOrigin="anonymous"
         />
         
         {/* Gradient Overlay */}
