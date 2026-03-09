@@ -21,10 +21,7 @@
  *   totpVerified:     Boolean (default: false — set true after first code confirm)
  */
 
-// otplib exports differ between CJS and ESM / version to version.
-// Namespace import then destructure is the most compatible pattern.
-import * as otplib from 'otplib';
-const { authenticator } = otplib;
+import { authenticator } from 'otplib';
 import QRCode from 'qrcode';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
@@ -32,9 +29,9 @@ import logger from './logger';
 
 // ─── TOTP Configuration ───────────────────────────────────────────────────────
 authenticator.options = {
-  window: 1,       // Accept 1 step before/after current (±30s tolerance)
-  step: 30,        // 30-second steps (standard)
-  digits: 6,       // 6-digit codes
+  window: 1,   // Accept 1 step before/after current (±30s tolerance)
+  step: 30,    // 30-second steps (standard)
+  digits: 6,   // 6-digit codes
 };
 
 const APP_NAME = process.env.TOTP_APP_NAME || 'DiscoverGroup';
