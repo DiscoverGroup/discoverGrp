@@ -7,8 +7,8 @@ const router = express.Router();
 // In-memory storage for settings (you can replace this with MongoDB if needed)
 const adminSettings = {
   bookingDepartmentEmail: process.env.BOOKING_DEPT_EMAIL || 'booking@discovergrp.com',
-  emailFromAddress: process.env.SENDGRID_FROM_EMAIL || 'traveldesk@discovergrp.com',
-  emailFromName: process.env.SENDGRID_FROM_NAME || 'Discover Group Travel Desk',
+  emailFromAddress: process.env.FROM_EMAIL || 'traveldesk@discovergrp.com',
+  emailFromName: process.env.FROM_NAME || 'Discover Group Travel Desk',
 };
 
 // GET /admin/settings - Get all settings
