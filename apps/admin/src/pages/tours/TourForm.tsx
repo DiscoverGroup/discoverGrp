@@ -83,7 +83,7 @@ interface ExtendedTour extends Tour {
   mainImage: string;
   galleryImages: string[];
   relatedImages: string[];
-  itinerary: { day: number; title: string; description: string }[];
+  images?: string[];
   fullStops: { city: string; country: string; days?: number }[];
   additionalInfo: {
     countriesVisited: string[];
@@ -371,8 +371,13 @@ export default function TourForm(): JSX.Element {
           departureDates: tour.departureDates || [],
 
           highlights: tour.highlights || [],
-          mainImage: typeof tour.mainImage === 'string' ? tour.mainImage : "",
-          galleryImages: Array.isArray(tour.galleryImages) ? tour.galleryImages : [],
+          // Populate from DB: images[] → mainImage (first) + galleryImages (rest)
+          mainImage: typeof tour.mainImage === 'string' && tour.mainImage
+            ? tour.mainImage
+            : (Array.isArray(tour.images) && tour.images.length > 0 ? tour.images[0] : ""),
+          galleryImages: Array.isArray(tour.galleryImages) && tour.galleryImages.length
+            ? tour.galleryImages
+            : (Array.isArray(tour.images) && tour.images.length > 1 ? tour.images.slice(1) : []),
           relatedImages: Array.isArray(tour.relatedImages) ? tour.relatedImages : [],
 
           itinerary: (tour.itinerary || []).map((it, i) => ({
@@ -511,8 +516,8 @@ export default function TourForm(): JSX.Element {
       // Prepare payload - convert empty strings to undefined/null for numbers
       const payload = {
         ...formData,
-        // Map form fields to database field
-        images: imagesArray.length > 0 ? imagesArray : undefined,
+        // Map form fields to database field — always send images array so clearing images persists
+        images: imagesArray,
         // Remove form-only fields that shouldn't go to DB
         mainImage: undefined,
         galleryImages: undefined,
