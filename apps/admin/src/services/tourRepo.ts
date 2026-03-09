@@ -5,6 +5,7 @@
 import * as api from "./apiClient";
 import type { Tour } from "@discovergroup/types";
 import { getAdminApiBaseUrl } from "../config/apiBase";
+import { authFetch } from "../utils/tokenStorage";
 
 const API_BASE_URL = getAdminApiBaseUrl();
 
@@ -23,7 +24,7 @@ export async function createTour(data: api.TourPayload): Promise<Tour> {
 }
 
 export async function updateTour(id: string | number, data: Partial<Tour>): Promise<Tour> {
-  const res = await fetch(`${API_BASE_URL}/admin/tours/${id}`, {
+  const res = await authFetch(`${API_BASE_URL}/admin/tours/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -36,7 +37,7 @@ export async function updateTour(id: string | number, data: Partial<Tour>): Prom
 }
 
 export async function deleteTour(id: string | number): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/admin/tours/${id}`, {
+  const res = await authFetch(`${API_BASE_URL}/admin/tours/${id}`, {
     method: "DELETE",
   });
   if (!res.ok) {

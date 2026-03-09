@@ -1,6 +1,7 @@
 // Browser-safe client used by the Admin UI to call the API.
 import type { Tour } from "@discovergroup/types";
 import { getAdminApiBaseUrl } from "../config/apiBase";
+import { authFetch } from "../utils/tokenStorage";
 export type { Tour };
 export type TourPayload = Partial<Tour>;
 
@@ -55,9 +56,7 @@ function normalizeTour(raw: Record<string, unknown>): Tour {
 
 // List all tours
 export async function fetchTours(): Promise<Tour[]> {
-  const res = await fetch(`${API_BASE}/admin/tours`, {
-    headers: { "Accept": "application/json" },
-  });
+  const res = await authFetch(`${API_BASE}/admin/tours`);
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
     throw new Error(`Failed to fetch tours: ${res.status} ${text}`);
@@ -87,9 +86,7 @@ export async function fetchTours(): Promise<Tour[]> {
 
 // Get a single tour by id (or slug)
 export async function fetchTourById(id: string | number): Promise<Tour | null> {
-  const res = await fetch(`${API_BASE}/admin/tours/${id}`, {
-    headers: { "Accept": "application/json" },
-  });
+  const res = await authFetch(`${API_BASE}/admin/tours/${id}`);
   if (res.status === 404) return null;
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
@@ -101,9 +98,9 @@ export async function fetchTourById(id: string | number): Promise<Tour | null> {
 
 // Create a new tour
 export async function createTour(data: TourPayload): Promise<Tour> {
-  const res = await fetch(`${API_BASE}/admin/tours`, {
+  const res = await authFetch(`${API_BASE}/admin/tours`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "Accept": "application/json" },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
   if (!res.ok) {
@@ -116,9 +113,9 @@ export async function createTour(data: TourPayload): Promise<Tour> {
 
 // Update an existing tour
 export async function updateTour(id: string | number, data: TourPayload): Promise<Tour> {
-  const res = await fetch(`${API_BASE}/admin/tours/${id}`, {
+  const res = await authFetch(`${API_BASE}/admin/tours/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json", "Accept": "application/json" },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
   if (!res.ok) {
@@ -132,9 +129,8 @@ export async function updateTour(id: string | number, data: TourPayload): Promis
 
 // Delete a tour
 export async function deleteTour(id: string | number): Promise<void> {
-  const res = await fetch(`${API_BASE}/admin/tours/${id}`, {
+  const res = await authFetch(`${API_BASE}/admin/tours/${id}`, {
     method: "DELETE",
-    headers: { "Accept": "application/json" },
   });
   if (!res.ok) {
     if (res.status === 404) throw new Error("not found");
@@ -182,9 +178,9 @@ export interface AdminCountryPayload {
 }
 
 export async function createCountryAdmin(data: Partial<AdminCountryPayload>): Promise<Record<string, unknown>> {
-  const res = await fetch(`${API_BASE}/api/countries`, {
+  const res = await authFetch(`${API_BASE}/api/countries`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   if (!res.ok) {
@@ -201,9 +197,9 @@ export async function createCountryAdmin(data: Partial<AdminCountryPayload>): Pr
 }
 
 export async function updateCountryAdmin(id: string, data: Partial<AdminCountryPayload>): Promise<Record<string, unknown>> {
-  const res = await fetch(`${API_BASE}/api/countries/${id}`, {
+  const res = await authFetch(`${API_BASE}/api/countries/${id}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   if (!res.ok) {
