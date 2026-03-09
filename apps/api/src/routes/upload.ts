@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
-import { requireAuth, requireRole, AuthenticatedRequest } from '../middleware/auth';
+import { requireAuth, requireAdmin, AuthenticatedRequest } from '../middleware/auth';
 import { Readable } from 'stream';
 
 const router = Router();
@@ -90,7 +90,7 @@ const uploadDocument = multer({
 router.post(
   '/single',
   requireAuth,
-  requireRole('admin', 'super-admin'),
+  requireAdmin,
   upload.single('file'),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -130,7 +130,7 @@ router.post(
 router.post(
   '/multiple',
   requireAuth,
-  requireRole('admin', 'super-admin'),
+  requireAdmin,
   upload.array('files', 10),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {

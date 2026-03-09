@@ -40,8 +40,8 @@ async function uploadImageToStorage(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Upload failed');
+    const errBody = await response.json().catch(() => ({}));
+    throw new Error(errBody.message || errBody.error || `Upload failed (HTTP ${response.status})`);
   }
 
   const data = await response.json();
