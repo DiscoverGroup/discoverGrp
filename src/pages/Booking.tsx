@@ -554,6 +554,7 @@ export default function Booking(): JSX.Element {
           
           const response = await fetch(buildApiUrl('/api/send-booking-email'), {
             method: 'POST',
+            credentials: 'include',
             headers: {
               'Content-Type': 'application/json',
             },

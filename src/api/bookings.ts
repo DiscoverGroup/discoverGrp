@@ -94,6 +94,7 @@ export async function createBooking(bookingData: {
 
   const res = await fetch(buildApiUrl('/api/bookings'), {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
