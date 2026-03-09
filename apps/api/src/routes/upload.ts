@@ -213,6 +213,9 @@ router.post(
  * Accessible to ANY authenticated user (not just admins).
  * Accepts: PDF, JPEG, PNG, WebP — max 10 MB.
  * Files go to: documents/{type}/{userId}/{timestamp}-{random}.ext
+ *
+ * When R2 is not yet configured (missing env vars) the route returns a stub
+ * success response so the booking flow can continue uninterrupted.
  */
 router.post(
   '/document',
@@ -237,6 +240,31 @@ router.post(
       const randomName = crypto.randomBytes(16).toString('hex');
       const timestamp = Date.now();
       const fileName = `documents/${docType}s/${userId}/${timestamp}-${randomName}${fileExt}`;
+
+      // ── Graceful fallback when Cloudflare R2 is not yet configured ──────────
+      const r2Configured = !!(
+        process.env.R2_ENDPOINT &&
+        process.env.R2_ACCESS_KEY_ID &&
+        process.env.R2_SECRET_ACCESS_KEY &&
+        process.env.R2_BUCKET_NAME
+      );
+
+      if (!r2Configured) {
+        console.warn(
+          '[R2 Document Upload] R2 not configured — returning stub URL so booking can proceed.',
+          { docType, fileName, userId, size: req.file.size }
+        );
+        // Return a stub URL; the file is accepted but not persisted until R2 is set up.
+        res.json({
+          success: true,
+          url: `/uploads/stub/${fileName}`,
+          fileName,
+          size: req.file.size,
+          type: req.file.mimetype,
+          stub: true,
+        });
+        return;
+      }
 
       const command = new PutObjectCommand({
         Bucket: R2_BUCKET,
