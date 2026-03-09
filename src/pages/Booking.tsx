@@ -185,7 +185,7 @@ export default function Booking(): JSX.Element {
   const [customPaymentTerms, setCustomPaymentTerms] = useState<string>("30"); // "30", "50", "70", or custom
 
   // Installment plan configuration
-  const [installmentMonths, setInstallmentMonths] = useState<number>(12); // Default 12 months
+  const [installmentMonths, setInstallmentMonths] = useState<number>(10); // Default 10 months (max 10)
   const [customInstallmentAmount, setCustomInstallmentAmount] = useState<number | null>(null);
   
   // Auto-check appointment if cash-appointment payment is selected
@@ -416,15 +416,19 @@ export default function Booking(): JSX.Element {
     if (paymentType === "downpayment") {
       const remainingBalance = total - paymentAmount;
       const monthlyAmount = customInstallmentAmount || Math.ceil(remainingBalance / installmentMonths);
-      const startDate = new Date();
-      startDate.setMonth(startDate.getMonth() + 1); // Start next month
+      // First installment is the 15th of next month
+      const firstDue = new Date();
+      firstDue.setMonth(firstDue.getMonth() + 1);
+      firstDue.setDate(15);
+      firstDue.setHours(0, 0, 0, 0);
       
       const payments: InstallmentPayment[] = [];
       let remainingToPay = remainingBalance;
       
       for (let i = 0; i < installmentMonths; i++) {
-        const dueDate = new Date(startDate);
-        dueDate.setMonth(dueDate.getMonth() + i);
+        const dueDate = new Date(firstDue);
+        dueDate.setMonth(firstDue.getMonth() + i);
+        dueDate.setDate(15);
         
         // Last payment gets any remaining balance
         const paymentAmount = i === installmentMonths - 1 
@@ -444,7 +448,7 @@ export default function Booking(): JSX.Element {
       installmentPlan = {
         totalMonths: installmentMonths,
         monthlyAmount,
-        startDate: startDate.toISOString(),
+        startDate: firstDue.toISOString(),
         payments,
       };
       

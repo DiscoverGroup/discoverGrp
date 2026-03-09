@@ -53,7 +53,7 @@ export default function BookingStepSelection({
   formatCurrencyPHP,
   onBack,
   onNext,
-  installmentMonths = 12,
+  installmentMonths = 10,
   setInstallmentMonths,
   customInstallmentAmount,
   setCustomInstallmentAmount,
@@ -274,9 +274,9 @@ export default function BookingStepSelection({
                       
                       <div className="space-y-3">
                         <div>
-                          <label className="block text-gray-700 text-sm font-medium mb-2">Number of Monthly Installments</label>
-                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                            {[3, 6, 9, 12, 18, 24].map((months) => (
+                          <label className="block text-gray-700 text-sm font-medium mb-2">Number of Monthly Installments (max 10)</label>
+                          <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((months) => (
                               <button
                                 key={months}
                                 type="button"
@@ -287,10 +287,11 @@ export default function BookingStepSelection({
                                     : "bg-white border-2 border-gray-300 text-gray-900 hover:border-blue-400"
                                 }`}
                               >
-                                {months}mo
+                                {months}
                               </button>
                             ))}
                           </div>
+                          <p className="mt-1 text-xs text-gray-500">Payments are due on the <strong>15th of each month</strong>.</p>
                         </div>
                         
                         <div>
@@ -325,8 +326,13 @@ export default function BookingStepSelection({
                               <div className="mt-1">
                                 • Downpayment: {formatCurrencyPHP(downpaymentAmount)} (Pay now)<br/>
                                 • Monthly Payment: {formatCurrencyPHP(customInstallmentAmount || Math.ceil(remainingBalance / installmentMonths))}<br/>
-                                • Duration: {installmentMonths} months<br/>
-                                • First installment due: Next month
+                                • {installmentMonths} installment{installmentMonths > 1 ? 's' : ''}, due on the <strong>15th of each month</strong><br/>
+                                {Array.from({ length: installmentMonths }, (_, i) => {
+                                  const d = new Date();
+                                  d.setMonth(d.getMonth() + 1 + i);
+                                  d.setDate(15);
+                                  return `${i + 1}${i === 0 ? 'st' : i === 1 ? 'nd' : i === 2 ? 'rd' : 'th'} – ${d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}: ${formatCurrencyPHP(i === installmentMonths - 1 ? remainingBalance - (customInstallmentAmount || Math.ceil(remainingBalance / installmentMonths)) * (installmentMonths - 1) : (customInstallmentAmount || Math.ceil(remainingBalance / installmentMonths)))}`;
+                                }).map((line, i) => <span key={i}>• {line}<br/></span>)}
                               </div>
                             </div>
                           </div>
