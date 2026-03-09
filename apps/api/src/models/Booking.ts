@@ -92,7 +92,7 @@ const BookingSchema = new Schema<IBooking>({
   status: { type: String, default: 'pending' },
   customerName: { type: String, required: true },
   customerEmail: { type: String, required: true },
-  customerPhone: { type: String, required: true },
+  customerPhone: { type: String, required: false },
   customerPassport: { type: String },
   passportUrl: { type: String },
   visaUrl: { type: String },
