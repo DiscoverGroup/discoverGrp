@@ -102,7 +102,17 @@ router.get('/verify-email', async (req, res) => {
       user.role,
       ipAddress
     );
-    
+
+    // Set httpOnly cookies (same pattern as /auth/login)
+    const isProd = process.env.NODE_ENV === 'production';
+    const cookieBase = {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax',
+    };
+    res.cookie('accessToken',  tokens.accessToken,  { ...cookieBase, maxAge: 15 * 60 * 1000 });
+    res.cookie('refreshToken', tokens.refreshToken, { ...cookieBase, maxAge: 7 * 24 * 60 * 60 * 1000 });
+
     res.json({
       success: true,
       message: 'Email verified successfully! You can now login.',
@@ -260,6 +270,19 @@ router.post('/login', async (req, res) => {
   );
 
   logger.info(`Login successful for email: ${email}`);
+
+  // Set httpOnly cookies so the tokens cannot be stolen via XSS.
+  // We still include them in the response body for backwards compat with
+  // existing clients that store them in localStorage.
+  const isProd = process.env.NODE_ENV === 'production';
+  const cookieBase = {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax',
+  };
+  res.cookie('accessToken',  tokens.accessToken,  { ...cookieBase, maxAge: 15 * 60 * 1000 });       // 15 min
+  res.cookie('refreshToken', tokens.refreshToken, { ...cookieBase, maxAge: 7 * 24 * 60 * 60 * 1000 }); // 7 days
+
   res.json({
     accessToken: tokens.accessToken,
     refreshToken: tokens.refreshToken,
@@ -406,7 +429,14 @@ router.post('/logout', async (req, res) => {
     
     const ipAddress = req.ip || req.socket.remoteAddress;
     await tokenService.revokeRefreshToken(refreshToken, ipAddress);
-    
+
+    // Clear httpOnly cookies regardless of whether client sent them
+    const isProd = process.env.NODE_ENV === 'production';
+    const cookieBase = { httpOnly: true, secure: isProd,
+      sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax' };
+    res.clearCookie('accessToken',  cookieBase);
+    res.clearCookie('refreshToken', cookieBase);
+
     logger.info('User logged out successfully');
     res.json({ message: 'Logged out successfully' });
   } catch (error) {

@@ -33,6 +33,7 @@ import jwt, { SignOptions, JwtPayload } from 'jsonwebtoken';
 import crypto from 'crypto';
 import { Request, Response, NextFunction } from 'express';
 import logger from '../utils/logger';
+import { getRedis } from '../utils/redisClient';
 
 // ─── Configuration ────────────────────────────────────────────────────────────
 const ALGORITHM         = 'HS256' as const;
@@ -50,30 +51,18 @@ function getSecret(): string {
   return secret;
 }
 
-// ─── Token blacklist (replace Map with Redis SET in production) ───────────────
-//    Key: jti (unique token ID)   Value: expiry timestamp
-const tokenBlacklist = new Map<string, number>();
+// ─── Token blacklist (Redis-backed; survives process restarts) ───────────────
+//    Key: bl:jti:<jti>   TTL: remaining token lifetime
 
-// Prune expired entries every 15 minutes to prevent memory leaks
-setInterval(() => {
-  const now = Date.now();
-  for (const [jti, exp] of tokenBlacklist) {
-    if (exp < now) tokenBlacklist.delete(jti);
-  }
-}, 15 * 60 * 1000);
-
-export function blacklistToken(jti: string, expMs: number): void {
-  tokenBlacklist.set(jti, expMs);
+export async function blacklistToken(jti: string, expMs: number): Promise<void> {
+  const ttlMs = expMs - Date.now();
+  if (ttlMs <= 0) return; // already expired
+  await getRedis().set(`bl:jti:${jti}`, '1', 'PX', ttlMs);
 }
 
-export function isTokenBlacklisted(jti: string): boolean {
-  const exp = tokenBlacklist.get(jti);
-  if (exp === undefined) return false;
-  if (Date.now() > exp) {
-    tokenBlacklist.delete(jti);
-    return false;
-  }
-  return true;
+export async function isTokenBlacklisted(jti: string): Promise<boolean> {
+  const exists = await getRedis().exists(`bl:jti:${jti}`);
+  return exists === 1;
 }
 
 // ─── Device fingerprint ───────────────────────────────────────────────────────
@@ -136,7 +125,7 @@ export interface VerifyResult {
   reason?: string;
 }
 
-export function verifyToken(token: string, expectedType: 'access' | 'refresh', req?: Request): VerifyResult {
+export async function verifyToken(token: string, expectedType: 'access' | 'refresh', req?: Request): Promise<VerifyResult> {
   try {
     // 1. Decode header first — reject disallowed algorithms BEFORE verify()
     //    This prevents the "alg:none" attack where jsonwebtoken is tricked
@@ -160,7 +149,7 @@ export function verifyToken(token: string, expectedType: 'access' | 'refresh', r
     }
 
     // 4. Check blacklist (covers logout / token rotation)
-    if (payload.jti && isTokenBlacklisted(payload.jti)) {
+    if (payload.jti && await isTokenBlacklisted(payload.jti)) {
       return { valid: false, reason: 'TOKEN_REVOKED' };
     }
 
@@ -210,7 +199,7 @@ export interface HardenedRequest extends Request {
  * Reads from Authorization header OR httpOnly cookie (whichever is present),
  * then runs the full hardened verification chain above.
  */
-export const requireHardenedAuth = (req: HardenedRequest, res: Response, next: NextFunction) => {
+export const requireHardenedAuth = async (req: HardenedRequest, res: Response, next: NextFunction) => {
   // Extract token from Bearer header or cookie
   let token: string | undefined;
 
@@ -225,7 +214,7 @@ export const requireHardenedAuth = (req: HardenedRequest, res: Response, next: N
     return res.status(401).json({ error: 'Authentication required', code: 'NO_TOKEN' });
   }
 
-  const result = verifyToken(token, 'access', req);
+  const result = await verifyToken(token, 'access', req);
 
   if (!result.valid || !result.payload) {
     const status = result.reason === 'TOKEN_EXPIRED' ? 401 : 403;
@@ -242,14 +231,14 @@ export const requireHardenedAuth = (req: HardenedRequest, res: Response, next: N
 /**
  * Logout helper — blacklists the current access AND refresh tokens
  */
-export const logoutHandler = (req: HardenedRequest, res: Response) => {
-  const blacklistFromCookie = (cookieName: string, expectedType: 'access' | 'refresh') => {
+export const logoutHandler = async (req: HardenedRequest, res: Response) => {
+  const blacklistFromCookie = async (cookieName: string, expectedType: 'access' | 'refresh') => {
     const token = req.cookies?.[cookieName] as string | undefined;
     if (!token) return;
     try {
       const decoded = jwt.decode(token) as JwtPayload | null;
       if (decoded?.jti && decoded.exp) {
-        blacklistToken(decoded.jti, decoded.exp * 1000);
+        await blacklistToken(decoded.jti, decoded.exp * 1000);
       }
     } catch {
       // ignore decode errors on logout
@@ -257,8 +246,8 @@ export const logoutHandler = (req: HardenedRequest, res: Response) => {
     void expectedType;
   };
 
-  blacklistFromCookie('accessToken', 'access');
-  blacklistFromCookie('refreshToken', 'refresh');
+  await blacklistFromCookie('accessToken', 'access');
+  await blacklistFromCookie('refreshToken', 'refresh');
 
   // Clear cookies
   const cookieOpts = {

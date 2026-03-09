@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import User from '../models/User';
 import jwt from 'jsonwebtoken';
+import logger from '../utils/logger';
 
 const router = Router();
 
@@ -69,7 +70,7 @@ router.post('/', authenticateUser, async (req: Request, res: Response) => {
     user.favorites.push(tourSlug);
     await user.save();
     
-    console.log(`✅ Added tour ${tourSlug} to favorites for user ${user.email}`);
+    logger.info('[Favorites] Tour added', { tourSlug, userId });
     res.json({ 
       message: 'Tour added to favorites',
       favorites: user.favorites,
@@ -109,7 +110,7 @@ router.delete('/:tourSlug', authenticateUser, async (req: Request, res: Response
     user.favorites.splice(index, 1);
     await user.save();
     
-    console.log(`✅ Removed tour ${tourSlug} from favorites for user ${user.email}`);
+    logger.info('[Favorites] Tour removed', { tourSlug, userId });
     res.json({ 
       message: 'Tour removed from favorites',
       favorites: user.favorites,
@@ -155,7 +156,7 @@ router.post('/toggle', authenticateUser, async (req: Request, res: Response) => 
     
     await user.save();
     
-    console.log(`✅ ${action === 'added' ? 'Added' : 'Removed'} tour ${tourSlug} ${action === 'added' ? 'to' : 'from'} favorites for user ${user.email}`);
+    logger.info('[Favorites] Tour toggled', { tourSlug, userId, action });
     res.json({ 
       action,
       message: `Tour ${action === 'added' ? 'added to' : 'removed from'} favorites`,

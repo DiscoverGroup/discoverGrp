@@ -73,7 +73,6 @@ export function validateStoredAuth(): { token: string; user: Record<string, unkn
   
   // Check if token is expired
   if (isTokenExpired(token)) {
-    console.log('Token expired, clearing auth data');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     return null;
@@ -100,10 +99,11 @@ export async function refreshAuthToken(): Promise<boolean> {
   try {
     const response = await fetch(buildApiUrl('/auth/refresh'), {
       method: 'POST',
+      credentials: 'include',  // sends httpOnly cookie automatically
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
     });
     
     if (!response.ok) {

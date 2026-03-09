@@ -32,10 +32,24 @@
 import { Request, Response, NextFunction, Router } from 'express';
 import logger from '../utils/logger';
 import { alertHoneypotTriggered, alertBehaviourBlock, alertAbuseIp } from '../utils/wafAlerts';
+import { getRedis } from '../utils/redisClient';
 
-// ─── Behavioural score store (replace with Redis in production) ───────────────
+// ─── Behavioural score store — Redis-backed (survives restarts & scaling) ─────
+// Keys are prefixed beh:ip:<ip>  TTL = BEHAVIOUR_BLOCK_MS seconds
+// Falls back to the InMemoryRedis stub when REDIS_URL is not set.
 
 interface BehaviourRecord {
+  fourOhFours: number;
+  authFailures: number;
+  uniquePaths: string[];   // stored as array; converted to Set in memory
+  unusualMethods: number;
+  firstSeen: number;
+  lastSeen: number;
+  blocked: boolean;
+}
+
+// Working record uses a real Set for fast deduplication during a request
+interface BehaviourRecordLive {
   fourOhFours: number;
   authFailures: number;
   uniquePaths: Set<string>;
@@ -45,41 +59,51 @@ interface BehaviourRecord {
   blocked: boolean;
 }
 
-const behaviourStore = new Map<string, BehaviourRecord>();
+const REDIS_BEH_PREFIX     = 'beh:ip:';
 const BEHAVIOUR_WINDOW_MS  = 10 * 60 * 1000;   // 10-minute rolling window
 const MAX_404S             = 20;
 const MAX_AUTH_FAILURES    = 10;
 const MAX_UNIQUE_PATHS     = 50;
 const BEHAVIOUR_BLOCK_MS   = 60 * 60 * 1000;   // block for 1 hour
+const REDIS_BEH_TTL_S      = Math.ceil(BEHAVIOUR_BLOCK_MS / 1000);
 
-function getBehaviourRecord(ip: string): BehaviourRecord {
-  const existing = behaviourStore.get(ip);
+async function getBehaviourRecord(ip: string): Promise<BehaviourRecordLive> {
   const now = Date.now();
-
-  if (!existing || now - existing.firstSeen > BEHAVIOUR_WINDOW_MS) {
-    const fresh: BehaviourRecord = {
-      fourOhFours: 0,
-      authFailures: 0,
-      uniquePaths: new Set(),
-      unusualMethods: 0,
-      firstSeen: now,
-      lastSeen: now,
-      blocked: false,
-    };
-    behaviourStore.set(ip, fresh);
-    return fresh;
+  try {
+    const redis = getRedis();
+    const raw = await redis.get(`${REDIS_BEH_PREFIX}${ip}`);
+    if (raw) {
+      const parsed = JSON.parse(raw) as BehaviourRecord;
+      // Reset if the rolling window has elapsed
+      if (now - parsed.firstSeen > BEHAVIOUR_WINDOW_MS && !parsed.blocked) {
+        return { fourOhFours: 0, authFailures: 0, uniquePaths: new Set(),
+                 unusualMethods: 0, firstSeen: now, lastSeen: now, blocked: false };
+      }
+      return { ...parsed, uniquePaths: new Set(parsed.uniquePaths), lastSeen: now };
+    }
+  } catch (err) {
+    logger.warn('[BEHAVIOUR] Redis read failed, using empty record', { err });
   }
-
-  existing.lastSeen = now;
-  return existing;
+  return { fourOhFours: 0, authFailures: 0, uniquePaths: new Set(),
+           unusualMethods: 0, firstSeen: now, lastSeen: now, blocked: false };
 }
 
-function isIpBlocked(ip: string): boolean {
-  const record = behaviourStore.get(ip);
-  return record?.blocked ?? false;
+async function saveBehaviourRecord(ip: string, record: BehaviourRecordLive): Promise<void> {
+  try {
+    const redis = getRedis();
+    const serialized: BehaviourRecord = { ...record, uniquePaths: [...record.uniquePaths] };
+    await redis.set(`${REDIS_BEH_PREFIX}${ip}`, JSON.stringify(serialized), 'EX', REDIS_BEH_TTL_S);
+  } catch (err) {
+    logger.warn('[BEHAVIOUR] Redis write failed', { err });
+  }
 }
 
-function evaluateBehaviourScore(record: BehaviourRecord): number {
+async function isIpBlocked(ip: string): Promise<boolean> {
+  const record = await getBehaviourRecord(ip);
+  return record.blocked;
+}
+
+function evaluateBehaviourScore(record: BehaviourRecordLive): number {
   let score = 0;
   score += Math.min(record.fourOhFours, MAX_404S) / MAX_404S * 40;
   score += Math.min(record.authFailures, MAX_AUTH_FAILURES) / MAX_AUTH_FAILURES * 30;
@@ -88,15 +112,7 @@ function evaluateBehaviourScore(record: BehaviourRecord): number {
   return score; // 0–100
 }
 
-// Prune old records every 30 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, record] of behaviourStore) {
-    if (now - record.lastSeen > BEHAVIOUR_BLOCK_MS) {
-      behaviourStore.delete(ip);
-    }
-  }
-}, 30 * 60 * 1000);
+// NOTE: No setInterval pruning needed — Redis TTL handles expiry automatically.
 
 // ─── Honeypot route builder ───────────────────────────────────────────────────
 
@@ -127,13 +143,14 @@ const HONEYPOT_PATHS = [
  */
 export function mountHoneypots(router: Router): void {
   for (const path of HONEYPOT_PATHS) {
-    router.all(path, (req: Request, res: Response) => {
+    router.all(path, async (req: Request, res: Response) => {
       const ip = req.ip || 'unknown';
-      const record = getBehaviourRecord(ip);
+      const record = await getBehaviourRecord(ip);
 
       // Immediately max-score this IP
       record.fourOhFours += MAX_404S;
       record.blocked = true;
+      await saveBehaviourRecord(ip, record);
 
       logger.error('[HONEYPOT] Trap triggered — IP flagged as hostile', {
         ip,
@@ -169,11 +186,11 @@ export function mountHoneypots(router: Router): void {
 // ─── Behavioural analysis middleware ─────────────────────────────────────────
 
 /** Attach this AFTER your routes so it can see 404 responses */
-export const behaviouralAnalysis = (req: Request, res: Response, next: NextFunction) => {
+export const behaviouralAnalysis = async (req: Request, res: Response, next: NextFunction) => {
   const ip = req.ip || 'unknown';
 
   // Hard block
-  if (isIpBlocked(ip)) {
+  if (await isIpBlocked(ip)) {
     logger.warn('[BEHAVIOUR] Blocked IP attempted access', { ip, path: req.path });
     return res.status(403).json({
       error: 'Access denied',
@@ -181,7 +198,7 @@ export const behaviouralAnalysis = (req: Request, res: Response, next: NextFunct
     });
   }
 
-  const record = getBehaviourRecord(ip);
+  const record = await getBehaviourRecord(ip);
   record.uniquePaths.add(req.path);
 
   const UNUSUAL_METHODS = new Set(['TRACE', 'TRACK', 'DEBUG', 'CONNECT']);
@@ -189,7 +206,7 @@ export const behaviouralAnalysis = (req: Request, res: Response, next: NextFunct
     record.unusualMethods += 1;
   }
 
-  // Hook into response to capture 401/404 counts
+  // Hook into response to capture 401/404 counts; save record to Redis after send
   const originalSend = res.send.bind(res);
   res.send = function (body) {
     const statusCode = res.statusCode;
@@ -213,6 +230,9 @@ export const behaviouralAnalysis = (req: Request, res: Response, next: NextFunct
         uniquePaths: record.uniquePaths.size,
       });
     }
+
+    // Persist updated record to Redis (fire-and-forget — don't delay the response)
+    void saveBehaviourRecord(ip, record);
 
     return originalSend(body);
   };

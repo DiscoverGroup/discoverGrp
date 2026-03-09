@@ -406,8 +406,8 @@
     <div class="email-container">
         <!-- Header -->
         <div class="header">
-            <h1>🎉 Booking Confirmed!</h1>
-            <p>Thank you for choosing Discover Group for your adventure</p>
+            <h1>✅ Tour Reservation Confirmed!</h1>
+            <p>Your tour slot is reserved — our team will contact you to arrange payment</p>
         </div>
         
         <!-- Main Content -->
@@ -415,7 +415,7 @@
             <div class="greeting">Hi {{customerName}},</div>
             
             <p class="intro-text">
-                We're thrilled to confirm your booking! Your European adventure awaits, and we can't wait to help you create unforgettable memories. Below are your complete booking details.
+                Great news, {{customerName}}! Your tour reservation is confirmed. Our booking team will reach out within <strong>24–48 hours</strong> to finalise payment arrangements and send you all the details you need before your trip.
             </p>
             
             <!-- Booking Details Card -->
@@ -464,26 +464,13 @@
                 {{/if}}
             </div>
             
-            <!-- Payment Method Card -->
-            {{#if paymentMethod}}
-            <div class="payment-method-card">
-                <h4><span class="payment-icon">{{paymentMethodIcon}}</span> Payment Method</h4>
-                <div class="detail-row">
-                    <span class="detail-label">Selected Method:</span>
-                    <span class="detail-value"><strong>{{paymentMethod}}</strong></span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Gateway:</span>
-                    <span class="detail-value">{{paymentGateway}}</span>
-                </div>
-                {{#if paymentMethodDescription}}
-                <div class="detail-row">
-                    <span class="detail-label">Details:</span>
-                    <span class="detail-value">{{paymentMethodDescription}}</span>
-                </div>
-                {{/if}}
+            <!-- Payment Pending Notice (replaces payment method card) -->
+            <div class="payment-method-card" style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-left-color: #f59e0b;">
+                <h4 style="color: #92400e;">⏳ Payment Pending — Our Team Will Be in Touch</h4>
+                <p style="color: #78350f; font-size: 14px; margin-top: 8px;">
+                    Online payment is coming soon! Our booking team will contact you within <strong>24–48 hours</strong> to arrange payment. We accept cash, bank transfer, GCash, Maya, and card payments.
+                </p>
             </div>
-            {{/if}}
             
             <!-- Payment Terms (for Downpayment) -->
             {{#if isDownpaymentOnly}}
@@ -591,7 +578,7 @@
             <div class="total-section">
                 <div class="total-row">
                     <div>
-                        <div class="total-label">Total Amount {{#if isDownpaymentOnly}}<span class="badge badge-warning">Downpayment</span>{{else}}<span class="badge badge-success">Full Payment</span>{{/if}}</div>
+                        <div class="total-label">Total Amount <span class="badge badge-warning">Payment Pending</span></div>
                     </div>
                     <div class="total-amount">{{totalAmount}}</div>
                 </div>
@@ -601,12 +588,10 @@
             <div class="info-card">
                 <h3>📍 What's Next?</h3>
                 <ul>
+                    <li><strong>Payment Arrangement:</strong> Our team will contact you within 24–48 hours to process your payment (cash, bank transfer, GCash, Maya, or card)</li>
                     <li><strong>Documentation:</strong> Ensure your passport is valid for at least 6 months from travel date</li>
                     <li><strong>Preparation:</strong> We'll send you a detailed itinerary 2 weeks before departure</li>
                     <li><strong>Contact:</strong> Our team will reach out with important travel information</li>
-                    {{#if isDownpaymentOnly}}
-                    <li><strong>Balance Payment:</strong> Reminder will be sent 45 days before departure</li>
-                    {{/if}}
                     <li><strong>Cancellation:</strong> Free cancellation up to 30 days before departure</li>
                     <li><strong>Travel Insurance:</strong> Included in your package for peace of mind</li>
                 </ul>

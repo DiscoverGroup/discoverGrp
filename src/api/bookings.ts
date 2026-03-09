@@ -241,14 +241,13 @@ export async function canUserReviewTour(tourSlug: string): Promise<{
 }> {
   try {
     const token = localStorage.getItem('token');
-    if (!token) {
-      return { canReview: false, isVerified: false, reason: 'not_logged_in' };
-    }
+    // If no localStorage token we will still attempt — the httpOnly cookie
+    // is sent automatically with credentials:'include' and the server will
+    // accept it via the cookie fallback in requireAuth.
 
     const response = await fetch(buildApiUrl(`/api/reviews/user/eligibility/${tourSlug}`), {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+      credentials: 'include',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
     });
 
     if (response.ok) {

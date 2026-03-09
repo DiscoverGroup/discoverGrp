@@ -149,14 +149,20 @@ const generateBookingConfirmationEmail = (booking: BookingDetails): string => {
 </head>
 <body>
     <div class="header">
-        <h1>🎉 Booking Confirmed!</h1>
-        <p>Thank you for choosing Discover Group for your adventure</p>
+        <h1>✅ Tour Reservation Confirmed!</h1>
+        <p>Your tour slot is reserved — our team will contact you to arrange payment</p>
     </div>
     
     <div class="content">
         <p>Dear ${booking.customerName},</p>
         
-        <p>We're excited to confirm your booking! Your adventure awaits, and we can't wait to help you create unforgettable memories.</p>
+        <p>Great news! Your tour reservation is confirmed. Our booking team will reach out within <strong>24–48 hours</strong> to finalise your payment arrangements. In the meantime, here are your reservation details:</p>
+        
+        <!-- Payment Pending Notice -->
+        <div class="booking-card" style="border-left: 4px solid #f59e0b; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);">
+            <h3 style="color: #92400e;">⏳ Payment Pending — We'll Contact You Shortly</h3>
+            <p style="color: #78350f; font-size: 14px;">Online payment is coming soon! We accept cash, bank transfer, GCash, Maya, and card payments. Our team will contact you to arrange this.</p>
+        </div>
         
         <div class="booking-card">
             <h3>📋 Booking Details</h3>
@@ -223,6 +229,7 @@ const generateBookingConfirmationEmail = (booking: BookingDetails): string => {
         <div class="booking-card">
             <h3>📍 What's Next?</h3>
             <ul>
+                <li><strong>Payment Arrangement:</strong> Our team will contact you within 24–48 hours to process payment</li>
                 <li><strong>Documentation:</strong> Ensure your passport is valid for at least 6 months</li>
                 <li><strong>Preparation:</strong> We'll send you a detailed itinerary 2 weeks before departure</li>
                 <li><strong>Contact:</strong> Our team will reach out with important travel information</li>
@@ -469,14 +476,14 @@ export const sendBookingConfirmationEmail = async (booking: BookingDetails): Pro
     const mailOptions = {
       from: `"${fromName}" <${fromEmail}>`,
       to: [booking.customerEmail, bookingDeptEmail], // Send to both customer and booking department
-      subject: `Booking Confirmation - ${booking.tourTitle} (${booking.bookingId})`,
+      subject: `Tour Reservation Confirmed - ${booking.tourTitle} (${booking.bookingId})`,
       html: generateBookingConfirmationEmail(booking),
       text: `
-Booking Confirmation - ${booking.tourTitle}
+Tour Reservation Confirmed - ${booking.tourTitle}
 
 Dear ${booking.customerName},
 
-Your booking has been confirmed! Here are the details:
+Your tour reservation is confirmed! Our team will contact you within 24-48 hours to arrange payment.
 
 Booking ID: ${booking.bookingId}
 Tour: ${booking.tourTitle}
@@ -484,7 +491,7 @@ Date: ${new Date(booking.tourDate).toLocaleDateString()}
 Passengers: ${booking.passengers}
 Total Amount: PHP ${booking.totalAmount.toLocaleString()}
 
-We'll be in touch with more details soon.
+We'll be in touch shortly with payment details.
 
 Thank you for choosing Discover Group!
 

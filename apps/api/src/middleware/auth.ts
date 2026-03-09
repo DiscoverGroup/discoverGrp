@@ -23,15 +23,21 @@ export type AuthenticatedRequest = Request & {
 export async function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   try {
     const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+
+    // Accept token from Authorization header OR httpOnly cookie (set at login)
+    let token: string | undefined;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    } else if (req.cookies?.accessToken) {
+      token = req.cookies.accessToken as string;
+    }
+
+    if (!token) {
       return res.status(401).json({ error: 'Authentication required. No token provided.' });
     }
     
-    const token = authHeader.split(' ')[1];
-    
     // ─ Hardened verification: algorithm whitelist + blacklist + iss/aud/sub + device FP
-    const result = verifyToken(token, 'access', req);
+    const result = await verifyToken(token, 'access', req);
 
     if (!result.valid || !result.payload) {
       const reason = result.reason ?? 'VERIFICATION_FAILED';

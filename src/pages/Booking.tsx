@@ -30,7 +30,7 @@ const bookingSteps = [
   { id: 2, title: "Details", description: "Your information" },
   { id: 3, title: "Passport & Visa", description: "Travel documents" },
   { id: 4, title: "Appointment", description: "Office visit (optional)" },
-  { id: 5, title: "Payment", description: "Secure checkout" }
+  { id: 5, title: "Confirm", description: "Secure your spot" }
 ];
 
 const PaymentMethodSelector = lazy(async () => {
@@ -395,22 +395,8 @@ export default function Booking(): JSX.Element {
       return null;
     }
     if (current === 4) {
-      // Payment step — skip validation if cash-appointment is selected
-      if (paymentType === "cash-appointment") {
-        return null; // No online payment needed
-      }
-      // Payment method must be selected for online payment
-      if (!selectedPaymentMethod) {
-        return "Please select a payment method to continue.";
-      }
-      // Payment terms must be accepted
-      if (!acceptedTerms) {
-        return "Please accept the payment terms and conditions to continue.";
-      }
-      // Check payment attempts limit
-      if (paymentAttempts >= MAX_PAYMENT_ATTEMPTS) {
-        return "Too many payment attempts. Please refresh the page and try again.";
-      }
+      // Payment step — online payment is coming soon;
+      // reservations are accepted without payment; no validation needed.
       return null;
     }
     return null;
@@ -867,8 +853,8 @@ export default function Booking(): JSX.Element {
                 </section>
               )}
 
-              {/* Step 4: Review Booking */}
-              {step === 4 && (
+              {/* Step 5: Review & Confirm Reservation (non-cash-appointment) */}
+              {step === 5 && paymentType !== "cash-appointment" && (
                 <section aria-labelledby="review-confirm-heading">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="p-3 bg-green-600 rounded-xl">
@@ -877,8 +863,17 @@ export default function Booking(): JSX.Element {
                       </svg>
                     </div>
                     <div>
-                      <h2 id="review-confirm-heading" className="text-2xl font-bold text-gray-900">Review Your Booking</h2>
-                      <p className="text-gray-700 text-sm">Double-check everything before proceeding</p>
+                      <h2 id="review-confirm-heading" className="text-2xl font-bold text-gray-900">Review &amp; Confirm Reservation</h2>
+                      <p className="text-gray-700 text-sm">Double-check everything before submitting your reservation</p>
+                    </div>
+                  </div>
+
+                  {/* Payment pending notice */}
+                  <div className="mb-6 p-4 bg-amber-50 border-2 border-amber-300 rounded-xl flex items-start gap-3">
+                    <span className="text-amber-500 text-xl flex-shrink-0">⏳</span>
+                    <div className="text-sm">
+                      <div className="font-semibold text-amber-900 mb-1">Payment to be arranged by our team</div>
+                      <p className="text-amber-800">Our team will contact you within 24–48 hours to finalise payment. Your reservation is secured once you click Confirm.</p>
                     </div>
                   </div>
                   
@@ -908,35 +903,23 @@ export default function Booking(): JSX.Element {
                         <div className="text-xs text-gray-600 mt-1">Purpose: {appointmentPurpose.replace('-', ' ')}</div>
                       </div>
                     )}
-                    {selectedPaymentMethod && (
-                      <div className="mt-6 pt-6 border-t border-gray-300">
-                        <div className="text-xs text-gray-600 uppercase tracking-wider mb-3">Selected Payment Method</div>
-                        <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl border-2 border-blue-200">
-                          <span className="text-3xl">{selectedPaymentMethod.icon}</span>
-                          <div className="flex-1">
-                            <div className="font-bold text-gray-900 text-lg">{selectedPaymentMethod.name}</div>
-                            <div className="text-sm text-gray-700">{selectedPaymentMethod.description}</div>
-                            <div className="mt-2 flex items-center gap-2 text-xs text-gray-600 font-medium">
-                              <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                              {selectedPaymentMethod.processingTime}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                     <div className="mt-6 pt-6 border-t border-gray-300">
                       <div className="flex justify-between items-center mb-3">
                         <div className="text-sm text-gray-700 font-medium">Per person</div>
                         <div className="font-semibold text-gray-900 text-lg">{formatCurrencyPHP(perPerson)}</div>
                       </div>
                       <div className="flex justify-between items-center">
-                        <div className="text-base text-gray-900 font-semibold">Total Amount</div>
+                        <div className="text-base text-gray-900 font-semibold">Total Amount Due</div>
                         <div className="text-3xl font-bold price-highlight">{formatCurrencyPHP(total)}</div>
                       </div>
+                      <p className="mt-2 text-xs text-gray-500">Payment will be arranged by our booking team after reservation.</p>
                     </div>
                   </div>
+
+                  {error && (
+                    <div className="mt-4 p-4 bg-red-50 border border-red-300 rounded-xl text-sm text-red-700">{error}</div>
+                  )}
+
                   <div className="mt-6 flex justify-between items-center">
                     <button onClick={handleBack} className="px-5 py-3 btn-secondary rounded-xl flex items-center gap-2 font-semibold">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -945,20 +928,23 @@ export default function Booking(): JSX.Element {
                       Back
                     </button>
                     <button
-                      onClick={() => setStep(5)}
+                      onClick={() => {
+                        const bookingId = `BK-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+                        handlePaymentSuccess(bookingId);
+                      }}
                       className="px-6 py-3 btn-accent rounded-xl flex items-center gap-2 font-bold shadow-lg hover:shadow-xl transition-all"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
-                      Proceed to Payment
+                      Confirm Reservation
                     </button>
                   </div>
                 </section>
               )}
 
-              {/* Step 5: Payment Gateway Mockup */}
-              {step === 5 && selectedPaymentMethod && (
+              {/* Step 5: Payment Gateway Mockup — kept for cash-appointment only (online payment is coming soon) */}
+              {step === 5 && selectedPaymentMethod && paymentType === "cash-appointment" && (
                 <section aria-labelledby="confirm-heading">
                   <div className="flex items-center gap-3 mb-6 section-header">
                     <div className="p-3 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-xl">

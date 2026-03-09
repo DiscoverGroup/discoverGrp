@@ -179,7 +179,8 @@ const allowedOrigins = [
   'https://admin--discovergrp.netlify.app',  // Admin production
   'https://admin-discoverg.netlify.app',  // Admin production (new repo)
   'https://admindiscovergrp.netlify.app',  // Admin production (alternate)
-  'https://lambent-dodol-2486cc.netlify.app',  // Admin preview
+  // NOTE: One-time preview URLs are intentionally omitted — they can be claimed
+  // by anyone after the original deploy is deleted.
 ];
 
 // Add production URLs from environment variables

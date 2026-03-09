@@ -16,7 +16,8 @@ export const authLimiter = rateLimit({
   message: 'Too many login attempts, please try again after 15 minutes.',
   standardHeaders: true,
   legacyHeaders: false,
-  skipSuccessfulRequests: true, // Don't count successful requests
+  // NOTE: skipSuccessfulRequests removed — a credential-stuffing attack mixing
+  // valid and invalid credentials would otherwise consume zero rate-limit budget.
 });
 
 // Email rate limiter - 3 emails per hour
