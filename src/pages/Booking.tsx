@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams, useLocation, Navigate } from "react-route
 import { useAuth } from "../context/useAuth";
 import type { Tour, CustomRoute, InstallmentPlan, InstallmentPayment } from "../types";
 import { fetchTourBySlug } from "../api/tours";
-import type { PaymentMethod } from "../lib/payment-gateway";
 import { createBooking } from "../api/bookings";
 import { buildApiUrl } from "../config/apiBase";
 import ProgressIndicator from "../components/ProgressIndicator";
@@ -14,9 +13,6 @@ import "./Booking.css";
 function formatCurrencyPHP(amount: number) {
   return `PHP ${amount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
-
-const GATEWAY_PAYMONGO = "paymongo" as const;
-const GATEWAY_DRAGONPAY = "dragonpay" as const;
 
 const themeStyle: React.CSSProperties = {
   background: "linear-gradient(180deg, rgba(249,250,251,1) 0%, rgba(243,244,246,1) 35%, rgba(255,255,255,1) 100%)",
@@ -33,39 +29,9 @@ const bookingSteps = [
   { id: 5, title: "Confirm", description: "Secure your spot" }
 ];
 
-const PaymentMethodSelector = lazy(async () => {
-  const mod = await import("../lib/payment-gateway");
-  return { default: mod.PaymentMethodSelector };
-});
-
-const PayMongoMockup = lazy(async () => {
-  const mod = await import("../components/PaymentMockup");
-  return { default: mod.PayMongoMockup };
-});
-
-const DragonpayMockup = lazy(async () => {
-  const mod = await import("../components/PaymentMockup");
-  return { default: mod.DragonpayMockup };
-});
-
 const BookingStepSelection = lazy(() => import("../components/booking/BookingStepSelection"));
 const BookingStepDetails = lazy(() => import("../components/booking/BookingStepDetails"));
 const BookingStepDocuments = lazy(() => import("../components/booking/BookingStepDocuments"));
-
-const TrustSignals = lazy(async () => {
-  const mod = await import("../components/TrustSignals");
-  return { default: mod.TrustSignals };
-});
-
-const UrgencyIndicators = lazy(async () => {
-  const mod = await import("../components/TrustSignals");
-  return { default: mod.UrgencyIndicators };
-});
-
-const BookingProtection = lazy(async () => {
-  const mod = await import("../components/TrustSignals");
-  return { default: mod.BookingProtection };
-});
 
 // Define an extended type that includes the new fields from TourForm
 type ExtendedTour = Tour & {
@@ -218,21 +184,10 @@ export default function Booking(): JSX.Element {
   const [downpaymentPercentage, setDownpaymentPercentage] = useState<number>(30); // 30% default
   const [customPaymentTerms, setCustomPaymentTerms] = useState<string>("30"); // "30", "50", "70", or custom
 
-  // Payment Gateway state (PayMongo & Dragonpay)
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
-  const [selectedGateway, setSelectedGateway] = useState<PaymentMethod["gateway"] | null>(null);
-  
-  // Payment terms acceptance
-  const [acceptedTerms, setAcceptedTerms] = useState<boolean>(false);
-  
   // Installment plan configuration
   const [installmentMonths, setInstallmentMonths] = useState<number>(12); // Default 12 months
   const [customInstallmentAmount, setCustomInstallmentAmount] = useState<number | null>(null);
   
-  // Payment attempt tracking
-  const [paymentAttempts, setPaymentAttempts] = useState<number>(0);
-  const MAX_PAYMENT_ATTEMPTS = 3;
-
   // Auto-check appointment if cash-appointment payment is selected
   useEffect(() => {
     if (paymentType === "cash-appointment" && !wantsAppointment) {
@@ -626,13 +581,6 @@ export default function Booking(): JSX.Element {
                   insertAfterDay: route.insertAfterDay,
                 })),
               }),
-              // Include payment method details
-              ...(selectedPaymentMethod && {
-                paymentMethod: selectedPaymentMethod.name,
-                paymentMethodIcon: selectedPaymentMethod.icon,
-                paymentMethodDescription: selectedPaymentMethod.description,
-                paymentGateway: selectedGateway === GATEWAY_PAYMONGO ? 'PayMongo' : 'Dragonpay',
-              }),
               // Include appointment details if scheduled
               ...(wantsAppointment && {
                 appointmentDate,
@@ -739,96 +687,44 @@ export default function Booking(): JSX.Element {
               />
             </div>
             <div className="rounded-3xl card-glass p-6 md:p-8 shadow-sm">{/* Step 3: Payment Method Selection */}
-              {/* Step 3: Payment Method Selection */}
+              {/* Step 4: Online Payment — Coming Soon */}
               {step === 4 && paymentType !== "cash-appointment" && (
-                <section aria-labelledby="payment-heading">
+                <section aria-labelledby="payment-coming-soon-heading">
+                  {/* Header */}
                   <div className="flex items-center gap-3 mb-6">
                     <div className="p-3 bg-blue-600 rounded-xl">
-                      <svg className="w-8 h-8 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                       </svg>
                     </div>
                     <div>
-                      <h2 id="payment-heading" className="text-2xl font-bold text-gray-900">Select Payment Method</h2>
-                      <p className="text-gray-700 text-sm">Choose how you'd like to complete your booking</p>
+                      <h2 id="payment-coming-soon-heading" className="text-2xl font-bold text-gray-900">Online Payment</h2>
+                      <p className="text-gray-700 text-sm">Secure online payment options</p>
                     </div>
                   </div>
 
-                  {/* Demo Mode Notice */}
-                  <div className="mb-6 p-4 bg-yellow-50 border-2 border-yellow-400 rounded-xl flex items-start gap-3">
-                    <svg className="w-5 h-5 text-yellow-700 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <div className="text-sm">
-                      <div className="font-semibold text-yellow-900 mb-1">Demo Mode Active</div>
-                      <p className="text-gray-900">This is a demonstration booking flow. No actual payment will be processed. Select any method to see how the payment experience works!</p>
-                    </div>
-                  </div>
-                  
-                  {/* Trust signals before payment form */}
-                  <div className="mb-6 space-y-4">
-                    <Suspense fallback={<div className="py-2 text-center text-gray-700">Loading trust details...</div>}>
-                      <TrustSignals />
-                      <UrgencyIndicators />
-                      <BookingProtection />
-                    </Suspense>
-                  </div>
-                  
-                  <Suspense fallback={<div className="py-6 text-center text-gray-700">Loading payment methods...</div>}>
-                    <PaymentMethodSelector 
-                      onSelect={(method) => {
-                        setSelectedPaymentMethod(method);
-                        setSelectedGateway(method.gateway);
-                      }}
-                      selectedMethod={selectedPaymentMethod || undefined}
-                    />
-                  </Suspense>
-                  
-                  {/* Payment Terms and Conditions */}
-                  <div className="mt-6 p-5 bg-gray-50 border-2 border-gray-200 rounded-xl">
-                    <div className="flex items-start gap-3">
-                      <input
-                        type="checkbox"
-                        id="accept-terms"
-                        checked={acceptedTerms}
-                        onChange={(e) => setAcceptedTerms(e.target.checked)}
-                        className="mt-1 w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                      />
-                      <label htmlFor="accept-terms" className="text-sm text-gray-900 cursor-pointer">
-                        <span className="font-semibold">I agree to the payment terms and conditions</span>
-                        <div className="mt-2 space-y-1 text-gray-700">
-                          <p>• All payments are processed securely through our payment partners</p>
-                          <p>• Full payment bookings are confirmed immediately upon successful payment</p>
-                          <p>• Downpayment bookings require balance payment at least 30 days before departure</p>
-                          <p>• Cancellations made 60+ days before departure receive 50% refund</p>
-                          <p>• Cancellations made 30-59 days before departure receive 25% refund</p>
-                          <p>• No refunds for cancellations within 30 days of departure</p>
-                          <p>• Prices are in Philippine Peso (PHP) and include applicable taxes</p>
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-                  
-                  {/* Security Notice */}
-                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-xl flex items-start gap-3">
-                    <svg className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
-                    <div className="text-sm text-green-900">
-                      <div className="font-semibold mb-1">🔒 Secure Payment Processing</div>
-                      <p className="text-green-800">Your payment is protected with bank-level encryption and fraud detection. We never store your card details.</p>
-                    </div>
-                  </div>
-                  
-                  {error && (
-                    <div className="mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-start gap-3">
-                      <svg className="w-5 h-5 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  {/* Coming Soon card */}
+                  <div className="flex flex-col items-center justify-center py-12 px-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl text-center">
+                    <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mb-5">
+                      <svg className="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      <div className="text-sm text-red-700">{error}</div>
                     </div>
-                  )}
-                  
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">Online Payment Coming Soon</h3>
+                    <p className="text-gray-600 max-w-md mb-4">
+                      We're working on integrating secure online payment options including credit/debit cards, GCash, GrabPay, and more.
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-2 mb-6 text-sm text-gray-500">
+                      <span className="px-3 py-1 bg-white border border-gray-200 rounded-full">💳 Cards</span>
+                      <span className="px-3 py-1 bg-white border border-gray-200 rounded-full">📱 GCash</span>
+                      <span className="px-3 py-1 bg-white border border-gray-200 rounded-full">🚗 GrabPay</span>
+                      <span className="px-3 py-1 bg-white border border-gray-200 rounded-full">🏦 Online Banking</span>
+                    </div>
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 max-w-md">
+                      <span className="font-semibold">In the meantime:</span> Continue to the next step to confirm your reservation. Our team will contact you within 24–48 hours to arrange payment.
+                    </div>
+                  </div>
+
                   <div className="mt-6 flex justify-between items-center">
                     <button onClick={handleBack} className="px-5 py-3 btn-secondary rounded-xl flex items-center gap-2 font-semibold">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -837,14 +733,10 @@ export default function Booking(): JSX.Element {
                       Back
                     </button>
                     <button
-                      onClick={() => {
-                        setPaymentAttempts(prev => prev + 1);
-                        handleNext();
-                      }}
-                      className="px-6 py-3 btn-primary rounded-xl flex items-center gap-2 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled={!selectedPaymentMethod || !acceptedTerms || paymentAttempts >= MAX_PAYMENT_ATTEMPTS}
+                      onClick={handleNext}
+                      className="px-6 py-3 btn-primary rounded-xl flex items-center gap-2 font-semibold"
                     >
-                      Continue to Payment
+                      Continue to Confirmation
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
@@ -943,62 +835,6 @@ export default function Booking(): JSX.Element {
                 </section>
               )}
 
-              {/* Step 5: Payment Gateway Mockup — kept for cash-appointment only (online payment is coming soon) */}
-              {step === 5 && selectedPaymentMethod && paymentType === "cash-appointment" && (
-                <section aria-labelledby="confirm-heading">
-                  <div className="flex items-center gap-3 mb-6 section-header">
-                    <div className="p-3 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-xl">
-                      <svg className="w-8 h-8 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h2 id="confirm-heading" className="text-2xl font-bold text-gray-900">Complete Your Payment</h2>
-                      <p className="text-gray-700 text-sm">Secure demo payment - No actual charges will be made</p>
-                    </div>
-                  </div>
-
-                  {/* Demo Payment Notice */}
-                  <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl flex items-start gap-3">
-                    <svg className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <div className="text-sm">
-                      <div className="font-semibold text-blue-300 mb-1">Demo Payment Gateway</div>
-                      <p className="text-blue-200/80">This is a simulated payment interface. Click "Complete Payment" to see a successful booking confirmation. No real transactions will occur.</p>
-                    </div>
-                  </div>
-                  
-                  <Suspense fallback={<div className="py-6 text-center text-gray-700">Loading payment gateway...</div>}>
-                    {selectedGateway === GATEWAY_PAYMONGO && (
-                      <PayMongoMockup 
-                        amount={total}
-                        paymentMethod={selectedPaymentMethod}
-                        onComplete={() => {
-                          const paymentId = `pm_${selectedPaymentMethod.type}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-                          console.log('✅ PayMongo mockup payment completed:', paymentId);
-                          handlePaymentSuccess(paymentId);
-                        }}
-                        onBack={handleBack}
-                      />
-                    )}
-                    
-                    {selectedGateway === GATEWAY_DRAGONPAY && (
-                      <DragonpayMockup 
-                        amount={total}
-                        paymentMethod={selectedPaymentMethod}
-                        onComplete={() => {
-                          const paymentId = `dp_${selectedPaymentMethod.type}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-                          console.log('✅ Dragonpay mockup payment completed:', paymentId);
-                          handlePaymentSuccess(paymentId);
-                        }}
-                        onBack={handleBack}
-                      />
-                    )}
-                  </Suspense>
-                </section>
-              )}
-              
               {/* Regular booking steps for early steps or cash payment */}
               {(step < 4 || paymentType === "cash-appointment") && (
                 <>
