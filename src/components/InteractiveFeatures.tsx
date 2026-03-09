@@ -95,11 +95,11 @@ const InteractiveFeatures: React.FC = () => {
   const activeFeatureData = features.find(f => f.id === activeFeature) || features[0];
 
   return (
-    <section ref={ref} className="relative py-24 overflow-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+    <section ref={ref} className="relative py-24 overflow-hidden bg-white">
       {/* Animated Background Pattern */}
       <div className="absolute inset-0">
         <motion.div
-          className="absolute inset-0 opacity-10"
+          className="absolute inset-0 opacity-5"
           style={{
             backgroundImage: `radial-gradient(circle at 20% 50%, #3b82f6 0%, transparent 50%), 
                              radial-gradient(circle at 80% 20%, #8b5cf6 0%, transparent 50%), 
@@ -131,15 +131,15 @@ const InteractiveFeatures: React.FC = () => {
         {/* Section Header */}
         <motion.div variants={itemVariants} className="text-center mb-20">
           <motion.div
-            className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full text-white mb-6"
-            whileHover={{ scale: 1.05, backgroundColor: "rgba(255, 255, 255, 0.15)" }}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-50 border border-blue-100 rounded-full text-blue-700 mb-6"
+            whileHover={{ scale: 1.05, backgroundColor: "rgba(219,234,254,1)" }}
           >
-            <Sparkles className="w-5 h-5 text-yellow-400" />
+            <Sparkles className="w-5 h-5 text-yellow-500" />
             <span className="text-sm font-medium uppercase tracking-wider">Why Choose Us</span>
           </motion.div>
 
           <motion.h2
-            className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight"
+            className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight"
             variants={itemVariants}
           >
             Experience The
@@ -161,7 +161,7 @@ const InteractiveFeatures: React.FC = () => {
 
           <motion.p
             variants={itemVariants}
-            className="text-xl text-white/80 max-w-3xl mx-auto leading-relaxed"
+            className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed"
           >
             Discover what makes our tours extraordinary through innovative features 
             designed to create unforgettable travel experiences
@@ -177,8 +177,8 @@ const InteractiveFeatures: React.FC = () => {
                 key={feature.id}
                 className={`group cursor-pointer p-6 rounded-2xl border transition-all duration-500 ${
                   activeFeature === feature.id
-                    ? 'bg-white/10 backdrop-blur-sm border-white/30 shadow-2xl'
-                    : 'bg-white/5 backdrop-blur-sm border-white/10 hover:border-white/20'
+                    ? 'bg-blue-50 border-blue-200 shadow-xl'
+                    : 'bg-white border-gray-100 shadow-sm hover:border-blue-100 hover:shadow-md'
                 }`}
                 onClick={() => setActiveFeature(feature.id)}
                 whileHover={{ scale: 1.02, y: -5 }}
@@ -198,18 +198,18 @@ const InteractiveFeatures: React.FC = () => {
 
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-xl font-bold text-white group-hover:text-yellow-400 transition-colors">
+                      <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
                         {feature.title}
                       </h3>
                       <motion.div
                         animate={{ x: activeFeature === feature.id ? 5 : 0 }}
                         transition={{ duration: 0.3 }}
                       >
-                        <ArrowRight className="w-5 h-5 text-white/60" />
+                        <ArrowRight className="w-5 h-5 text-gray-400" />
                       </motion.div>
                     </div>
                     
-                    <p className="text-white/70 text-sm leading-relaxed mb-3">
+                    <p className="text-gray-600 text-sm leading-relaxed mb-3">
                       {feature.description}
                     </p>
                     
@@ -227,7 +227,7 @@ const InteractiveFeatures: React.FC = () => {
 
           {/* Active Feature Display */}
           <motion.div
-            className="relative rounded-3xl overflow-hidden bg-white/5 backdrop-blur-sm border border-white/10"
+            className="relative rounded-3xl overflow-hidden bg-white border border-gray-200 shadow-xl"
             layout
           >
             <AnimatePresence mode="wait">

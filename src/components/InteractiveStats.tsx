@@ -32,7 +32,7 @@ const statsData: StatItem[] = [
     label: 'Happy Travelers',
     description: 'Customers who chose us for their dream vacation',
     color: 'from-blue-500 to-cyan-500',
-    accent: 'text-blue-400'
+    accent: 'text-blue-600'
   },
   {
     id: 'destinations',
@@ -42,7 +42,7 @@ const statsData: StatItem[] = [
     label: 'Destinations',
     description: 'Countries and cities we explore together',
     color: 'from-green-500 to-emerald-500',
-    accent: 'text-green-400'
+    accent: 'text-green-600'
   },
   {
     id: 'rating',
@@ -52,7 +52,7 @@ const statsData: StatItem[] = [
     label: 'Average Rating',
     description: 'Based on thousands of verified reviews',
     color: 'from-yellow-500 to-orange-500',
-    accent: 'text-yellow-400'
+    accent: 'text-yellow-600'
   },
   {
     id: 'awards',
@@ -62,7 +62,7 @@ const statsData: StatItem[] = [
     label: 'Industry Awards',
     description: 'Recognition for outstanding service',
     color: 'from-purple-500 to-pink-500',
-    accent: 'text-purple-400'
+    accent: 'text-purple-600'
   },
   {
     id: 'experience',
@@ -72,7 +72,7 @@ const statsData: StatItem[] = [
     label: 'Experience',
     description: 'Crafting unforgettable travel experiences',
     color: 'from-indigo-500 to-blue-500',
-    accent: 'text-indigo-400'
+    accent: 'text-indigo-600'
   },
   {
     id: 'satisfaction',
@@ -82,7 +82,7 @@ const statsData: StatItem[] = [
     label: 'Satisfaction Rate',
     description: 'Customer satisfaction and return rate',
     color: 'from-red-500 to-pink-500',
-    accent: 'text-red-400'
+    accent: 'text-red-600'
   }
 ];
 
@@ -161,15 +161,15 @@ const StatCard: React.FC<{
       <motion.div
         className="relative p-8 rounded-3xl overflow-hidden"
         style={{
-          background: 'linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255,255,255,0.2)',
+          background: '#ffffff',
+          border: '1px solid #e5e7eb',
+          boxShadow: '0 1px 3px 0 rgba(0,0,0,0.07)',
         }}
         whileHover={{ 
           scale: 1.05, 
           y: -10,
           rotateY: 5,
-          background: 'linear-gradient(145deg, rgba(255,255,255,0.15), rgba(255,255,255,0.08))',
+          background: '#eff6ff',
         }}
         whileTap={{ scale: 0.95 }}
         transition={{ duration: 0.3 }}
@@ -232,7 +232,7 @@ const StatCard: React.FC<{
           className="relative z-10 mb-4"
           whileHover={{ scale: 1.05 }}
         >
-          <div className="text-4xl lg:text-5xl font-bold text-white mb-2">
+          <div className="text-4xl lg:text-5xl font-bold text-gray-900 mb-2">
             <AnimatedCounter 
               value={stat.value} 
               suffix={stat.suffix}
@@ -242,7 +242,7 @@ const StatCard: React.FC<{
           
           <motion.h3
             className={`text-xl font-semibold mb-3 ${stat.accent}`}
-            whileHover={{ color: "#ffffff" }}
+            whileHover={{ color: "#111827" }}
             transition={{ duration: 0.3 }}
           >
             {stat.label}
@@ -251,8 +251,8 @@ const StatCard: React.FC<{
 
         {/* Description */}
         <motion.p
-          className="text-white/70 text-sm leading-relaxed relative z-10"
-          whileHover={{ color: "rgba(255,255,255,0.9)" }}
+          className="text-gray-600 text-sm leading-relaxed relative z-10"
+          whileHover={{ color: "rgba(17,24,39,0.9)" }}
           transition={{ duration: 0.3 }}
         >
           {stat.description}
@@ -260,7 +260,7 @@ const StatCard: React.FC<{
 
         {/* Hover Overlay Effect */}
         <motion.div
-          className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+          className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-blue-200 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"
           initial={{ scaleX: 0 }}
           whileHover={{ scaleX: 1 }}
           transition={{ duration: 0.5 }}
@@ -305,7 +305,7 @@ const InteractiveStats: React.FC = () => {
   return (
     <section 
       ref={sectionRef}
-      className="relative py-24 overflow-hidden bg-gradient-to-br from-gray-900 via-slate-900 to-black"
+      className="relative py-24 overflow-hidden bg-gray-50"
     >
       {/* Dynamic Background */}
       <motion.div
@@ -344,7 +344,7 @@ const InteractiveStats: React.FC = () => {
         <div 
           className="absolute inset-0 opacity-5"
           style={{
-            backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.3) 1px, transparent 0)`,
+            backgroundImage: `radial-gradient(circle at 1px 1px, rgba(0,0,0,0.06) 1px, transparent 0)`,
             backgroundSize: '40px 40px',
           }}
         />
@@ -359,10 +359,10 @@ const InteractiveStats: React.FC = () => {
           transition={{ duration: 0.8 }}
         >
           <motion.div
-            className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full text-white mb-6"
-            whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.15)" }}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 border border-gray-200 rounded-full text-gray-700 mb-6"
+            whileHover={{ scale: 1.05, backgroundColor: "rgba(243,244,246,1)" }}
           >
-            <TrendingUp className="w-5 h-5 text-green-400" />
+            <TrendingUp className="w-5 h-5 text-green-600" />
             <span className="text-sm font-medium uppercase tracking-wider">Our Impact</span>
           </motion.div>
 
@@ -372,7 +372,7 @@ const InteractiveStats: React.FC = () => {
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            <span className="text-white">Numbers That</span>
+            <span className="text-gray-900">Numbers That</span>
             <br />
             <motion.span
               className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 bg-clip-text text-transparent"
@@ -391,7 +391,7 @@ const InteractiveStats: React.FC = () => {
           </motion.h2>
 
           <motion.p
-            className="text-xl text-white/80 max-w-3xl mx-auto leading-relaxed"
+            className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed"
             initial={{ opacity: 0, y: 30 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.8, delay: 0.4 }}
@@ -421,8 +421,8 @@ const InteractiveStats: React.FC = () => {
           transition={{ duration: 0.8, delay: 1 }}
         >
           <motion.p
-            className="text-white/70 text-lg mb-8"
-            whileHover={{ color: "rgba(255,255,255,0.9)" }}
+            className="text-gray-600 text-lg mb-8"
+            whileHover={{ color: "rgba(17,24,39,0.9)" }}
           >
             Ready to become part of our story?
           </motion.p>
@@ -464,8 +464,8 @@ const InteractiveStats: React.FC = () => {
               className="flex items-center gap-3"
               whileHover={{ scale: 1.1, opacity: 1 }}
             >
-              <Icon className="w-6 h-6 text-white" />
-              <span className="text-white text-sm font-medium">
+              <Icon className="w-6 h-6 text-gray-600" />
+              <span className="text-gray-600 text-sm font-medium">
                 {index === 0 ? 'Secure' : index === 1 ? 'Awarded' : 'Trusted'}
               </span>
             </motion.div>

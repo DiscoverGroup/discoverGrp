@@ -132,7 +132,7 @@ export default function Home() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.2 }}
         transition={{ duration: 0.6 }}
-        className="bg-blue-50 py-12"
+        className="bg-gray-50 py-12 border-y border-gray-100"
       >
         <div className="container mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 items-center text-center">
@@ -437,7 +437,7 @@ export default function Home() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.3 }}
         transition={{ duration: 0.7 }}
-        className="bg-gradient-to-br from-blue-900 to-purple-900 py-20"
+        className="bg-gradient-to-br from-blue-700 to-indigo-800 py-20"
       >
         <div className="container mx-auto px-6 text-center">
           <motion.h2

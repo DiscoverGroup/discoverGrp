@@ -35,15 +35,15 @@ body {
   }
 }
 
-/* Global Dark Theme - Applied to main content areas, not navigation */
+/* Global Light Theme - Clean modern white background */
 body {
-  background: linear-gradient(to bottom, #111827, #1f2937);
+  background: #ffffff;
   min-height: 100vh;
 }
 
-/* Default text color for dark backgrounds only */
+/* Default text color for light backgrounds */
 main {
-  color: #fff;
+  color: #111827;
 }
 
 /* Input placeholder styling - darker and more visible */
@@ -72,16 +72,17 @@ textarea:focus::placeholder {
   animation: shimmer 3s infinite;
 }
 
-/* Glass morphism utilities */
+/* Clean card utilities */
 .glass-card {
-  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
-  backdrop-filter: blur(16px) saturate(150%);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1);
 }
 
 .glass-card:hover {
-  background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05));
-  border-color: rgba(255,255,255,0.15);
+  background: #f9fafb;
+  border-color: #d1d5db;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
 }
 
 /* Button styles */
@@ -102,33 +103,26 @@ textarea:focus::placeholder {
 }
 
 .btn-secondary {
-  background: rgba(255,255,255,0.10);
-  color: #fff;
+  background: #ffffff;
+  color: #374151;
   font-weight: 500;
   padding: 0.75rem 1.5rem;
   border-radius: 0.75rem;
-  border: 1px solid rgba(255,255,255,0.20);
+  border: 1px solid #d1d5db;
   transition: all 0.3s;
 }
 
 .btn-secondary:hover {
-  background: rgba(255,255,255,0.20);
-  border-color: rgba(255,255,255,0.30);
+  background: #f9fafb;
+  border-color: #9ca3af;
 }
 
 /* Input styles */
 input, select, textarea {
-  background: rgba(255,255,255,0.10);
-  border: 1px solid rgba(255,255,255,0.20);
-  color: #fff;
   border-radius: 0.5rem;
   padding: 0.5rem 1rem;
   transition: all 0.2s;
   outline: none;
-}
-
-input::placeholder, select::placeholder, textarea::placeholder {
-  color: rgba(255,255,255,0.5);
 }
 
 input:focus, select:focus, textarea:focus {
@@ -136,14 +130,16 @@ input:focus, select:focus, textarea:focus {
   border-color: transparent;
 }
 
-/* Override for white background inputs - force dark text */
-input.bg-white, select.bg-white, textarea.bg-white {
+/* White background inputs — dark text */
+input.bg-white, select.bg-white, textarea.bg-white,
+input, select, textarea {
   background: #ffffff !important;
   color: #111827 !important;
   border: 1px solid #d1d5db;
 }
 
-input.bg-white::placeholder, select.bg-white::placeholder, textarea.bg-white::placeholder {
+input.bg-white::placeholder, select.bg-white::placeholder, textarea.bg-white::placeholder,
+input::placeholder, select::placeholder, textarea::placeholder {
   color: #9ca3af !important;
 }
 

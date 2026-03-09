@@ -73,10 +73,10 @@ const TourCard3D: React.FC<{
 
   return (
     <motion.div
-      className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl rounded-2xl overflow-hidden border border-white/20 hover:border-white/40 transition-all duration-300 w-full max-w-sm mx-auto"
+      className="bg-white rounded-2xl overflow-hidden border border-gray-100 hover:border-gray-200 shadow-md hover:shadow-xl transition-all duration-300 w-full max-w-sm mx-auto"
       initial={{ opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -8, boxShadow: "0 20px 40px rgba(0,0,0,0.3)" }}
+      whileHover={{ y: -8, boxShadow: "0 20px 40px rgba(0,0,0,0.10)" }}
     >
       {/* Image Section */}
       <div className="relative h-64 overflow-hidden">
@@ -97,17 +97,17 @@ const TourCard3D: React.FC<{
             e.stopPropagation();
             onFavorite(tour.id);
           }}
-          className="absolute top-4 right-4 p-2 bg-black/40 backdrop-blur-sm rounded-full border border-white/20 hover:bg-black/60 transition-colors z-10"
+          className="absolute top-4 right-4 p-2 bg-white/90 backdrop-blur-sm rounded-full border border-white shadow-sm hover:bg-white transition-colors z-10"
         >
           <Heart
             className={`w-5 h-5 transition-colors ${
-              favorites.includes(tour.id) ? 'fill-red-500 text-red-500' : 'text-white'
+              favorites.includes(tour.id) ? 'fill-red-500 text-red-500' : 'text-gray-600'
             }`}
           />
         </button>
 
         {/* Category Badge */}
-        <div className="absolute top-4 left-4 px-3 py-1 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full text-white text-xs font-medium">
+        <div className="absolute top-4 left-4 px-3 py-1 bg-black/50 backdrop-blur-sm rounded-full text-white text-xs font-medium">
           {tour.category}
         </div>
 
@@ -122,11 +122,11 @@ const TourCard3D: React.FC<{
       {/* Content Section */}
       <div className="p-6 space-y-4">
         <div>
-          <h3 className="text-xl font-bold text-white mb-2 line-clamp-2">
+          <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2">
             {tour.title}
           </h3>
           
-          <div className="flex flex-col gap-2 text-white/70 text-sm">
+          <div className="flex flex-col gap-2 text-gray-500 text-sm">
             <div className="flex items-center gap-2">
               <MapPin className="w-4 h-4 flex-shrink-0" />
               <span className="line-clamp-1">{tour.destination}</span>
@@ -141,18 +141,18 @@ const TourCard3D: React.FC<{
             <div className="flex items-center gap-2 mt-3">
               <div className="flex items-center gap-1">
                 <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                <span className="text-white font-medium">{tour.rating.toFixed(1)}</span>
+                <span className="text-gray-900 font-medium">{tour.rating.toFixed(1)}</span>
               </div>
-              <span className="text-white/60 text-sm">({tour.reviews} {tour.reviews === 1 ? 'review' : 'reviews'})</span>
+              <span className="text-gray-400 text-sm">({tour.reviews} {tour.reviews === 1 ? 'review' : 'reviews'})</span>
             </div>
           ) : (
             <div className="flex items-center gap-2 mt-3">
-              <span className="text-white/60 text-sm">No reviews yet</span>
+              <span className="text-gray-400 text-sm">No reviews yet</span>
             </div>
           )}
         </div>
 
-        <div className="flex items-center justify-between pt-4 border-t border-white/10">
+        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
           <span className="text-2xl font-bold text-yellow-400">
             {tour.price}
           </span>
@@ -291,14 +291,14 @@ const TourCarousel3D: React.FC = () => {
 
   if (loading) {
     return (
-      <section className="relative min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 overflow-hidden flex items-center justify-center">
+      <section className="relative min-h-screen bg-gray-50 overflow-hidden flex items-center justify-center">
         <div className="text-center">
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full mx-auto mb-4"
+            className="w-16 h-16 border-4 border-gray-200 border-t-blue-600 rounded-full mx-auto mb-4"
           />
-          <p className="text-white text-xl">Loading Featured Tours...</p>
+          <p className="text-gray-600 text-xl">Loading Featured Tours...</p>
         </div>
       </section>
     );
@@ -306,13 +306,13 @@ const TourCarousel3D: React.FC = () => {
 
   if (tours.length === 0) {
     return (
-      <section className="relative min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 overflow-hidden flex items-center justify-center">
-        <div className="text-center text-white">
-          <h2 className="text-3xl font-bold mb-4">No Featured Tours Available</h2>
+      <section className="relative min-h-screen bg-gray-50 overflow-hidden flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold mb-4 text-gray-900">No Featured Tours Available</h2>
           {loadError ? (
-            <p className="text-red-300 max-w-xl mx-auto">{loadError}</p>
+            <p className="text-red-500 max-w-xl mx-auto">{loadError}</p>
           ) : (
-            <p className="text-white/70">Check back soon for exciting destinations!</p>
+            <p className="text-gray-500">Check back soon for exciting destinations!</p>
           )}
         </div>
       </section>
@@ -320,11 +320,11 @@ const TourCarousel3D: React.FC = () => {
   }
 
   return (
-    <section className="relative py-24 overflow-hidden bg-gradient-to-b from-slate-900 to-black">
+    <section className="relative py-24 overflow-hidden bg-gray-50">
       {/* Background Effects */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 pointer-events-none">
         <motion.div
-          className="absolute top-1/4 left-1/4 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl"
+          className="absolute top-1/4 left-1/4 w-72 h-72 bg-blue-100 rounded-full blur-3xl opacity-60"
           animate={{
             x: [0, 100, 0],
             y: [0, 50, 0],
@@ -333,7 +333,7 @@ const TourCarousel3D: React.FC = () => {
           transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div
-          className="absolute bottom-1/4 right-1/4 w-72 h-72 bg-purple-500/20 rounded-full blur-3xl"
+          className="absolute bottom-1/4 right-1/4 w-72 h-72 bg-indigo-100 rounded-full blur-3xl opacity-60"
           animate={{
             x: [0, -80, 0],
             y: [0, -60, 0],
@@ -352,12 +352,12 @@ const TourCarousel3D: React.FC = () => {
           transition={{ duration: 0.8 }}
         >
           <motion.h2
-            className="text-5xl md:text-7xl font-bold text-white mb-6"
+            className="text-5xl md:text-7xl font-bold mb-6"
             animate={{
               backgroundImage: [
-                'linear-gradient(45deg, #fff, #fbbf24)',
-                'linear-gradient(45deg, #fbbf24, #f59e0b)',
-                'linear-gradient(45deg, #f59e0b, #fff)',
+                'linear-gradient(45deg, #111827, #3b82f6)',
+                'linear-gradient(45deg, #3b82f6, #1d4ed8)',
+                'linear-gradient(45deg, #1d4ed8, #111827)',
               ],
             }}
             transition={{ duration: 4, repeat: Infinity }}
@@ -370,7 +370,7 @@ const TourCarousel3D: React.FC = () => {
             Featured Tours
           </motion.h2>
           
-          <p className="text-xl text-white/70 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-500 max-w-2xl mx-auto">
             Immerse yourself in our handpicked collection of extraordinary journeys
           </p>
         </motion.div>
@@ -399,7 +399,7 @@ const TourCarousel3D: React.FC = () => {
           <button
             onClick={handlePrevious}
             disabled={currentIndex === 0}
-            className="absolute left-0 top-1/2 -translate-y-1/2 p-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full text-white hover:bg-white/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="absolute left-0 top-1/2 -translate-y-1/2 p-4 bg-white border border-gray-200 rounded-full text-gray-700 shadow-sm hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
@@ -407,7 +407,7 @@ const TourCarousel3D: React.FC = () => {
           <button
             onClick={handleNext}
             disabled={currentIndex >= tours.length - 3}
-            className="absolute right-0 top-1/2 -translate-y-1/2 p-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full text-white hover:bg-white/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="absolute right-0 top-1/2 -translate-y-1/2 p-4 bg-white border border-gray-200 rounded-full text-gray-700 shadow-sm hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <ChevronRight className="w-6 h-6" />
           </button>
@@ -427,7 +427,7 @@ const TourCarousel3D: React.FC = () => {
                 key={index}
                 onClick={() => setCurrentIndex(index)}
                 className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                  index === currentIndex ? 'bg-yellow-400 w-8' : 'bg-white/30 hover:bg-white/50'
+                  index === currentIndex ? 'bg-blue-600 w-8' : 'bg-gray-300 hover:bg-gray-400'
                 }`}
               />
             ))}
@@ -445,8 +445,8 @@ const TourCarousel3D: React.FC = () => {
             onClick={() => setAutoPlay(!autoPlay)}
             className={`px-6 py-3 backdrop-blur-sm border rounded-full text-sm font-medium transition-all duration-300 ${
               autoPlay 
-                ? 'bg-yellow-400/20 border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/30' 
-                : 'bg-white/10 border-white/20 text-white/70 hover:bg-white/20'
+                ? 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100' 
+                : 'bg-gray-100 border-gray-200 text-gray-600 hover:bg-gray-200'
             }`}
           >
             {autoPlay ? 'Pause Auto-Play' : 'Start Auto-Play'}
