@@ -1,10 +1,9 @@
 import { Router, Response } from 'express';
 import multer from 'multer';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { v2 as cloudinary } from 'cloudinary';
+import { Readable } from 'stream';
 import { requireAuth, requireRole, AuthenticatedRequest } from '../../middleware/auth';
 import FeaturedVideo from '../../models/FeaturedVideo';
-import crypto from 'crypto';
-import path from 'path';
 
 // Type for uploaded files (avoid Express namespace issues)
 type UploadedFile = {
@@ -16,18 +15,13 @@ type UploadedFile = {
 
 const router = Router();
 
-// Configure Cloudflare R2 client
-const r2Client = new S3Client({
-  region: 'auto',
-  endpoint: process.env.R2_ENDPOINT,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
-  },
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true,
 });
-
-const R2_BUCKET = process.env.R2_BUCKET_NAME || '';
-const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || '';
 
 // Configure multer for video and thumbnail uploads
 const upload = multer({
@@ -55,27 +49,23 @@ const upload = multer({
 });
 
 /**
- * Upload video file to R2
+ * Upload a file (video or image) to Cloudinary
  */
-async function uploadToR2(
+async function uploadToCloudinary(
   file: UploadedFile,
-  folder: string,
-  label: string
+  folder: string
 ): Promise<string> {
-  const fileExt = path.extname(file.originalname);
-  const randomName = crypto.randomBytes(16).toString('hex');
-  const timestamp = Date.now();
-  const fileName = `${folder}/${label}-${timestamp}-${randomName}${fileExt}`;
-
-  const command = new PutObjectCommand({
-    Bucket: R2_BUCKET,
-    Key: fileName,
-    Body: file.buffer,
-    ContentType: file.mimetype,
+  return new Promise((resolve, reject) => {
+    const resourceType = file.mimetype.startsWith('video/') ? 'video' : 'image';
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: `discovergrp/${folder}`, resource_type: resourceType },
+      (error, result) => {
+        if (error || !result) return reject(error ?? new Error('Cloudinary upload failed'));
+        resolve(result.secure_url);
+      }
+    );
+    Readable.from(file.buffer).pipe(stream);
   });
-
-  await r2Client.send(command);
-  return `${R2_PUBLIC_URL}/${fileName}`;
 }
 
 /**
@@ -133,12 +123,12 @@ router.post(
       }
 
       // Upload video
-      const videoUrl = await uploadToR2(files.video[0], 'homepage/videos', 'video');
+      const videoUrl = await uploadToCloudinary(files.video[0], 'homepage/videos');
 
       // Upload thumbnail if provided
       let thumbnailUrl: string | undefined;
       if (files.thumbnail && files.thumbnail.length > 0) {
-        thumbnailUrl = await uploadToR2(files.thumbnail[0], 'homepage/thumbnails', 'thumb');
+        thumbnailUrl = await uploadToCloudinary(files.thumbnail[0], 'homepage/thumbnails');
       }
 
       // Create database record

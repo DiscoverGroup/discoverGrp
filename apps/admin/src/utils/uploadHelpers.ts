@@ -265,8 +265,9 @@ export const HomepageUploads = {
 // ============================================================================
 
 /**
- * R2 Storage Folder Structure:
- * 
+ * Cloudinary Storage Folder Structure:
+ * All assets are stored under the root "discovergrp/" prefix in Cloudinary.
+ *
  * tours/
  *   ├── {tourId}/
  *   │   ├── main/              - Main tour image
@@ -276,7 +277,9 @@ export const HomepageUploads = {
  *   │   │   ├── day-2/         - Day 2 itinerary images
  *   │   │   └── ...
  *   │   ├── videos/            - Tour videos
- *   │   └── related/           - Related tour images
+ *   │   ├── related/           - Related tour images
+ *   │   ├── countries/         - Countries-to-visit photos
+ *   │   └── cities/            - Cities-to-visit photos
  * 
  * countries/
  *   ├── {countryId}/

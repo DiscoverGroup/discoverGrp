@@ -16,11 +16,11 @@ import {
 import { buildAdminApiUrl } from "../../config/apiBase";
 import { useToast } from "../../components/Toast";
 
-// --- Image Upload Helper (Cloudflare R2) ---
+// --- Image Upload Helper (Cloudinary) ---
 async function uploadImageToStorage(
   file: File,
   tourId: string,
-  imageType: 'main' | 'gallery' | 'itinerary' | 'video' | 'related',
+  imageType: 'main' | 'gallery' | 'itinerary' | 'video' | 'related' | 'countries' | 'cities',
   dayNumber?: number
 ): Promise<string> {
   const formData = new FormData();
@@ -101,6 +101,12 @@ interface CountryEntry {
   image?: string; // a single image URL for the country
 }
 
+interface CityEntry {
+  city: string;
+  country?: string;
+  image?: string;
+}
+
 interface TourFormData {
   // Basic Info
   title: string;
@@ -152,6 +158,8 @@ interface TourFormData {
     mainCities: Record<string, string[]>;
     // New: countries with images
     countries?: CountryEntry[];
+    // New: cities to visit with images
+    citiesToVisit?: CityEntry[];
   };
 }
 
@@ -261,7 +269,8 @@ export default function TourForm(): JSX.Element {
       startingPoint: "",
       endingPoint: "",
       mainCities: {},
-      countries: []
+      countries: [],
+      citiesToVisit: []
     }
   });
 
@@ -377,7 +386,8 @@ export default function TourForm(): JSX.Element {
             startingPoint: tour.additionalInfo?.startingPoint || "",
             endingPoint: tour.additionalInfo?.endingPoint || "",
             mainCities: tour.additionalInfo?.mainCities || {},
-            countries: (tour.additionalInfo as Record<string, unknown>)?.countries as CountryEntry[] || []
+            countries: (tour.additionalInfo as Record<string, unknown>)?.countries as CountryEntry[] || [],
+            citiesToVisit: (tour.additionalInfo as Record<string, unknown>)?.citiesToVisit as CityEntry[] || []
           }
         });
       } catch (err) {
@@ -440,11 +450,47 @@ export default function TourForm(): JSX.Element {
   function handleCountryFile(index: number, file?: File | null) {
     if (!file) return;
     const tourId = id || formData.slug || `new-tour-${Date.now()}`;
-    uploadImageToStorage(file, tourId, 'related').then(url => {
+    uploadImageToStorage(file, tourId, 'countries').then(url => {
       if (url) updateCountry(index, "image", url);
     });
   }
   // ---------------------------------------
+
+  // ----- Cities to Visit helpers -----
+  function addCity() {
+    setFormData((prev: TourFormData) => ({
+      ...prev,
+      additionalInfo: {
+        ...prev.additionalInfo,
+        citiesToVisit: [...(prev.additionalInfo.citiesToVisit || []), { city: "", country: "", image: "" }]
+      }
+    }));
+  }
+
+  function updateCity(index: number, field: "city" | "country" | "image", value: string) {
+    setFormData((prev: TourFormData) => {
+      const citiesToVisit = [...(prev.additionalInfo.citiesToVisit || [])];
+      citiesToVisit[index] = { ...(citiesToVisit[index] || { city: "", country: "", image: "" }), [field]: value };
+      return { ...prev, additionalInfo: { ...prev.additionalInfo, citiesToVisit } };
+    });
+  }
+
+  function removeCity(index: number) {
+    setFormData((prev: TourFormData) => {
+      const citiesToVisit = [...(prev.additionalInfo.citiesToVisit || [])];
+      citiesToVisit.splice(index, 1);
+      return { ...prev, additionalInfo: { ...prev.additionalInfo, citiesToVisit } };
+    });
+  }
+
+  function handleCityFile(index: number, file?: File | null) {
+    if (!file) return;
+    const tourId = id || formData.slug || `new-tour-${Date.now()}`;
+    uploadImageToStorage(file, tourId, 'cities').then(url => {
+      if (url) updateCity(index, "image", url);
+    });
+  }
+  // -----------------------------------
 
   // Form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -483,7 +529,9 @@ export default function TourForm(): JSX.Element {
           ...formData.additionalInfo,
           continent: formData.continent,
           // ensure countries list is included; backend will receive under additionalInfo.countries
-          countries: formData.additionalInfo.countries && formData.additionalInfo.countries.length ? formData.additionalInfo.countries : undefined
+          countries: formData.additionalInfo.countries && formData.additionalInfo.countries.length ? formData.additionalInfo.countries : undefined,
+          // include cities to visit
+          citiesToVisit: formData.additionalInfo.citiesToVisit && formData.additionalInfo.citiesToVisit.length ? formData.additionalInfo.citiesToVisit : undefined
         },
         // Preserve existing backend field name for compatibility — used to store FlippingBook links
         bookingPdfUrl: formData.bookingPdfUrl ? formData.bookingPdfUrl : undefined
@@ -1555,7 +1603,93 @@ export default function TourForm(): JSX.Element {
             </div>
           </div>
 
-          {/* Continue with more sections... (rest unchanged) */}
+          {/* NEW: Cities to Visit */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Cities to Visit</h2>
+                <p className="text-gray-600">Add the cities this tour will visit, with an optional country and photo for each.</p>
+              </div>
+              <div>
+                <button
+                  type="button"
+                  onClick={addCity}
+                  className="px-4 py-2 rounded bg-gradient-to-r from-indigo-400 to-indigo-500 text-white font-semibold text-sm shadow hover:from-indigo-500 hover:to-indigo-600 transition"
+                >
+                  + Add City
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {(formData.additionalInfo.citiesToVisit && formData.additionalInfo.citiesToVisit.length > 0) ? (
+                formData.additionalInfo.citiesToVisit.map((c: CityEntry, idx: number) => (
+                  <div key={idx} className="grid grid-cols-1 md:grid-cols-8 gap-3 items-center bg-gray-50 p-3 rounded">
+                    <div className="md:col-span-2">
+                      <label className="block text-xs text-gray-600 mb-1">City Name</label>
+                      <input
+                        type="text"
+                        value={c.city}
+                        onChange={(e) => updateCity(idx, "city", e.target.value)}
+                        placeholder="e.g., Tokyo"
+                        className="w-full border border-gray-300 rounded px-3 py-2"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-xs text-gray-600 mb-1">Country</label>
+                      <input
+                        type="text"
+                        value={c.country ?? ""}
+                        onChange={(e) => updateCity(idx, "country", e.target.value)}
+                        placeholder="e.g., Japan"
+                        className="w-full border border-gray-300 rounded px-3 py-2"
+                      />
+                    </div>
+
+                    <div className="md:col-span-3">
+                      <label className="block text-xs text-gray-600 mb-1">Image URL</label>
+                      <input
+                        type="url"
+                        value={c.image ?? ""}
+                        onChange={(e) => updateCity(idx, "image", e.target.value)}
+                        className="w-full border border-gray-300 rounded px-3 py-2"
+                      />
+                      <div className="text-xs text-gray-500 mt-1">Or upload a photo file — a preview will be shown.</div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files && e.target.files[0];
+                          if (file) handleCityFile(idx, file);
+                        }}
+                        className="mt-2"
+                      />
+                    </div>
+
+                    <div className="md:col-span-1 flex items-center gap-3">
+                      {c.image ? (
+                        <img src={c.image} alt={c.city || `city-${idx}`} className="w-24 h-16 object-cover rounded border" />
+                      ) : (
+                        <div className="w-24 h-16 bg-gray-100 rounded border flex items-center justify-center text-xs text-gray-400">No photo</div>
+                      )}
+                      <div className="ml-auto">
+                        <button
+                          type="button"
+                          onClick={() => removeCity(idx)}
+                          className="px-3 py-1 rounded bg-red-50 text-red-700 text-xs hover:bg-red-100"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-gray-500">No cities added yet. Click "+ Add City" to begin.</div>
+              )}
+            </div>
+          </div>
 
           {/* Submit Buttons */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
