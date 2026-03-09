@@ -5,8 +5,6 @@ import { getBookingDepartmentEmail, getEmailFromAddress, getEmailFromName } from
 
 // Initialize SendGrid
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-const SENDGRID_TEMPLATE_ID = process.env.SENDGRID_TEMPLATE_ID;
-
 if (SENDGRID_API_KEY) {
   sgMail.setApiKey(SENDGRID_API_KEY);
   console.log('✅ SendGrid initialized successfully in API');
@@ -62,6 +60,7 @@ interface BookingDetails {
 const createTransporter = async () => {
   // Use Gmail SMTP for sending real emails
   if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    console.log('📧 Using Gmail SMTP for real email delivery to:', process.env.EMAIL_USER);
     return nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -72,9 +71,9 @@ const createTransporter = async () => {
   }
 
   // Fallback to Ethereal Email for development testing
+  console.warn('⚠️ EMAIL_USER/EMAIL_PASS not set — falling back to Ethereal (fake SMTP). Emails will NOT be delivered to real inboxes!');
   const testAccount = await nodemailer.createTestAccount();
-  console.log('📧 Using Ethereal Email for testing');
-  console.log('Test credentials:', testAccount.user, testAccount.pass);
+  console.log('📧 Ethereal test credentials:', testAccount.user);
   
   return nodemailer.createTransport({
     host: 'smtp.ethereal.email',
@@ -455,10 +454,9 @@ export const sendBookingConfirmationEmail = async (booking: BookingDetails): Pro
     });
     
     console.log('🔧 Environment check:');
-    console.log('- SENDGRID_API_KEY:', SENDGRID_API_KEY ? '✅ Set' : '❌ Not set');
-    console.log('- SENDGRID_TEMPLATE_ID:', SENDGRID_TEMPLATE_ID ? '✅ Set' : '❌ Not set');
-    console.log('- EMAIL_USER:', process.env.EMAIL_USER ? '✅ Set' : '❌ Not set');
-    console.log('- EMAIL_PASS:', process.env.EMAIL_PASS ? '✅ Set' : '❌ Not set');
+    console.log('- SENDGRID_API_KEY:', SENDGRID_API_KEY ? '✅ Set' : '❌ Not set (will use Gmail/Ethereal fallback)');
+    console.log('- EMAIL_USER (Gmail):', process.env.EMAIL_USER ? `✅ Set (${process.env.EMAIL_USER})` : '❌ Not set (emails will go to Ethereal fake SMTP!)');
+    console.log('- EMAIL_PASS (Gmail):', process.env.EMAIL_PASS ? '✅ Set' : '❌ Not set');
     
     // Try SendGrid first
     if (SENDGRID_API_KEY) {
