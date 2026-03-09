@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { buildApiUrl } from "../../config/apiBase";
+import { isTokenExpired, refreshAuthToken } from "../../utils/auth-validation";
 
 export interface InsurancePax {
   name: string;
@@ -91,12 +92,33 @@ export default function BookingStepDocuments({
     const formData = new FormData();
     formData.append('file', file);
     formData.append('type', type);
-    const token = localStorage.getItem('token');
-    const res = await fetch(buildApiUrl('/api/upload/document'), {
-      method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: formData,
-    });
+
+    // Proactively refresh if the stored token is already expired (uses 5-min buffer)
+    let token = localStorage.getItem('token');
+    if (!token || isTokenExpired(token)) {
+      await refreshAuthToken();
+      token = localStorage.getItem('token');
+    }
+
+    const doUpload = () =>
+      fetch(buildApiUrl('/api/upload/document'), {
+        method: 'POST',
+        credentials: 'include', // send httpOnly cookie as fallback
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+
+    let res = await doUpload();
+
+    // If still 401, try one token refresh and retry
+    if (res.status === 401) {
+      const refreshed = await refreshAuthToken();
+      if (refreshed) {
+        token = localStorage.getItem('token');
+        res = await doUpload();
+      }
+    }
+
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error((err as { message?: string }).message || 'Upload failed');
