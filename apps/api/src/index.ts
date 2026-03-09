@@ -1,5 +1,5 @@
 import "dotenv/config";
-import express, { Request, Response, NextFunction } from "express";
+import express, { Request, Response } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
@@ -251,34 +251,9 @@ app.get('/api/csrf-token', csrfProtection, getCsrfToken);
 // Note: Conditionally applied - GET requests don't need CSRF
 app.use('/admin/', conditionalCsrfProtection);
 
-// For /api/ routes: skip CSRF on public (unauthenticated) endpoints.
-// CSRF is only relevant when the attacker can leverage an authenticated session;
-// public routes that don't use cookies are not vulnerable.
-const PUBLIC_API_PATHS = [
-  '/visa-applications',
-  '/bookings',
-  '/reviews',
-  '/favorites',
-  '/email',
-  '/tours',
-  '/countries',
-  '/promo-banners',
-  '/featured-videos',
-  '/homepage-settings',
-  '/security',
-  '/monitoring',
-  '/visa-readiness',
-  '/settings',
-  '/upload',
-];
-
-app.use('/api/', (req: Request, res: Response, next: NextFunction) => {
-  const isPublic = PUBLIC_API_PATHS.some(
-    p => req.path === p || req.path.startsWith(p + '/') || req.path.startsWith(p + '?')
-  );
-  if (isPublic) return next();
-  conditionalCsrfProtection(req, res, next);
-});
+// /api/ routes use JWT Bearer tokens (not session cookies), so CSRF does not
+// apply — an attacker cannot forge a Bearer token via an img/form tag.
+// CSRF is only enforced on the /admin/ panel where session cookies are used.
 
 // Apply audit logging to all admin routes
 app.use('/admin/', auditLog);

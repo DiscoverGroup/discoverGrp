@@ -99,9 +99,13 @@ router.post("/", async (req, res) => {
 
     if (isVisaReadinessEnabled() && typeof tourSlug === 'string' && typeof selectedDate === 'string') {
       try {
+        // selectedDate may be a range like '2026-03-18 - 2026-03-27'; use only the start date
+        const departureDateStr = selectedDate.includes(' - ')
+          ? selectedDate.split(' - ')[0].trim()
+          : selectedDate.trim();
         const readiness = await evaluateVisaReadiness({
           tourSlug,
-          departureDate: selectedDate,
+          departureDate: departureDateStr,
           nationality: typeof nationality === 'string' ? nationality : 'philippines',
           passportExpiryDate: typeof customerPassport === 'string' ? customerPassport : undefined,
           documents: {
@@ -231,8 +235,12 @@ router.post("/", async (req, res) => {
 
     res.status(201).json(booking);
   } catch (err) {
-    console.error("Error creating booking:", err);
-    res.status(500).json({ error: "Failed to create booking" });
+    // Safely extract message — some driver errors have message = undefined
+    const msg = err instanceof Error
+      ? (err.message || err.constructor?.name || err.toString())
+      : String(err ?? 'Unknown error');
+    console.error('Error creating booking:', msg, err);
+    res.status(500).json({ error: 'Failed to create booking', detail: msg || 'See server logs' });
   }
 });
 
