@@ -1,16 +1,6 @@
 import nodemailer from 'nodemailer';
-import sgMail from '@sendgrid/mail';
 
 import { getBookingDepartmentEmail, getEmailFromAddress, getEmailFromName } from '../routes/admin/settings';
-
-// Initialize SendGrid
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-if (SENDGRID_API_KEY) {
-  sgMail.setApiKey(SENDGRID_API_KEY);
-  console.log('✅ SendGrid initialized successfully in API');
-} else {
-  console.warn('⚠️ SendGrid API key not found - email sending will use fallback');
-}
 
 interface CustomRoute {
   tourSlug: string;
@@ -59,19 +49,19 @@ interface BookingDetails {
 // Create transporter - using Gmail for real email sending
 const createTransporter = async () => {
   // Use Gmail SMTP for sending real emails
-  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-    console.log('📧 Using Gmail SMTP for real email delivery to:', process.env.EMAIL_USER);
+  if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
+    console.log('📧 Using Gmail SMTP for real email delivery to:', process.env.GMAIL_USER);
     return nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
       },
     });
   }
 
   // Fallback to Ethereal Email for development testing
-  console.warn('⚠️ EMAIL_USER/EMAIL_PASS not set — falling back to Ethereal (fake SMTP). Emails will NOT be delivered to real inboxes!');
+  console.warn('⚠️ GMAIL_USER/GMAIL_APP_PASSWORD not set — falling back to Ethereal (fake SMTP). Emails will NOT be delivered to real inboxes!');
   const testAccount = await nodemailer.createTestAccount();
   console.log('📧 Ethereal test credentials:', testAccount.user);
   
@@ -454,63 +444,9 @@ export const sendBookingConfirmationEmail = async (booking: BookingDetails): Pro
     });
     
     console.log('🔧 Environment check:');
-    console.log('- SENDGRID_API_KEY:', SENDGRID_API_KEY ? '✅ Set' : '❌ Not set (will use Gmail/Ethereal fallback)');
-    console.log('- EMAIL_USER (Gmail):', process.env.EMAIL_USER ? `✅ Set (${process.env.EMAIL_USER})` : '❌ Not set (emails will go to Ethereal fake SMTP!)');
-    console.log('- EMAIL_PASS (Gmail):', process.env.EMAIL_PASS ? '✅ Set' : '❌ Not set');
-    
-    // Try SendGrid first
-    if (SENDGRID_API_KEY) {
-      try {
-        console.log('📧 Using SendGrid for email delivery');
-      
-      // Get current settings
-      const bookingDeptEmail = getBookingDepartmentEmail();
-      const fromEmail = getEmailFromAddress();
-      const fromName = getEmailFromName();
+    console.log('- GMAIL_USER:', process.env.GMAIL_USER ? `✅ Set (${process.env.GMAIL_USER})` : '❌ Not set (emails will go to Ethereal fake SMTP!)');
+    console.log('- GMAIL_APP_PASSWORD:', process.env.GMAIL_APP_PASSWORD ? '✅ Set' : '❌ Not set');
 
-      // Send email to both customer and booking department
-      // Use locally-generated HTML so no SendGrid dynamic template setup is required
-      const msg = {
-        to: [
-          booking.customerEmail,
-          bookingDeptEmail,
-        ],
-        from: {
-          email: fromEmail,
-          name: fromName,
-        },
-        subject: `Tour Reservation Confirmed - ${booking.tourTitle} (${booking.bookingId})`,
-        html: generateBookingConfirmationEmail(booking),
-        text: `Tour Reservation Confirmed\n\nDear ${booking.customerName},\n\nYour reservation is confirmed! Our team will contact you within 24-48 hours to arrange payment.\n\nBooking ID: ${booking.bookingId}\nTour: ${booking.tourTitle}\nDate: ${booking.tourDate}\nPassengers: ${booking.passengers}\nTotal: PHP ${booking.totalAmount.toLocaleString()}\n\nThank you for choosing Discover Group!`,
-        categories: ['booking-confirmation', 'transactional'],
-        customArgs: {
-          bookingId: booking.bookingId,
-          tourTitle: booking.tourTitle,
-        },
-      };
-
-      console.log('📤 Sending email via SendGrid...');
-      console.log('📧 Recipients:', [booking.customerEmail, bookingDeptEmail]);
-      const [response] = await sgMail.send(msg);
-      
-      console.log('✅ Email sent successfully via SendGrid to both customer and booking department!');
-      console.log('✅ Status Code:', response.statusCode);
-      console.log('✅ Message ID:', response.headers['x-message-id']);
-
-      return {
-        success: true,
-        messageId: response.headers['x-message-id'] as string,
-      };
-      } catch (sendGridError) {
-        console.error('❌ SendGrid error:', sendGridError);
-        console.error('SendGrid error details:', JSON.stringify(sendGridError, null, 2));
-        // Don't return error yet, try Nodemailer fallback
-      }
-    }
-    
-    // Fallback to Nodemailer if SendGrid is not configured or fails
-    console.log('⚠️ SendGrid not configured or failed, using Nodemailer fallback');
-    
     try {
       const transporter = await createTransporter();
       
@@ -587,139 +523,10 @@ export const sendVerificationEmail = async (
 ): Promise<{ success: boolean; messageId?: string; previewUrl?: string; error?: string }> => {
   try {
     console.log('📧 Sending verification email to:', email);
-    console.log('🔧 Environment check for verification email:');
-    console.log('- SENDGRID_API_KEY:', SENDGRID_API_KEY ? '✅ Set' : '❌ Not set');
-    console.log('- EMAIL_USER:', process.env.EMAIL_USER ? '✅ Set' : '❌ Not set');
-    
+    console.log('- GMAIL_USER:', process.env.GMAIL_USER ? '✅ Set' : '❌ Not set (will use Ethereal fake SMTP)');
+
     const verificationUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/verify-email?token=${verificationToken}`;
-    
-    // Try SendGrid first
-    if (SENDGRID_API_KEY) {
-      try {
-        console.log('📧 Using SendGrid for verification email');
-      
-      const fromEmail = getEmailFromAddress();
-      const fromName = getEmailFromName();
-      
-      const msg = {
-        to: email,
-        from: {
-          email: fromEmail,
-          name: fromName,
-        },
-        subject: 'Verify Your Email - Discover Group',
-        html: `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verify Your Email</title>
-    <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            line-height: 1.6; 
-            color: #333; 
-            max-width: 600px; 
-            margin: 0 auto; 
-            padding: 20px; 
-        }
-        .header { 
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6); 
-            color: white; 
-            padding: 30px; 
-            text-align: center; 
-            border-radius: 10px 10px 0 0; 
-        }
-        .content { 
-            background: #f8fafc; 
-            padding: 30px; 
-            border-radius: 0 0 10px 10px; 
-        }
-        .verify-btn { 
-            display: inline-block; 
-            background: #3b82f6; 
-            color: white; 
-            padding: 15px 30px; 
-            text-decoration: none; 
-            border-radius: 5px; 
-            font-weight: bold; 
-            margin: 20px 0; 
-        }
-        .footer { 
-            text-align: center; 
-            margin-top: 30px; 
-            padding-top: 20px; 
-            border-top: 1px solid #e2e8f0; 
-            color: #64748b; 
-        }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>✉️ Verify Your Email</h1>
-    </div>
-    
-    <div class="content">
-        <p>Hello ${fullName},</p>
-        
-        <p>Thank you for registering with Discover Group! To complete your registration and start booking amazing tours, please verify your email address.</p>
-        
-        <div style="text-align: center;">
-            <a href="${verificationUrl}" class="verify-btn">Verify Email Address</a>
-        </div>
-        
-        <p>Or copy and paste this link into your browser:</p>
-        <p style="word-break: break-all; color: #3b82f6;">${verificationUrl}</p>
-        
-        <p><strong>This link will expire in 24 hours.</strong></p>
-        
-        <p>If you didn't create an account with Discover Group, please ignore this email.</p>
-        
-        <p>Best regards,<br>
-        <strong>The Discover Group Team</strong></p>
-    </div>
-    
-    <div class="footer">
-        <p>© 2025 Discover Group. All rights reserved.</p>
-        <p>This is an automated message. Please do not reply to this email.</p>
-    </div>
-</body>
-</html>
-        `,
-        text: `
-Hello ${fullName},
 
-Thank you for registering with Discover Group!
-
-Please verify your email address by clicking the link below:
-${verificationUrl}
-
-This link will expire in 24 hours.
-
-If you didn't create an account with Discover Group, please ignore this email.
-
-Best regards,
-The Discover Group Team
-        `.trim(),
-      };
-
-      const [response] = await sgMail.send(msg);
-      
-      console.log('✅ Verification email sent via SendGrid!');
-      return {
-        success: true,
-        messageId: response.headers['x-message-id'] as string,
-      };
-      } catch (sendGridError) {
-        console.error('❌ SendGrid verification email error:', sendGridError);
-        // Don't return error yet, try Nodemailer fallback
-      }
-    }
-    
-    // Fallback to Nodemailer
-    console.log('⚠️ SendGrid not configured or failed, using Nodemailer fallback for verification email');
-    
     try {
       const transporter = await createTransporter();
     
@@ -809,9 +616,7 @@ export const sendPasswordResetEmail = async (
 ): Promise<{ success: boolean; messageId?: string; previewUrl?: string; error?: string }> => {
   try {
     console.log('📧 Sending password reset email to:', email);
-    console.log('🔧 Environment check for password reset email:');
-    console.log('- SENDGRID_API_KEY:', SENDGRID_API_KEY ? '✅ Set' : '❌ Not set');
-    console.log('- EMAIL_USER:', process.env.EMAIL_USER ? '✅ Set' : '❌ Not set');
+    console.log('- GMAIL_USER:', process.env.GMAIL_USER ? '✅ Set' : '❌ Not set (will use Ethereal fake SMTP)');
     
     const passwordResetHtml = `
     <style>
@@ -896,51 +701,6 @@ Best regards,
 The Discover Group Team
     `.trim();
 
-    // Try SendGrid first
-    if (SENDGRID_API_KEY) {
-      try {
-        console.log('📧 Using SendGrid for password reset email');
-      
-        const fromEmail = getEmailFromAddress();
-        const fromName = getEmailFromName();
-        
-        const msg = {
-          to: email,
-          from: {
-            email: fromEmail,
-            name: fromName,
-          },
-          subject: 'Password Reset Request - Discover Group',
-          html: passwordResetHtml,
-          text: passwordResetText,
-          categories: ['password-reset', 'transactional'],
-          customArgs: {
-            email: email,
-            type: 'password-reset',
-          },
-        };
-
-        console.log('📤 Sending password reset email via SendGrid...');
-        const [response] = await sgMail.send(msg);
-        
-        console.log('✅ Password reset email sent successfully via SendGrid!');
-        console.log('✅ Status Code:', response.statusCode);
-        console.log('✅ Message ID:', response.headers['x-message-id']);
-
-        return {
-          success: true,
-          messageId: response.headers['x-message-id'] as string,
-        };
-      } catch (sendGridError) {
-        console.error('❌ SendGrid password reset error:', sendGridError);
-        console.error('SendGrid error details:', JSON.stringify(sendGridError, null, 2));
-        // Don't return error yet, try Nodemailer fallback
-      }
-    }
-
-    // Fallback to Nodemailer if SendGrid is not configured or fails
-    console.log('⚠️ SendGrid not configured or failed, using Nodemailer fallback for password reset');
-    
     try {
       const transporter = await createTransporter();
       const fromEmail = getEmailFromAddress();
