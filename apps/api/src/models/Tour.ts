@@ -35,6 +35,8 @@ export interface ITour extends Document {
     endingPoint?: string;
     countriesVisited?: string[];
     mainCities?: Record<string, string[]>;
+    countries?: Array<{ name: string; image?: string }>;
+    citiesToVisit?: Array<{ city: string; country?: string; image?: string }>;
     [key: string]: unknown;
   };
   regularPricePerPerson?: number;
@@ -81,7 +83,16 @@ const TourSchema = new Schema<ITour>({
     startingPoint: { type: String },
     endingPoint: { type: String },
     countriesVisited: [{ type: String }],
-    mainCities: { type: Schema.Types.Mixed }
+    mainCities: { type: Schema.Types.Mixed },
+    countries: [{
+      name: { type: String },
+      image: { type: String }
+    }],
+    citiesToVisit: [{
+      city: { type: String },
+      country: { type: String },
+      image: { type: String }
+    }]
   },
   regularPricePerPerson: { type: Number },
   promoPricePerPerson: { type: Number, default: null },

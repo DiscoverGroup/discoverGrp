@@ -91,6 +91,7 @@ interface ExtendedTour extends Tour {
     endingPoint: string;
     mainCities: Record<string, string[]>;
     countries: CountryEntry[];
+    citiesToVisit?: CityEntry[];
   };
 
 }
