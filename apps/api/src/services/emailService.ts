@@ -262,24 +262,6 @@ const generateBookingConfirmationEmail = (booking: BookingDetails): string => {
   `;
 };
 
-/**
- * Format currency for display
- */
-function formatCurrency(amount: number): string {
-  return `PHP ${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-/**
- * Format appointment purpose
- */
-function formatAppointmentPurpose(purpose?: string): string {
-  if (!purpose) return 'Consultation';
-  return purpose
-    .split('-')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-}
-
 export const sendBookingConfirmationEmail = async (booking: BookingDetails): Promise<{ success: boolean; messageId?: string; previewUrl?: string; error?: string }> => {
   try {
     console.log('📧 Attempting to send booking confirmation email to:', booking.customerEmail);
@@ -298,143 +280,29 @@ export const sendBookingConfirmationEmail = async (booking: BookingDetails): Pro
     console.log('- EMAIL_PASS:', process.env.EMAIL_PASS ? '✅ Set' : '❌ Not set');
     
     // Try SendGrid first
-    if (SENDGRID_API_KEY && SENDGRID_TEMPLATE_ID) {
+    if (SENDGRID_API_KEY) {
       try {
         console.log('📧 Using SendGrid for email delivery');
       
-      // Format tour date - handle both single dates and date ranges
-      let formattedTourDate: string;
-      if (!booking.tourDate || booking.tourDate === '') {
-        formattedTourDate = 'Date to be confirmed';
-      } else if (booking.tourDate.includes(' - ')) {
-        // Handle date range (e.g., "2025-05-13 - 2025-05-27")
-        const [startDate, endDate] = booking.tourDate.split(' - ').map(d => d.trim());
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        
-        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-          formattedTourDate = booking.tourDate; // Use original if invalid
-        } else {
-          formattedTourDate = `${start.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-          })} - ${end.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-          })}`;
-        }
-      } else {
-        // Handle single date
-        const date = new Date(booking.tourDate);
-        if (isNaN(date.getTime())) {
-          formattedTourDate = booking.tourDate; // Use original if invalid
-        } else {
-          formattedTourDate = date.toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          });
-        }
-      }
-
-      // Calculate combined tour details
-      const hasCustomRoutes = booking.customRoutes && booking.customRoutes.length > 0;
-      const baseDurationDays = parseInt(booking.tourTitle.match(/\d+/)?.[0] || '0');
-      const additionalDays = hasCustomRoutes 
-        ? booking.customRoutes.reduce((sum, route) => sum + route.durationDays, 0)
-        : 0;
-      const totalDays = baseDurationDays + additionalDays;
-      
-      // Calculate combined price per person
-      const combinedPricePerPerson = hasCustomRoutes
-        ? booking.pricePerPerson + booking.customRoutes.reduce((sum, route) => sum + route.pricePerPerson, 0)
-        : booking.pricePerPerson;
-
-      // Prepare template data
-      const templateData = {
-        customerName: booking.customerName,
-        bookingId: booking.bookingId,
-        tourTitle: booking.tourTitle,
-        tourDate: formattedTourDate,
-        passengers: booking.passengers.toString(),
-        pricePerPerson: formatCurrency(booking.pricePerPerson),
-        totalAmount: formatCurrency(booking.totalAmount),
-        isDownpaymentOnly: booking.isDownpaymentOnly || false,
-        bookingDetailsUrl: `${process.env.CLIENT_URL || 'http://localhost:5173'}/booking-confirmation/${booking.bookingId}`,
-        // Combined tour details
-        hasCustomRoutes,
-        ...(hasCustomRoutes && {
-          customRoutes: booking.customRoutes?.map(route => ({
-            tourTitle: route.tourTitle,
-            tourLine: route.tourLine || '',
-            durationDays: route.durationDays,
-            pricePerPerson: formatCurrency(route.pricePerPerson),
-          })),
-          combinedDurationDays: totalDays,
-          combinedPricePerPerson: formatCurrency(combinedPricePerPerson),
-        }),
-        // Payment method details
-        ...(booking.paymentMethod && {
-          paymentMethod: booking.paymentMethod,
-          paymentMethodIcon: booking.paymentMethodIcon || '💳',
-          paymentMethodDescription: booking.paymentMethodDescription || '',
-          paymentGateway: booking.paymentGateway || 'Online Payment',
-        }),
-        // Downpayment details
-        ...(booking.downpaymentAmount && {
-          downpaymentAmount: formatCurrency(booking.downpaymentAmount),
-          remainingBalance: formatCurrency(booking.remainingBalance || 0),
-        }),
-        // Appointment details
-        ...(booking.appointmentDate && booking.appointmentTime && {
-          appointmentDate: (() => {
-            const date = new Date(booking.appointmentDate);
-            if (isNaN(date.getTime())) {
-              return booking.appointmentDate; // Use original if invalid
-            }
-            return date.toLocaleDateString('en-US', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            });
-          })(),
-          appointmentTime: booking.appointmentTime,
-          appointmentPurpose: formatAppointmentPurpose(booking.appointmentPurpose),
-        }),
-        // Visa assistance data
-        visaAssistanceRequested: booking.visaAssistanceRequested || false,
-        visaAssistanceFee: booking.visaAssistanceRequested ? formatCurrency(booking.visaAssistanceFee ?? 10000) : undefined,
-        visaPaxDetails: booking.visaPaxDetails || [],
-        visaDocumentsProvided: booking.visaDocumentsProvided || false,
-        travelInsuranceRequested: booking.travelInsuranceRequested || false,
-        travelInsuranceFee: booking.travelInsuranceRequested ? formatCurrency(booking.travelInsuranceFee ?? 3000) : undefined,
-        travelInsurancePax: booking.travelInsurancePax || [],
-        visaDestinationCountries: booking.visaDestinationCountries || '',
-        visaAssistanceStatus: booking.visaAssistanceStatus || 'not-needed',
-        tourDestinationCountries: booking.country || booking.tourTitle || 'your destination',
-      };
-
       // Get current settings
       const bookingDeptEmail = getBookingDepartmentEmail();
       const fromEmail = getEmailFromAddress();
       const fromName = getEmailFromName();
 
       // Send email to both customer and booking department
+      // Use locally-generated HTML so no SendGrid dynamic template setup is required
       const msg = {
         to: [
-          booking.customerEmail, // Customer email
-          bookingDeptEmail     // Booking department email (configurable)
+          booking.customerEmail,
+          bookingDeptEmail,
         ],
         from: {
           email: fromEmail,
           name: fromName,
         },
-        templateId: SENDGRID_TEMPLATE_ID,
-        dynamicTemplateData: templateData,
+        subject: `Tour Reservation Confirmed - ${booking.tourTitle} (${booking.bookingId})`,
+        html: generateBookingConfirmationEmail(booking),
+        text: `Tour Reservation Confirmed\n\nDear ${booking.customerName},\n\nYour reservation is confirmed! Our team will contact you within 24-48 hours to arrange payment.\n\nBooking ID: ${booking.bookingId}\nTour: ${booking.tourTitle}\nDate: ${booking.tourDate}\nPassengers: ${booking.passengers}\nTotal: PHP ${booking.totalAmount.toLocaleString()}\n\nThank you for choosing Discover Group!`,
         categories: ['booking-confirmation', 'transactional'],
         customArgs: {
           bookingId: booking.bookingId,
@@ -444,7 +312,6 @@ export const sendBookingConfirmationEmail = async (booking: BookingDetails): Pro
 
       console.log('📤 Sending email via SendGrid...');
       console.log('📧 Recipients:', [booking.customerEmail, bookingDeptEmail]);
-      console.log('📋 Template data:', JSON.stringify(templateData, null, 2));
       const [response] = await sgMail.send(msg);
       
       console.log('✅ Email sent successfully via SendGrid to both customer and booking department!');
