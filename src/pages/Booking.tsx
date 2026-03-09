@@ -383,9 +383,9 @@ export default function Booking(): JSX.Element {
     }
   }
 
-  function handlePaymentSuccess(confirmationId: string) {
-    // Validate payment ID format for security
-    if (!validatePaymentIntentId(confirmationId)) {
+  function handlePaymentSuccess(confirmationId: string, isReservation = false) {
+    // Only validate payment ID format for actual payments (not direct reservations)
+    if (!isReservation && !validatePaymentIntentId(confirmationId)) {
       setError("Invalid payment confirmation. Please contact support.");
       logSecurityEvent("INVALID_PAYMENT_ID_BOOKING", confirmationId, {
         tourSlug: tour?.slug,
@@ -822,7 +822,7 @@ export default function Booking(): JSX.Element {
                     <button
                       onClick={() => {
                         const bookingId = `BK-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
-                        handlePaymentSuccess(bookingId);
+                        handlePaymentSuccess(bookingId, true);
                       }}
                       className="px-6 py-3 btn-accent rounded-xl flex items-center gap-2 font-bold shadow-lg hover:shadow-xl transition-all"
                     >
@@ -1321,7 +1321,7 @@ export default function Booking(): JSX.Element {
                           onClick={() => {
                             // Generate booking ID and complete the booking
                             const bookingId = `BK-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
-                            handlePaymentSuccess(bookingId);
+                            handlePaymentSuccess(bookingId, true);
                           }}
                           className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded transition-colors"
                         >
