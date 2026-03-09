@@ -7,7 +7,6 @@
 
 import 'dotenv/config';
 import mongoose from 'mongoose';
-import { S3Client, HeadBucketCommand } from '@aws-sdk/client-s3';
 import sgMail from '@sendgrid/mail';
 import nodemailer from 'nodemailer';
 import axios from 'axios';
@@ -35,7 +34,7 @@ const log = {
 // Test results tracking
 const results = {
   mongodb: { status: 'pending', details: '' },
-  cloudflareR2: { status: 'pending', details: '' },
+  cloudinary: { status: 'pending', details: '' },
   sendGrid: { status: 'pending', details: '' },
   gmail: { status: 'pending', details: '' },
   payMongo: { status: 'pending', details: '' },
@@ -48,7 +47,7 @@ async function testEnvironmentVariables() {
   log.test('Testing Environment Variables...');
   
   const criticalVars = ['JWT_SECRET', 'MONGODB_URI'];
-  const optionalVars = ['SENDGRID_API_KEY', 'PAYMONGO_SECRET_KEY', 'R2_ACCESS_KEY_ID', 'EMAIL_USER'];
+  const optionalVars = ['SENDGRID_API_KEY', 'PAYMONGO_SECRET_KEY', 'CLOUDINARY_API_KEY', 'EMAIL_USER'];
   
   let missing = [];
   let present = [];
@@ -124,43 +123,35 @@ async function testMongoDB() {
   console.log();
 }
 
-// 3. Cloudflare R2 Storage Test
-async function testCloudflareR2() {
-  log.test('Testing Cloudflare R2 Storage...');
-  
+// 3. Cloudinary Storage Test
+async function testCloudinary() {
+  log.test('Testing Cloudinary Storage...');
+
   try {
-    if (!process.env.R2_ACCESS_KEY_ID || !process.env.R2_SECRET_ACCESS_KEY || !process.env.R2_ENDPOINT) {
-      throw new Error('R2 credentials not configured');
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      throw new Error('Cloudinary credentials not configured (CLOUDINARY_CLOUD_NAME / CLOUDINARY_API_KEY / CLOUDINARY_API_SECRET)');
     }
-    
-    const s3Client = new S3Client({
-      region: 'auto',
-      endpoint: process.env.R2_ENDPOINT,
-      credentials: {
-        accessKeyId: process.env.R2_ACCESS_KEY_ID,
-        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
-      },
+
+    // Use the Cloudinary Admin API ping endpoint to verify credentials
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey    = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+    const pingUrl   = `https://api.cloudinary.com/v1_1/${cloudName}/ping`;
+
+    await axios.get(pingUrl, {
+      auth: { username: apiKey, password: apiSecret },
+      timeout: 8000,
     });
-    
-    const bucketName = process.env.R2_BUCKET_NAME || 'dg-website';
-    log.info(`Testing bucket: ${bucketName}`);
-    
-    const command = new HeadBucketCommand({ Bucket: bucketName });
-    await s3Client.send(command);
-    
-    log.success('Cloudflare R2 connection successful');
-    log.info(`Public URL: ${process.env.R2_PUBLIC_URL || 'Not configured'}`);
-    
-    results.cloudflareR2 = { 
-      status: 'success', 
-      details: `Bucket: ${bucketName}, Endpoint: ${process.env.R2_ENDPOINT}` 
-    };
-    
+
+    log.success('Cloudinary connection successful');
+    log.info(`Cloud name: ${cloudName}`);
+
+    results.cloudinary = { status: 'success', details: `Cloud: ${cloudName}` };
   } catch (error) {
-    log.error(`Cloudflare R2 connection failed: ${error.message}`);
-    results.cloudflareR2 = { status: 'error', details: error.message };
+    log.error(`Cloudinary connection failed: ${error.message}`);
+    results.cloudinary = { status: 'error', details: error.message };
   }
-  
+
   console.log();
 }
 
@@ -383,7 +374,7 @@ async function runAllTests() {
   
   await testEnvironmentVariables();
   await testMongoDB();
-  await testCloudflareR2();
+  await testCloudinary();
   await testSendGrid();
   await testGmail();
   await testPayMongo();

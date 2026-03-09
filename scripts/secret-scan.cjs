@@ -57,7 +57,7 @@ function scanEnvLine(line, filePath, lineNo, findings) {
     'DATABASE_URL',
     'JWT_SECRET',
     'SENDGRID_API_KEY',
-    'R2_SECRET_ACCESS_KEY',
+    'CLOUDINARY_API_SECRET',
     'AWS_SECRET_ACCESS_KEY',
     'PAYMONGO_SECRET_KEY',
     'VITE_EMAILJS_PRIVATE_KEY',

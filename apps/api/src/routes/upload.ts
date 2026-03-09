@@ -1,79 +1,91 @@
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { v2 as cloudinary } from 'cloudinary';
 import { requireAuth, requireRole, AuthenticatedRequest } from '../middleware/auth';
-import crypto from 'crypto';
-import path from 'path';
+import { Readable } from 'stream';
 
 const router = Router();
 
-// Configure Cloudflare R2 client (S3-compatible)
-const r2Client = new S3Client({
-  region: 'auto',
-  endpoint: process.env.R2_ENDPOINT,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
-  },
+//  Cloudinary configuration 
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true,
 });
 
-const R2_BUCKET = process.env.R2_BUCKET_NAME || '';
-const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || '';
+function isCloudinaryConfigured(): boolean {
+  return !!(
+    process.env.CLOUDINARY_CLOUD_NAME &&
+    process.env.CLOUDINARY_API_KEY &&
+    process.env.CLOUDINARY_API_SECRET
+  );
+}
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Upload failed';
 }
 
-// Configure multer for memory storage (images + videos — admin only)
+/**
+ * Upload a buffer to Cloudinary and return the secure URL.
+ */
+function uploadToCloudinary(
+  buffer: Buffer,
+  options: {
+    folder: string;
+    publicId?: string;
+    resourceType?: 'image' | 'video' | 'raw' | 'auto';
+    mimeType?: string;
+  }
+): Promise<{ url: string; publicId: string }> {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: options.folder,
+        public_id: options.publicId,
+        resource_type: options.mimeType === 'application/pdf' ? 'raw' : (options.resourceType ?? 'auto'),
+      },
+      (error, result) => {
+        if (error || !result) return reject(error ?? new Error('Cloudinary upload failed'));
+        resolve({ url: result.secure_url, publicId: result.public_id });
+      }
+    );
+    Readable.from(buffer).pipe(uploadStream);
+  });
+}
+
+//  Multer configs 
+
+// Images + videos (admin only)
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
-  },
-  fileFilter: (req, file, cb) => {
-    // Allow images and videos
-    const allowedMimes = [
-      'image/jpeg',
-      'image/jpg',
-      'image/png',
-      'image/gif',
-      'image/webp',
-      'video/mp4',
-      'video/webm',
-      'video/quicktime',
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+      'video/mp4', 'video/webm', 'video/quicktime',
     ];
-    
-    if (allowedMimes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid file type. Only images and videos are allowed.'));
-    }
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Invalid file type. Only images and videos are allowed.'));
   },
 });
 
-// Configure multer for document uploads (PDF + images — any authenticated user)
+// Documents (any authenticated user)
 const uploadDocument = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const allowedMimes = [
-      'application/pdf',
-      'image/jpeg',
-      'image/jpg',
-      'image/png',
-      'image/webp',
-    ];
-    if (allowedMimes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid file type. Only PDF and images are allowed.'));
-    }
+    const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Invalid file type. Only PDF and images are allowed.'));
   },
 });
 
+//  Routes 
+
 /**
- * Upload single file to Cloudflare R2
- * Protected route - requires authentication and admin role
+ * Upload a single image/video to Cloudinary.
+ * Admin only.
  */
 router.post(
   '/single',
@@ -87,135 +99,83 @@ router.post(
         return;
       }
 
-      const { folder = 'uploads', label = '' } = req.body;
-      
-      // Generate unique filename
-      const fileExt = path.extname(req.file.originalname);
-      const randomName = crypto.randomBytes(16).toString('hex');
-      const timestamp = Date.now();
-      const fileName = label 
-        ? `${folder}/${label}-${timestamp}-${randomName}${fileExt}`
-        : `${folder}/${timestamp}-${randomName}${fileExt}`;
+      if (!isCloudinaryConfigured()) {
+        res.status(503).json({ error: 'Storage not configured', message: 'Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET.' });
+        return;
+      }
 
-      // Upload to R2
-      const command = new PutObjectCommand({
-        Bucket: R2_BUCKET,
-        Key: fileName,
-        Body: req.file.buffer,
-        ContentType: req.file.mimetype,
-        // Make objects publicly readable
-        // Note: R2 bucket must have public access enabled
+      const { folder = 'uploads', label = '' } = req.body as { folder?: string; label?: string };
+      const cloudFolder = `discovergrp/${folder}`;
+      const publicId = label ? `${label}-${Date.now()}` : undefined;
+
+      const { url, publicId: cloudPublicId } = await uploadToCloudinary(req.file.buffer, {
+        folder: cloudFolder,
+        publicId,
+        mimeType: req.file.mimetype,
       });
 
-      await r2Client.send(command);
-
-      // Construct public URL
-      const publicUrl = `${R2_PUBLIC_URL}/${fileName}`;
-
-      console.log('[R2 Upload] Success:', {
-        fileName,
-        size: req.file.size,
-        type: req.file.mimetype,
-        url: publicUrl,
-      });
-
-      res.json({
-        success: true,
-        url: publicUrl,
-        fileName,
-        size: req.file.size,
-        type: req.file.mimetype,
-      });
+      console.log('[Cloudinary Upload] Success:', { cloudPublicId, size: req.file.size, type: req.file.mimetype });
+      res.json({ success: true, url, publicId: cloudPublicId, size: req.file.size, type: req.file.mimetype });
     } catch (error: unknown) {
-      console.error('[R2 Upload] Error:', error);
-      res.status(500).json({
-        error: 'Upload failed',
-        message: getErrorMessage(error),
-      });
+      console.error('[Cloudinary Upload] Error:', error);
+      res.status(500).json({ error: 'Upload failed', message: getErrorMessage(error) });
     }
   }
 );
 
 /**
- * Upload multiple files to Cloudflare R2
- * Protected route - requires authentication and admin role
+ * Upload multiple images/videos to Cloudinary.
+ * Admin only.
  */
 router.post(
   '/multiple',
   requireAuth,
   requireRole('admin', 'super-admin'),
-  upload.array('files', 10), // Max 10 files
+  upload.array('files', 10),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const files = req.files as Array<{
-        buffer: Buffer;
-        originalname: string;
-        mimetype: string;
-        size: number;
-      }>;
-      
-      if (!files || files.length === 0) {
+      const files = req.files as Express.Multer.File[];
+      if (!files?.length) {
         res.status(400).json({ error: 'No files uploaded' });
         return;
       }
 
-      const { folder = 'uploads', label = '' } = req.body;
-      
-      const uploadPromises = files.map(async (file, index) => {
-        const fileExt = path.extname(file.originalname);
-        const randomName = crypto.randomBytes(16).toString('hex');
-        const timestamp = Date.now();
-        const fileName = label 
-          ? `${folder}/${label}-${index + 1}-${timestamp}-${randomName}${fileExt}`
-          : `${folder}/${timestamp}-${randomName}${fileExt}`;
+      if (!isCloudinaryConfigured()) {
+        res.status(503).json({ error: 'Storage not configured', message: 'Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET.' });
+        return;
+      }
 
-        const command = new PutObjectCommand({
-          Bucket: R2_BUCKET,
-          Key: fileName,
-          Body: file.buffer,
-          ContentType: file.mimetype,
-        });
+      const { folder = 'uploads', label = '' } = req.body as { folder?: string; label?: string };
+      const cloudFolder = `discovergrp/${folder}`;
 
-        await r2Client.send(command);
+      const results = await Promise.all(
+        files.map(async (file, index) => {
+          const publicId = label ? `${label}-${index + 1}-${Date.now()}` : undefined;
+          const { url, publicId: cloudPublicId } = await uploadToCloudinary(file.buffer, {
+            folder: cloudFolder,
+            publicId,
+            mimeType: file.mimetype,
+          });
+          return { url, publicId: cloudPublicId, size: file.size, type: file.mimetype };
+        })
+      );
 
-        return {
-          url: `${R2_PUBLIC_URL}/${fileName}`,
-          fileName,
-          size: file.size,
-          type: file.mimetype,
-        };
-      });
-
-      const results = await Promise.all(uploadPromises);
-
-      console.log('[R2 Upload Multiple] Success:', {
-        count: results.length,
-        totalSize: results.reduce((sum, r) => sum + r.size, 0),
-      });
-
-      res.json({
-        success: true,
-        files: results,
-        count: results.length,
-      });
+      console.log('[Cloudinary Upload Multiple] Success:', { count: results.length });
+      res.json({ success: true, files: results, count: results.length });
     } catch (error: unknown) {
-      console.error('[R2 Upload Multiple] Error:', error);
-      res.status(500).json({
-        error: 'Upload failed',
-        message: getErrorMessage(error),
-      });
+      console.error('[Cloudinary Upload Multiple] Error:', error);
+      res.status(500).json({ error: 'Upload failed', message: getErrorMessage(error) });
     }
   }
 );
 
 /**
- * Upload a travel document (passport / visa copy) to Cloudflare R2.
- * Accessible to ANY authenticated user (not just admins).
- * Accepts: PDF, JPEG, PNG, WebP — max 10 MB.
- * Files go to: documents/{type}/{userId}/{timestamp}-{random}.ext
+ * Upload a travel document (passport / visa copy) to Cloudinary.
+ * Accessible to any authenticated user.
+ * Accepts: PDF, JPEG, PNG, WebP  max 10 MB.
  *
- * When R2 is not yet configured (missing env vars) the route returns a stub
- * success response so the booking flow can continue uninterrupted.
+ * When Cloudinary is not yet configured the route returns a stub success
+ * response so the booking flow can continue uninterrupted.
  */
 router.post(
   '/document',
@@ -228,37 +188,24 @@ router.post(
         return;
       }
 
-      // type: 'passport' | 'visa' (defaults to 'passport')
-      const docType = (req.body.type as string) || 'passport';
+      const docType = (req.body as { type?: string }).type || 'passport';
       if (!['passport', 'visa'].includes(docType)) {
         res.status(400).json({ error: 'Invalid document type. Use "passport" or "visa".' });
         return;
       }
 
       const userId = req.user?.id || 'guest';
-      const fileExt = path.extname(req.file.originalname);
-      const randomName = crypto.randomBytes(16).toString('hex');
-      const timestamp = Date.now();
-      const fileName = `documents/${docType}s/${userId}/${timestamp}-${randomName}${fileExt}`;
 
-      // ── Graceful fallback when Cloudflare R2 is not yet configured ──────────
-      const r2Configured = !!(
-        process.env.R2_ENDPOINT &&
-        process.env.R2_ACCESS_KEY_ID &&
-        process.env.R2_SECRET_ACCESS_KEY &&
-        process.env.R2_BUCKET_NAME
-      );
-
-      if (!r2Configured) {
-        console.warn(
-          '[R2 Document Upload] R2 not configured — returning stub URL so booking can proceed.',
-          { docType, fileName, userId, size: req.file.size }
-        );
-        // Return a stub URL; the file is accepted but not persisted until R2 is set up.
+      //  Graceful fallback when Cloudinary is not yet configured 
+      if (!isCloudinaryConfigured()) {
+        const stubFileName = `documents/${docType}s/${userId}/${Date.now()}.stub`;
+        console.warn('[Cloudinary Document Upload] Not configured  returning stub URL.', {
+          docType, userId, size: req.file.size,
+        });
         res.json({
           success: true,
-          url: `/uploads/stub/${fileName}`,
-          fileName,
+          url: `/uploads/stub/${stubFileName}`,
+          publicId: stubFileName,
           size: req.file.size,
           type: req.file.mimetype,
           stub: true,
@@ -266,52 +213,28 @@ router.post(
         return;
       }
 
-      const command = new PutObjectCommand({
-        Bucket: R2_BUCKET,
-        Key: fileName,
-        Body: req.file.buffer,
-        ContentType: req.file.mimetype,
+      const { url, publicId } = await uploadToCloudinary(req.file.buffer, {
+        folder: `discovergrp/documents/${docType}s/${userId}`,
+        mimeType: req.file.mimetype,
       });
 
-      await r2Client.send(command);
-
-      const publicUrl = `${R2_PUBLIC_URL}/${fileName}`;
-
-      console.log('[R2 Document Upload] Success:', { docType, fileName, userId, size: req.file.size });
-
-      res.json({
-        success: true,
-        url: publicUrl,
-        fileName,
-        size: req.file.size,
-        type: req.file.mimetype,
-      });
+      console.log('[Cloudinary Document Upload] Success:', { docType, publicId, userId, size: req.file.size });
+      res.json({ success: true, url, publicId, size: req.file.size, type: req.file.mimetype });
     } catch (error: unknown) {
-      console.error('[R2 Document Upload] Error:', error);
-      res.status(500).json({
-        error: 'Upload failed',
-        message: getErrorMessage(error),
-      });
+      console.error('[Cloudinary Document Upload] Error:', error);
+      res.status(500).json({ error: 'Upload failed', message: getErrorMessage(error) });
     }
   }
 );
 
 /**
- * Health check endpoint
+ * Health check  reports Cloudinary configuration status.
  */
-router.get('/health', (req: Request, res: Response) => {
-  const configured = !!(
-    process.env.R2_ENDPOINT &&
-    process.env.R2_ACCESS_KEY_ID &&
-    process.env.R2_SECRET_ACCESS_KEY &&
-    process.env.R2_BUCKET_NAME &&
-    process.env.R2_PUBLIC_URL
-  );
-
+router.get('/health', (_req: Request, res: Response) => {
   res.json({
-    status: configured ? 'ready' : 'not-configured',
-    bucket: R2_BUCKET || 'not-set',
-    endpoint: process.env.R2_ENDPOINT ? 'configured' : 'not-set',
+    status: isCloudinaryConfigured() ? 'ready' : 'not-configured',
+    provider: 'cloudinary',
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME || 'not-set',
   });
 });
 
