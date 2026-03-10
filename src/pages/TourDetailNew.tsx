@@ -147,12 +147,24 @@ export default function TourDetailNew() {
             transition={{ duration: 0.3 }}
             className="col-span-1 lg:col-span-2 lg:row-span-2 relative group cursor-pointer overflow-hidden"
           >
-            <img
-              src={images[0] || "/image.png"}
-              alt={tour.title}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-            />
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300" />
+            {images[0] ? (
+              <>
+                <img
+                  src={images[0]}
+                  alt={tour.title}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300" />
+              </>
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-blue-900 to-indigo-800 flex flex-col items-center justify-center gap-3 select-none">
+                <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center text-4xl font-bold text-white">
+                  {tour.title ? tour.title.charAt(0).toUpperCase() : "?"}
+                </div>
+                <p className="text-white font-semibold text-base px-8 text-center">{tour.title}</p>
+                <span className="text-white/60 text-xs uppercase tracking-widest">No image yet</span>
+              </div>
+            )}
           </motion.div>
           
           {/* Smaller images */}
