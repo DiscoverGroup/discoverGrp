@@ -16,8 +16,8 @@ const isNumber = (value: unknown): value is number => typeof value === 'number';
 const isStringArray = (value: unknown): value is string[] => 
   Array.isArray(value) && value.every(item => typeof item === 'string');
 
-export default function TourCard({ 
-  tour, 
+export default function TourCard({
+  tour,
   onWishlist,
   isWishlisted = false
 }: TourCardProps) {
@@ -27,6 +27,10 @@ export default function TourCard({
   const [imageError, setImageError] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const imageList = useMemo(() => tour.images ?? [], [tour.images]);
+
+  // Null when tour has no images or the current image failed to load — prevents using /image.png banner as default
+  const hasNoImage = imageError || !tour.images || tour.images.length === 0;
+  const currentImage = hasNoImage ? null : (tour.images?.[currentImageIndex] ?? null);
 
   const handleWishlistClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -45,7 +49,7 @@ export default function TourCard({
   const prevImage = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setCurrentImageIndex((prev) => 
+    setCurrentImageIndex((prev) =>
       prev === 0 ? (tour.images?.length || 1) - 1 : prev - 1
     );
   };
@@ -66,16 +70,6 @@ export default function TourCard({
   const hasPromoPrice = saleIsActive && promoPrice && regularPrice && promoPrice < regularPrice;
   const displayPrice = hasPromoPrice ? promoPrice : (regularPrice || price);
   const originalPrice = hasPromoPrice ? regularPrice : undefined;
-
-  // Fallback image chain: tour image → fallback → default
-  const getFallbackImage = () => {
-    // Use a pleasant default gradient/placeholder
-    return "/image.png";
-  };
-  
-  const currentImage = imageError 
-    ? getFallbackImage()
-    : (tour.images?.[currentImageIndex] ?? getFallbackImage());
 
   // Reset error state when image index changes
   React.useEffect(() => {
@@ -151,15 +145,26 @@ export default function TourCard({
       aria-labelledby={`tour-title-${tour.slug}`}
     >
       {/* Image Section with Carousel */}
-      <div className="relative h-64 overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300">
-        <img
-          src={currentImage}
-          alt={tour.title}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-          loading="lazy"
-          crossOrigin="anonymous"
-          onError={() => setImageError(true)}
-        />
+      <div className="relative h-64 overflow-hidden bg-gradient-to-br from-blue-900 to-indigo-800">
+        {currentImage ? (
+          <img
+            src={currentImage}
+            alt={tour.title}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
+            crossOrigin="anonymous"
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          /* No-image placeholder — shows tour initial on gradient, does NOT fall back to /image.png */
+          <div className="w-full h-full flex flex-col items-center justify-center gap-2 select-none">
+            <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-3xl font-bold text-white">
+              {tour.title ? tour.title.charAt(0).toUpperCase() : "?"}
+            </div>
+            <p className="text-white font-semibold text-sm px-6 text-center line-clamp-2">{tour.title}</p>
+            <span className="text-white/60 text-xs uppercase tracking-widest">No image yet</span>
+          </div>
+        )}
 
         {/* Category Badge - Top Left */}
         <div className="absolute top-4 left-4 z-10">
