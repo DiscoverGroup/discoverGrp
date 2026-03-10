@@ -11,7 +11,8 @@ import {
   Camera,
   Plus,
   X,
-  Check
+  Check,
+  Wand2
 } from "lucide-react";
 import { buildAdminApiUrl } from "../../config/apiBase";
 import { useToast } from "../../components/Toast";
@@ -52,6 +53,143 @@ async function uploadImageToStorage(
 async function createImageRecord(label: 'main' | 'gallery'): Promise<{ id: string; label: string; url?: string }> {
   // Replace with real API call if available
   return { id: `${label}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, label };
+}
+
+// ── Smart-paste tour text parser ───────────────────────────────────────────
+const MONTH_MAP: Record<string, string> = {
+  january:'01', jan:'01', february:'02', feb:'02', march:'03', mar:'03',
+  april:'04',   apr:'04', may:'05',      june:'06', jun:'06', july:'07',
+  jul:'07',     august:'08', aug:'08',   september:'09', sep:'09', sept:'09',
+  october:'10', oct:'10', november:'11', nov:'11', december:'12', dec:'12',
+};
+
+function toISO(month: string, day: number | string, year: number | string): string {
+  const m = MONTH_MAP[month.toLowerCase()] ?? '01';
+  return `${year}-${m}-${String(day).padStart(2, '0')}`;
+}
+
+function parseTourText(raw: string): Partial<TourFormData> {
+  const result: Partial<TourFormData> = {};
+  const lines = raw.split(/\r?\n/);
+
+  // ─ Title + duration ───────────────────────────────────────────────────
+  const titleM = raw.match(/^([^\n(]+?)\s*\((\d+)\s*days?\)/im);
+  if (titleM) {
+    result.title = titleM[1].trim();
+    result.durationDays = parseInt(titleM[2]);
+    const tl = result.title.toLowerCase();
+    if (/route\s*a/i.test(tl))       result.line = 'ROUTE_A';
+    else if (/route\s*b/i.test(tl))  result.line = 'ROUTE_B';
+    else if (/route\s*c/i.test(tl))  result.line = 'ROUTE_C';
+    else if (/route\s*d/i.test(tl))  result.line = 'ROUTE_D';
+    if (/europe/i.test(tl))          result.continent = 'Europe';
+    else if (/asia/i.test(tl))       result.continent = 'Asia';
+    const slug = result.title.toLowerCase().replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').trim();
+    result.slug = `${slug}-${result.durationDays ?? 15}-days`;
+  }
+
+  // ─ Departure dates ───────────────────────────────────────────────
+  const departureDates: TourFormData['departureDates'] = [];
+  const seen = new Set<string>();
+  const addDate = (start: string, end: string, price: number) => {
+    const k = `${start}|${end}`;
+    if (!seen.has(k)) { seen.add(k); departureDates.push({ start, end, price, isAvailable: true, currentBookings: 0 }); }
+  };
+
+  // Pattern A — same month: "May 13 - 27, 2026 (Php 170,000)"
+  const pA = /([A-Za-z]+)\s+(\d{1,2})\s*[-–]\s*(\d{1,2}),\s*(\d{4})(?:\s*\(Php\s*([\d,]+)\))?/g;
+  let m: RegExpExecArray | null;
+  while ((m = pA.exec(raw))) {
+    const [, mon, d1, d2, yr, ps] = m;
+    if (MONTH_MAP[mon.toLowerCase()]) addDate(toISO(mon,d1,yr), toISO(mon,d2,yr), ps ? parseInt(ps.replace(/,/g,'')) : 0);
+  }
+
+  // Pattern B — different months: "May 25 - June 8, 2026 (Php 170,000)"
+  const pB = /([A-Za-z]+)\s+(\d{1,2})\s*[-–]\s*([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})(?:\s*\(Php\s*([\d,]+)\))?/g;
+  while ((m = pB.exec(raw))) {
+    const [, m1, d1, m2, d2, yr, ps] = m;
+    if (MONTH_MAP[m1.toLowerCase()] && MONTH_MAP[m2.toLowerCase()])
+      addDate(toISO(m1,d1,yr), toISO(m2,d2,yr), ps ? parseInt(ps.replace(/,/g,'')) : 0);
+  }
+
+  if (departureDates.length) {
+    result.departureDates = departureDates.sort((a, b) => a.start.localeCompare(b.start));
+    result.travelWindow = { start: result.departureDates[0].start, end: result.departureDates[result.departureDates.length - 1].end };
+    const prices = result.departureDates.map(d => d.price ?? 0).filter(Boolean);
+    if (prices.length) result.regularPricePerPerson = Math.max(...prices);
+  }
+
+  // ─ Promo info ───────────────────────────────────────────────────────
+  let promoFlat: number | "" = "";
+  let promoPercent: number | "" = "";
+  const pfM = raw.match(/promo\s+price[^:]*:\s*(?:Php\s*)?(\d[\d,]*)\s*(?:,000)? /i)
+             ?? raw.match(/(\d[\d,]*)\s*(?:,000)?\s*tour\s*packages?/i);
+  if (pfM) promoFlat = parseInt(pfM[1].replace(/,/g,''));
+  const ppM = raw.match(/(\d+)%\s*(?:discount|off)/i);
+  if (ppM) promoPercent = parseInt(ppM[1]);
+
+  // ─ Optional tours ──────────────────────────────────────────────────
+  const optionalTours: TourFormData['optionalTours'] = [];
+  let inOptional = false;
+  for (const line of lines) {
+    const l = line.trim();
+    if (/optional\s*tours?\s*:/i.test(l) || /^optional\s*tours?\s*$/i.test(l)) { inOptional = true; continue; }
+    if (/regular\s*rate|country\s*to\s*visit|fullcash|full\s*cash|downpayment/i.test(l)) inOptional = false;
+    if (inOptional) {
+      const dm = l.match(/Day\s*(\d+)\s*[:\-–]\s*(.+)/i);
+      if (dm) {
+        optionalTours.push({
+          day: parseInt(dm[1]),
+          title: dm[2].replace(/^optional\s+(for\s+)?/i,'').trim(),
+          regularPrice: "",
+          promoEnabled: !!(promoFlat || promoPercent),
+          promoType: promoFlat ? "flat" : "percent",
+          promoValue: promoFlat || promoPercent,
+        });
+      }
+    }
+  }
+  if (optionalTours.length) result.optionalTours = optionalTours;
+
+  // ─ Downpayment + balance days ───────────────────────────────────────
+  const dpM = raw.match(/Php\s*([\d,]+)\s*downpayment/i);
+  if (dpM) { result.allowsDownpayment = true; result.fixedDownpaymentAmount = parseInt(dpM[1].replace(/,/g,'')); }
+  const bdM = raw.match(/(\d+)\s*days?\s*before\s*travel/i);
+  if (bdM) result.balanceDueDaysBeforeTravel = parseInt(bdM[1]);
+
+  // ─ Countries ───────────────────────────────────────────────────────────
+  const cM = raw.match(/Country\s+(?:to\s+visit|visited)?[:\s]+([A-Z][A-Z|\s&,]+)/i);
+  if (cM) {
+    const cs = cM[1].split(/[|,]/).map(c => c.trim()).filter(Boolean)
+      .map(c => c.charAt(0).toUpperCase() + c.slice(1).toLowerCase());
+    if (cs.length) {
+      result.additionalInfo = {
+        countriesVisited: cs,
+        startingPoint: "",
+        endingPoint: "",
+        mainCities: {},
+        countries: cs.map(name => ({ name, image: "" })),
+        citiesToVisit: [],
+      };
+    }
+  }
+
+  // ─ Full cash freebies ────────────────────────────────────────────────
+  const freebies: TourFormData['cashFreebies'] = [];
+  let inFreebies = false;
+  for (const line of lines) {
+    const l = line.trim();
+    if (/fullcash|full\s*cash/i.test(l)) { inFreebies = true; continue; }
+    if (inFreebies && l) {
+      const pctM2 = l.match(/^(\d+)%\s*off\s+(?:on\s+)?(.+)/i);
+      const freeM = l.match(/^free\s+(.+)/i);
+      if (pctM2) freebies.push({ label: pctM2[2].trim(), type: "percent_off", value: parseInt(pctM2[1]) });
+      else if (freeM) freebies.push({ label: freeM[1].trim(), type: "free", value: "" });
+    }
+  }
+  if (freebies.length) result.cashFreebies = freebies;
+
+  return result;
 }
 
 // ── Route A Preferred pre-fill template ─────────────────────────────────────
@@ -329,7 +467,34 @@ export default function TourForm(): JSX.Element {
     setShowAddLineModal(false);
   }
 
-  // ── Route A Template Loader ───────────────────────────────────────────────
+  // ── Smart Paste state ───────────────────────────────────────────────────
+  const [smartPasteOpen, setSmartPasteOpen] = useState(false);
+  const [smartPasteText, setSmartPasteText] = useState("");
+  const [smartPastePreview, setSmartPastePreview] = useState<Partial<TourFormData> | null>(null);
+
+  function handleSmartParse() {
+    if (!smartPasteText.trim()) return;
+    const parsed = parseTourText(smartPasteText);
+    setSmartPastePreview(parsed);
+  }
+
+  function applySmartPaste() {
+    if (!smartPastePreview) return;
+    setFormData(prev => ({
+      ...prev,
+      ...smartPastePreview,
+      additionalInfo: {
+        ...prev.additionalInfo,
+        ...(smartPastePreview.additionalInfo ?? {}),
+      },
+    } as TourFormData));
+    setSmartPasteOpen(false);
+    setSmartPasteText("");
+    setSmartPastePreview(null);
+    success("Tour data parsed and applied to the form! ✅ Review each section before saving.");
+  }
+
+  // Route A Template Loader
   function loadRouteATemplate() {
     setFormData(prev => ({
       ...prev,
@@ -817,6 +982,154 @@ export default function TourForm(): JSX.Element {
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
             <p className="text-red-800">{error}</p>
+          </div>
+        )}
+
+        {/* ─── Smart Paste / AI Auto-fill Panel ──────────────────────── */}
+        {!isEdit && (
+          <div className="bg-white rounded-xl shadow-sm border border-purple-200 overflow-hidden mb-2">
+            <button
+              type="button"
+              onClick={() => { setSmartPasteOpen(o => !o); setSmartPastePreview(null); }}
+              className="w-full flex items-center justify-between px-6 py-4 hover:bg-purple-50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="bg-purple-100 p-2 rounded-lg">
+                  <Wand2 className="text-purple-600" size={20} />
+                </div>
+                <div className="text-left">
+                  <p className="font-bold text-gray-900">AI Smart Paste — Auto-fill from Tour Text</p>
+                  <p className="text-sm text-gray-500">Paste your tour brief text and let the form fill itself automatically</p>
+                </div>
+              </div>
+              <span className="text-purple-600 font-semibold text-sm">{smartPasteOpen ? 'Close ↑' : 'Open ↓'}</span>
+            </button>
+
+            {smartPasteOpen && (
+              <div className="px-6 pb-6 border-t border-purple-100">
+                <p className="text-sm text-gray-600 mt-4 mb-3">
+                  Paste your raw tour description below (dates, prices, optional tours, countries, freebies, downpayment rules — all supported).
+                </p>
+                <textarea
+                  className="w-full border border-gray-300 rounded-xl p-4 text-sm font-mono focus:ring-2 focus:ring-purple-400 focus:border-transparent resize-y min-h-[180px]"
+                  placeholder={`Route A Preferred (15 days)\nTravel Date: May 13 - 27, 2026 (Php 170,000)\n             May 25 - June 8, 2026 (Php 170,000)\nOptional Tours:\nDay 4: Disneyland Paris Tour\n...\nCountry to Visit: FRANCE | SWITZERLAND | ITALY | VATICAN\nFULLCASH PAYMENT FREEBIES:\n50% off on Visa Processing and Appointment Fee\nFree Philippine Travel Tax`}
+                  value={smartPasteText}
+                  onChange={e => { setSmartPasteText(e.target.value); setSmartPastePreview(null); }}
+                />
+                <div className="flex gap-3 mt-3">
+                  <button
+                    type="button"
+                    onClick={handleSmartParse}
+                    disabled={!smartPasteText.trim()}
+                    className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white font-semibold rounded-xl text-sm flex items-center gap-2 transition-colors"
+                  >
+                    <Wand2 size={16} />
+                    Parse &amp; Preview
+                  </button>
+                  {smartPastePreview && (
+                    <button
+                      type="button"
+                      onClick={applySmartPaste}
+                      className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl text-sm flex items-center gap-2 transition-colors"
+                    >
+                      <Check size={16} />
+                      Apply to Form
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => { setSmartPasteText(""); setSmartPastePreview(null); }}
+                    className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl text-sm transition-colors"
+                  >
+                    Clear
+                  </button>
+                </div>
+
+                {/* Parsed Preview */}
+                {smartPastePreview && (
+                  <div className="mt-5 bg-purple-50 border border-purple-200 rounded-xl p-5 space-y-3 text-sm">
+                    <p className="font-bold text-purple-900 text-base">Detected Fields — review before applying</p>
+
+                    {smartPastePreview.title && (
+                      <div className="flex gap-2">
+                        <span className="text-purple-500 font-semibold w-36 flex-shrink-0">Title</span>
+                        <span className="text-gray-800">{smartPastePreview.title} ({smartPastePreview.durationDays} days)</span>
+                      </div>
+                    )}
+                    {smartPastePreview.line && (
+                      <div className="flex gap-2">
+                        <span className="text-purple-500 font-semibold w-36 flex-shrink-0">Tour Line</span>
+                        <span className="text-gray-800">{smartPastePreview.line}</span>
+                      </div>
+                    )}
+                    {smartPastePreview.regularPricePerPerson !== undefined && smartPastePreview.regularPricePerPerson !== "" && (
+                      <div className="flex gap-2">
+                        <span className="text-purple-500 font-semibold w-36 flex-shrink-0">Regular Price</span>
+                        <span className="text-gray-800">₱{Number(smartPastePreview.regularPricePerPerson).toLocaleString()}</span>
+                      </div>
+                    )}
+                    {smartPastePreview.departureDates && smartPastePreview.departureDates.length > 0 && (
+                      <div className="flex gap-2">
+                        <span className="text-purple-500 font-semibold w-36 flex-shrink-0">Departure Dates</span>
+                        <ul className="space-y-0.5">
+                          {smartPastePreview.departureDates.map((d, i) => (
+                            <li key={i} className="text-gray-800">
+                              {new Date(d.start + 'T00:00:00').toLocaleDateString('en-PH', { month:'short', day:'numeric', year:'numeric' })}
+                              {' – '}
+                              {new Date(d.end + 'T00:00:00').toLocaleDateString('en-PH', { month:'short', day:'numeric', year:'numeric' })}
+                              {d.price ? <span className="ml-2 text-green-700 font-medium">₱{d.price.toLocaleString()}</span> : null}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {smartPastePreview.optionalTours && smartPastePreview.optionalTours.length > 0 && (
+                      <div className="flex gap-2">
+                        <span className="text-purple-500 font-semibold w-36 flex-shrink-0">Optional Tours</span>
+                        <ul className="space-y-0.5">
+                          {smartPastePreview.optionalTours.map((ot, i) => (
+                            <li key={i} className="text-gray-800">Day {ot.day} – {ot.title}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {smartPastePreview.fixedDownpaymentAmount !== undefined && smartPastePreview.fixedDownpaymentAmount !== "" && (
+                      <div className="flex gap-2">
+                        <span className="text-purple-500 font-semibold w-36 flex-shrink-0">Downpayment</span>
+                        <span className="text-gray-800">₱{Number(smartPastePreview.fixedDownpaymentAmount).toLocaleString()}</span>
+                      </div>
+                    )}
+                    {smartPastePreview.balanceDueDaysBeforeTravel !== undefined && smartPastePreview.balanceDueDaysBeforeTravel !== "" && (
+                      <div className="flex gap-2">
+                        <span className="text-purple-500 font-semibold w-36 flex-shrink-0">Balance Due</span>
+                        <span className="text-gray-800">{smartPastePreview.balanceDueDaysBeforeTravel} days before travel</span>
+                      </div>
+                    )}
+                    {smartPastePreview.additionalInfo?.countriesVisited && smartPastePreview.additionalInfo.countriesVisited.length > 0 && (
+                      <div className="flex gap-2">
+                        <span className="text-purple-500 font-semibold w-36 flex-shrink-0">Countries</span>
+                        <span className="text-gray-800">{smartPastePreview.additionalInfo.countriesVisited.join(' · ')}</span>
+                      </div>
+                    )}
+                    {smartPastePreview.cashFreebies && smartPastePreview.cashFreebies.length > 0 && (
+                      <div className="flex gap-2">
+                        <span className="text-purple-500 font-semibold w-36 flex-shrink-0">Cash Freebies</span>
+                        <ul className="space-y-0.5">
+                          {smartPastePreview.cashFreebies.map((f, i) => (
+                            <li key={i} className="text-gray-800">
+                              {f.type === 'percent_off' ? `${f.value}% off — ` : 'FREE — '}{f.label}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {Object.keys(smartPastePreview).length === 0 && (
+                      <p className="text-orange-700">Could not detect any structured fields. Try pasting more formatted text.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
