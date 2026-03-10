@@ -54,6 +54,74 @@ async function createImageRecord(label: 'main' | 'gallery'): Promise<{ id: strin
   return { id: `${label}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, label };
 }
 
+// ── Route A Preferred pre-fill template ─────────────────────────────────────
+const ROUTE_A_TEMPLATE: Partial<TourFormData> = {
+  title: "Route A Preferred – Europe (15 Days)",
+  slug: "route-a-preferred-europe-15-days",
+  summary: "Experience the best of Europe in 15 days — France, Switzerland, Italy & Vatican with guaranteed departure dates.",
+  shortDescription: "15-day Europe tour covering France, Switzerland, Italy and Vatican City.",
+  line: "ROUTE_A",
+  continent: "Europe",
+  durationDays: 15,
+  guaranteedDeparture: true,
+  regularPricePerPerson: 170000,
+  promoPricePerPerson: "",
+  basePricePerDay: 15000,
+  isSaleEnabled: false,
+  saleEndDate: "",
+  allowsDownpayment: true,
+  fixedDownpaymentAmount: 50000,
+  balanceDueDaysBeforeTravel: 90,
+  departureDates: [
+    { start: "2026-05-13", end: "2026-05-27", price: 170000, isAvailable: true, currentBookings: 0 },
+    { start: "2026-05-25", end: "2026-06-08", price: 170000, isAvailable: true, currentBookings: 0 },
+    { start: "2026-10-28", end: "2026-11-11", price: 160000, isAvailable: true, currentBookings: 0 },
+    { start: "2027-02-24", end: "2027-03-10", price: 160000, isAvailable: true, currentBookings: 0 },
+    { start: "2027-03-31", end: "2027-04-14", price: 150000, isAvailable: true, currentBookings: 0 },
+  ],
+  optionalTours: [
+    { day: 4,  title: "Disneyland Paris Tour",               regularPrice: "", promoEnabled: true, promoType: "flat",    promoValue: 15000 },
+    { day: 6,  title: "Cable Car and Ice Flyer Chairlift",   regularPrice: "", promoEnabled: true, promoType: "percent", promoValue: 50 },
+    { day: 7,  title: "Grindelwald-Interlaken-Lauterbrunnen",regularPrice: "", promoEnabled: true, promoType: "percent", promoValue: 50 },
+    { day: 9,  title: "Lake Como-Bellagio-Lugano",            regularPrice: "", promoEnabled: true, promoType: "percent", promoValue: 50 },
+    { day: 12, title: "In-depth Colosseum Tour",              regularPrice: "", promoEnabled: true, promoType: "percent", promoValue: 50 },
+    { day: 13, title: "Pompeii, Amalfi & Positano Tour",      regularPrice: "", promoEnabled: true, promoType: "percent", promoValue: 50 },
+  ],
+  cashFreebies: [
+    { label: "Visa Processing and Appointment Fee", type: "percent_off", value: 50 },
+    { label: "Permits, City Tax & Tippings in Europe",  type: "percent_off", value: 50 },
+    { label: "Travel Insurance",                       type: "percent_off", value: 50 },
+    { label: "Philippine Travel Tax",                  type: "free",        value: "" },
+    { label: "Ireland ETA",                            type: "free",        value: "" },
+  ],
+  additionalInfo: {
+    countriesVisited: ["France", "Switzerland", "Italy", "Vatican"],
+    startingPoint: "Paris, France",
+    endingPoint: "Rome, Italy",
+    mainCities: {
+      France: ["Paris"],
+      Switzerland: ["Interlaken", "Grindelwald", "Lauterbrunnen", "Lugano"],
+      Italy: ["Milan", "Lake Como", "Bellagio", "Rome", "Pompeii", "Amalfi", "Positano"],
+      Vatican: ["Vatican City"],
+    },
+    countries: [
+      { name: "France",      image: "" },
+      { name: "Switzerland", image: "" },
+      { name: "Italy",       image: "" },
+      { name: "Vatican",     image: "" },
+    ],
+    citiesToVisit: [],
+  },
+  highlights: [
+    "Disneyland Paris",
+    "Swiss Alps – Grindelwald, Interlaken & Lauterbrunnen",
+    "Lake Como, Bellagio & Lugano",
+    "Colosseum & Vatican City",
+    "Pompeii, Amalfi Coast & Positano",
+  ],
+  travelWindow: { start: "2026-05-13", end: "2027-04-14" },
+};
+
 // Initial tour line options - will be extended with user-added lines
 const DEFAULT_LINE_OPTIONS = [
   { value: "ROUTE_A", label: "Route A Preferred" },
@@ -162,6 +230,28 @@ interface TourFormData {
     // New: cities to visit with images
     citiesToVisit?: CityEntry[];
   };
+
+  // Optional add-on excursions for specific days
+  optionalTours: {
+    day: number;
+    title: string;
+    regularPrice: number | "";
+    promoEnabled: boolean;
+    promoType: "flat" | "percent";
+    promoValue: number | "";
+  }[];
+
+  // Full cash payment freebies
+  cashFreebies: {
+    label: string;
+    type: "free" | "percent_off";
+    value: number | "";
+  }[];
+
+  // Reservation payment rules
+  allowsDownpayment: boolean;
+  fixedDownpaymentAmount: number | ""; // e.g. 50000 — overrides % downpayment when set
+  balanceDueDaysBeforeTravel: number | ""; // e.g. 90 — days before departure balance is due
 }
 
 export default function TourForm(): JSX.Element {
@@ -239,6 +329,19 @@ export default function TourForm(): JSX.Element {
     setShowAddLineModal(false);
   }
 
+  // ── Route A Template Loader ───────────────────────────────────────────────
+  function loadRouteATemplate() {
+    setFormData(prev => ({
+      ...prev,
+      ...ROUTE_A_TEMPLATE,
+      additionalInfo: {
+        ...prev.additionalInfo,
+        ...(ROUTE_A_TEMPLATE.additionalInfo ?? {}),
+      },
+    } as TourFormData));
+    success("Route A Preferred template loaded! Review and adjust before saving. ✅");
+  }
+
   // Form state
   const [formData, setFormData] = useState<TourFormData>({
     title: "",
@@ -272,7 +375,12 @@ export default function TourForm(): JSX.Element {
       mainCities: {},
       countries: [],
       citiesToVisit: []
-    }
+    },
+    optionalTours: [],
+    cashFreebies: [],
+    allowsDownpayment: false,
+    fixedDownpaymentAmount: "",
+    balanceDueDaysBeforeTravel: 90,
   });
 
   // Dynamic gallery upload fields
@@ -394,7 +502,20 @@ export default function TourForm(): JSX.Element {
             mainCities: tour.additionalInfo?.mainCities || {},
             countries: (tour.additionalInfo as Record<string, unknown>)?.countries as CountryEntry[] || [],
             citiesToVisit: (tour.additionalInfo as Record<string, unknown>)?.citiesToVisit as CityEntry[] || []
-          }
+          },
+          optionalTours: Array.isArray((tour as Record<string, unknown>).optionalTours)
+            ? ((tour as Record<string, unknown>).optionalTours as TourFormData["optionalTours"])
+            : [],
+          cashFreebies: Array.isArray((tour as Record<string, unknown>).cashFreebies)
+            ? ((tour as Record<string, unknown>).cashFreebies as TourFormData["cashFreebies"])
+            : [],
+          allowsDownpayment: !!(tour as Record<string, unknown>).allowsDownpayment,
+          fixedDownpaymentAmount: typeof (tour as Record<string, unknown>).fixedDownpaymentAmount === 'number'
+            ? ((tour as Record<string, unknown>).fixedDownpaymentAmount as number)
+            : "",
+          balanceDueDaysBeforeTravel: typeof (tour as Record<string, unknown>).balanceDueDaysBeforeTravel === 'number'
+            ? ((tour as Record<string, unknown>).balanceDueDaysBeforeTravel as number)
+            : 90,
         });
       } catch (err) {
         console.error("Load tour error", err);
@@ -417,7 +538,7 @@ export default function TourForm(): JSX.Element {
         .replace(/\s+/g, '-')
         .replace(/-+/g, '-')
         .trim();
-  setFormData((prev: TourFormData) => ({ ...prev, slug }));
+      setFormData((prev: TourFormData) => ({ ...prev, slug }));
     }
   }, [formData.title, isEdit]);
 
@@ -499,6 +620,66 @@ export default function TourForm(): JSX.Element {
   // -----------------------------------
 
   // Form submission
+  // ── Optional Tour Handlers ────────────────────────────────────────────────
+  function addOptionalTour() {
+    setFormData(prev => ({
+      ...prev,
+      optionalTours: [
+        ...prev.optionalTours,
+        { day: prev.optionalTours.length + 4, title: "", regularPrice: "", promoEnabled: false, promoType: "percent", promoValue: "" },
+      ],
+    }));
+  }
+
+  function updateOptionalTour(
+    index: number,
+    field: keyof TourFormData["optionalTours"][0],
+    value: string | number | boolean
+  ) {
+    setFormData(prev => {
+      const updated = [...prev.optionalTours];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, optionalTours: updated };
+    });
+  }
+
+  function removeOptionalTour(index: number) {
+    setFormData(prev => ({
+      ...prev,
+      optionalTours: prev.optionalTours.filter((_, i) => i !== index),
+    }));
+  }
+
+  // ── Cash Freebie Handlers ─────────────────────────────────────────────────
+  function addCashFreebie() {
+    setFormData(prev => ({
+      ...prev,
+      cashFreebies: [
+        ...prev.cashFreebies,
+        { label: "", type: "percent_off", value: 50 },
+      ],
+    }));
+  }
+
+  function updateCashFreebie(
+    index: number,
+    field: keyof TourFormData["cashFreebies"][0],
+    value: string | number
+  ) {
+    setFormData(prev => {
+      const updated = [...prev.cashFreebies];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, cashFreebies: updated };
+    });
+  }
+
+  function removeCashFreebie(index: number) {
+    setFormData(prev => ({
+      ...prev,
+      cashFreebies: prev.cashFreebies.filter((_, i) => i !== index),
+    }));
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -540,7 +721,25 @@ export default function TourForm(): JSX.Element {
           citiesToVisit: formData.additionalInfo.citiesToVisit && formData.additionalInfo.citiesToVisit.length ? formData.additionalInfo.citiesToVisit : undefined
         },
         // Preserve existing backend field name for compatibility — used to store FlippingBook links
-        bookingPdfUrl: formData.bookingPdfUrl ? formData.bookingPdfUrl : undefined
+        bookingPdfUrl: formData.bookingPdfUrl ? formData.bookingPdfUrl : undefined,
+        // Optional tours and freebies
+        optionalTours: formData.optionalTours.length
+          ? formData.optionalTours.map(ot => ({
+              ...ot,
+              regularPrice: ot.regularPrice === "" ? 0 : Number(ot.regularPrice),
+              promoValue: ot.promoValue === "" ? 0 : Number(ot.promoValue),
+            }))
+          : undefined,
+        cashFreebies: formData.cashFreebies.length
+          ? formData.cashFreebies.map(f => ({
+              ...f,
+              value: f.value === "" ? undefined : Number(f.value),
+            }))
+          : undefined,
+        // Payment rules
+        allowsDownpayment: formData.allowsDownpayment,
+        fixedDownpaymentAmount: formData.fixedDownpaymentAmount === "" ? undefined : Number(formData.fixedDownpaymentAmount),
+        balanceDueDaysBeforeTravel: formData.balanceDueDaysBeforeTravel === "" ? 90 : Number(formData.balanceDueDaysBeforeTravel),
       };
 
       if (isEdit && id) {
@@ -585,12 +784,32 @@ export default function TourForm(): JSX.Element {
           </button>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              {isEdit ? "Edit Tour" : "Create New Tour"}
-            </h1>
-            <p className="text-gray-600 text-lg">
-              {isEdit ? "Update tour information and details" : "Add a new tour to your collection"}
-            </p>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                  {isEdit ? "Edit Tour" : "Create New Tour"}
+                </h1>
+                <p className="text-gray-600 text-lg">
+                  {isEdit ? "Update tour information and details" : "Add a new tour to your collection"}
+                </p>
+              </div>
+              {!isEdit && (
+                <button
+                  type="button"
+                  onClick={loadRouteATemplate}
+                  className="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl shadow text-sm transition-colors"
+                  title="Pre-fill form with Route A Preferred example data (pricing, dates, optional tours, freebies)"
+                >
+                  <span className="text-base">🗺️</span>
+                  Load Route A Template
+                </button>
+              )}
+            </div>
+            {!isEdit && (
+              <div className="mt-4 bg-rose-50 border border-rose-200 rounded-lg px-4 py-2.5 text-rose-800 text-sm">
+                <strong>Tip:</strong> Click <strong>Load Route A Template</strong> to pre-fill this form with Route A Preferred 2026 pricing, departure dates, optional tours, and full cash payment freebies. You can still edit every field after loading.
+              </div>
+            )}
           </div>
         </div>
 
@@ -912,7 +1131,7 @@ export default function TourForm(): JSX.Element {
                     value={formData.regularPricePerPerson}
                     onChange={(e) => handleInputChange("regularPricePerPerson", e.target.value ? Number(e.target.value) : "")}
                     className="w-full border border-gray-300 rounded-xl pl-8 pr-4 py-3 text-lg font-medium focus:ring-2 focus:ring-yellow-500 focus:border-transparent shadow-sm"
-                    placeholder="250,000.00"
+                    placeholder="170,000"
                   />
                 </div>
               </div>
@@ -985,6 +1204,494 @@ export default function TourForm(): JSX.Element {
                 <p className="text-xs text-gray-500 mt-1">Daily rate for pricing calculations</p>
               </div>
             </div>
+
+            {/* ─── Reservation Payment Rules ──────────────────────────────────────── */}
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <h3 className="text-lg font-bold text-gray-800 mb-4">🏦 Reservation Payment Rules</h3>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="flex items-start gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                  <input
+                    type="checkbox"
+                    id="allows-downpayment"
+                    checked={!!formData.allowsDownpayment}
+                    onChange={e => handleInputChange("allowsDownpayment", e.target.checked)}
+                    className="w-5 h-5 mt-0.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <div>
+                    <label htmlFor="allows-downpayment" className="text-sm font-semibold text-gray-700 cursor-pointer">Allow Downpayment</label>
+                    <p className="text-xs text-gray-500 mt-0.5">Show downpayment option at checkout</p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    💵 Fixed Downpayment Amount (PHP)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₱</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.fixedDownpaymentAmount}
+                      onChange={e => handleInputChange("fixedDownpaymentAmount", e.target.value ? Number(e.target.value) : "")}
+                      className="w-full border border-gray-300 rounded-lg pl-8 pr-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
+                      placeholder="50,000"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Fixed PHP downpayment (overrides % method). E.g. ₱50,000. Leave blank for percentage-based.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    📆 Balance Due (Days Before Travel)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.balanceDueDaysBeforeTravel}
+                    onChange={e => handleInputChange("balanceDueDaysBeforeTravel", e.target.value ? Number(e.target.value) : "")}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
+                    placeholder="90"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    E.g. 90 = balance must be settled 90 days before travel OR upon visa release.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ─── Optional Tours / Excursions ─────────────────────────────────────── */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="bg-orange-100 p-3 rounded-xl">
+                  <Plus className="text-orange-600" size={26} />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Optional Tours / Excursions</h2>
+                  <p className="text-gray-600 text-sm">
+                    Add day-specific optional activities customers can add on to their booking
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={addOptionalTour}
+                className="px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm flex items-center gap-2 transition-colors"
+              >
+                <Plus size={16} />
+                Add Optional Tour
+              </button>
+            </div>
+
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+              <p className="text-orange-800 text-sm">
+                <strong>Route A Preferred Example:</strong>{" "}
+                Day 4 – Disneyland Paris Tour &nbsp;·&nbsp;
+                Day 6 – Cable Car and Ice Flyer Chairlift &nbsp;·&nbsp;
+                Day 7 – Grindelwald-Interlaken-Lauterbrunnen &nbsp;·&nbsp;
+                Day 9 – Lake Como-Bellagio-Lugano &nbsp;·&nbsp;
+                Day 12 – In-depth Colosseum &nbsp;·&nbsp;
+                Day 13 – Pompeii, Amalfi &amp; Positano Tour.
+                {" "}Promo: <strong>₱15,000 flat</strong> per package OR <strong>50% off</strong> on optional tours — depends on sales.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {formData.optionalTours.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">No optional tours added yet.</p>
+              ) : (
+                formData.optionalTours.map((ot, idx) => (
+                  <div key={idx} className="border border-gray-200 rounded-lg p-4 bg-gray-50 space-y-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Optional Tour #{idx + 1}</span>
+                      <button type="button" onClick={() => removeOptionalTour(idx)} className="text-red-500 hover:text-red-700 text-sm font-medium">Remove</button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Day #</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={ot.day}
+                          onChange={e => updateOptionalTour(idx, "day", Number(e.target.value))}
+                          className="w-full border rounded px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div className="md:col-span-3">
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Activity Title</label>
+                        <input
+                          type="text"
+                          value={ot.title}
+                          onChange={e => updateOptionalTour(idx, "title", e.target.value)}
+                          placeholder="e.g. Disneyland Paris Tour"
+                          className="w-full border rounded px-3 py-2 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Regular Price (PHP/pax)</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₱</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={ot.regularPrice}
+                            onChange={e => updateOptionalTour(idx, "regularPrice", e.target.value ? Number(e.target.value) : "")}
+                            className="w-full border rounded pl-7 pr-3 py-2 text-sm"
+                            placeholder="0"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="">
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Promo Type</label>
+                        <select
+                          value={ot.promoType}
+                          onChange={e => updateOptionalTour(idx, "promoType", e.target.value)}
+                          disabled={!ot.promoEnabled}
+                          className="w-full border rounded px-3 py-2 text-sm bg-white disabled:opacity-50"
+                        >
+                          <option value="flat">Flat PHP amount (e.g. ₱15,000)</option>
+                          <option value="percent">% Discount (e.g. 50% off)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">
+                          {ot.promoType === "flat" ? "Promo Price (PHP/pax)" : "Discount (%)"}
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                            {ot.promoType === "flat" ? "₱" : "%"}
+                          </span>
+                          <input
+                            type="number"
+                            min="0"
+                            max={ot.promoType === "percent" ? 100 : undefined}
+                            value={ot.promoValue}
+                            onChange={e => updateOptionalTour(idx, "promoValue", e.target.value ? Number(e.target.value) : "")}
+                            disabled={!ot.promoEnabled}
+                            className="w-full border rounded pl-7 pr-3 py-2 text-sm disabled:opacity-50"
+                            placeholder={ot.promoType === "flat" ? "15,000" : "50"}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1">
+                      <input
+                        type="checkbox"
+                        id={`ot-promo-${idx}`}
+                        checked={ot.promoEnabled}
+                        onChange={e => updateOptionalTour(idx, "promoEnabled", e.target.checked)}
+                        className="w-4 h-4 text-orange-500"
+                      />
+                      <label htmlFor={`ot-promo-${idx}`} className="text-sm font-medium text-gray-700 cursor-pointer">
+                        Enable Promo Pricing for this optional tour
+                      </label>
+                      {ot.promoEnabled && ot.promoType === "flat" && ot.promoValue !== "" && (
+                        <span className="ml-2 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+                          Promo: ₱{Number(ot.promoValue).toLocaleString()}
+                        </span>
+                      )}
+                      {ot.promoEnabled && ot.promoType === "percent" && ot.promoValue !== "" && (
+                        <span className="ml-2 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+                          Promo: {ot.promoValue}% off → ₱{ot.regularPrice !== "" ? Math.round(Number(ot.regularPrice) * (1 - Number(ot.promoValue) / 100)).toLocaleString() : "—"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* ─── Full Cash Payment Freebies ───────────────────────────────────────── */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="bg-green-100 p-3 rounded-xl">
+                  <Check className="text-green-600" size={26} />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Full Cash Payment Freebies</h2>
+                  <p className="text-gray-600 text-sm">
+                    Perks shown to customers who choose full cash payment at booking
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={addCashFreebie}
+                className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold text-sm flex items-center gap-2 transition-colors"
+              >
+                <Plus size={16} />
+                Add Freebie
+              </button>
+            </div>
+
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+              <p className="text-green-800 text-sm">
+                <strong>Route A Preferred Freebies (Full Cash Payment):</strong>{" "}
+                50% off Visa Processing &amp; Appointment Fee &nbsp;·&nbsp;
+                50% off Permits, City Tax &amp; Tippings in Europe &nbsp;·&nbsp;
+                50% off Travel Insurance &nbsp;·&nbsp;
+                Free Philippine Travel Tax &nbsp;·&nbsp;
+                Free Ireland ETA
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {formData.cashFreebies.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">No freebies added yet.</p>
+              ) : (
+                formData.cashFreebies.map((fb, idx) => (
+                  <div key={idx} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Freebie Label</label>
+                      <input
+                        type="text"
+                        value={fb.label}
+                        onChange={e => updateCashFreebie(idx, "label", e.target.value)}
+                        placeholder="e.g. Free Philippine Travel Tax"
+                        className="w-full border rounded px-3 py-2 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Type</label>
+                      <select
+                        value={fb.type}
+                        onChange={e => updateCashFreebie(idx, "type", e.target.value)}
+                        className="w-full border rounded px-3 py-2 text-sm bg-white"
+                      >
+                        <option value="free">Completely Free</option>
+                        <option value="percent_off">% Off</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">
+                        {fb.type === "percent_off" ? "Discount %" : "N/A"}
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={fb.type === "percent_off" ? fb.value : ""}
+                        onChange={e => updateCashFreebie(idx, "value", e.target.value ? Number(e.target.value) : "")}
+                        disabled={fb.type === "free"}
+                        className="w-full border rounded px-3 py-2 text-sm disabled:opacity-40 disabled:bg-gray-100"
+                        placeholder={fb.type === "percent_off" ? "50" : "—"}
+                      />
+                    </div>
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => removeCashFreebie(idx)}
+                        className="px-3 py-2 bg-red-50 text-red-700 rounded text-xs font-semibold hover:bg-red-100"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* ─── Live Pricing Computation Preview ───────────────────────────── */}
+          <div className="bg-white rounded-xl shadow-sm border border-blue-200 p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="bg-blue-100 p-3 rounded-xl">
+                <DollarSign className="text-blue-600" size={28} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Live Pricing Preview</h2>
+                <p className="text-gray-600 text-sm">Real-time computation — reflects exactly what customers will see</p>
+              </div>
+            </div>
+
+            {/* Route A Preferred reference callout */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-blue-800 text-sm">
+              <strong>Reference – Route A Preferred (15 days):</strong>
+              <ul className="mt-1 list-disc list-inside space-y-0.5">
+                <li>May 13–27, 2026 · May 25–Jun 8, 2026 → <strong>₱170,000</strong> per pax</li>
+                <li>Oct 28–Nov 11, 2026 · Feb 24–Mar 10, 2027 → <strong>₱160,000</strong> per pax</li>
+                <li>Mar 31–Apr 14, 2027 → <strong>₱150,000</strong> per pax</li>
+                <li>Promo: ₱15,000 tour package OR 50% off optional tours (sales-dependent)</li>
+                <li>Downpayment: ₱50,000 · Balance: 90 days before travel or upon visa release</li>
+                <li>Countries: France · Switzerland · Italy · Vatican</li>
+              </ul>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Base Pricing */}
+              <div className="space-y-2">
+                <h3 className="font-bold text-gray-700 text-base border-b pb-2">Base Pricing</h3>
+                <div className="flex justify-between items-center py-2 border-b border-dashed border-gray-200">
+                  <span className="text-sm text-gray-600">Regular Rate / Pax</span>
+                  <span className="font-bold text-gray-900 text-lg">
+                    {formData.regularPricePerPerson !== ""
+                      ? `₱${Number(formData.regularPricePerPerson).toLocaleString()}`
+                      : <span className="text-gray-400 text-sm">Not set</span>}
+                  </span>
+                </div>
+                {formData.isSaleEnabled && (
+                  <div className="flex justify-between items-center py-2 border-b border-dashed border-gray-200">
+                    <span className="text-sm text-gray-600">Promo / Sale Rate / Pax</span>
+                    <span className="font-bold text-green-600 text-lg">
+                      {formData.promoPricePerPerson !== ""
+                        ? `₱${Number(formData.promoPricePerPerson).toLocaleString()}`
+                        : <span className="text-gray-400 text-sm">Not set</span>}
+                    </span>
+                  </div>
+                )}
+                {formData.isSaleEnabled &&
+                  formData.regularPricePerPerson !== "" &&
+                  formData.promoPricePerPerson !== "" && (
+                    <div className="flex justify-between items-center py-2 border-b border-dashed border-gray-200">
+                      <span className="text-sm text-gray-600">Customer Savings</span>
+                      <span className="font-bold text-green-700">
+                        ₱{(Number(formData.regularPricePerPerson) - Number(formData.promoPricePerPerson)).toLocaleString()}
+                        {" "}({Math.round((1 - Number(formData.promoPricePerPerson) / Number(formData.regularPricePerPerson)) * 100)}% off)
+                      </span>
+                    </div>
+                  )}
+              </div>
+
+              {/* Payment Rules */}
+              <div className="space-y-2">
+                <h3 className="font-bold text-gray-700 text-base border-b pb-2">Payment Rules</h3>
+                <div className="flex justify-between items-center py-2 border-b border-dashed border-gray-200">
+                  <span className="text-sm text-gray-600">Downpayment</span>
+                  <span className="font-semibold text-gray-800">
+                    {formData.allowsDownpayment
+                      ? formData.fixedDownpaymentAmount !== ""
+                        ? `₱${Number(formData.fixedDownpaymentAmount).toLocaleString()}`
+                        : "Enabled (amount not set)"
+                      : <span className="text-gray-400">Full payment only</span>}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-dashed border-gray-200">
+                  <span className="text-sm text-gray-600">Balance Due</span>
+                  <span className="font-semibold text-gray-800">
+                    {formData.balanceDueDaysBeforeTravel !== ""
+                      ? `${formData.balanceDueDaysBeforeTravel} days before travel / visa release`
+                      : <span className="text-gray-400">Not set</span>}
+                  </span>
+                </div>
+                {formData.allowsDownpayment &&
+                  formData.fixedDownpaymentAmount !== "" &&
+                  formData.regularPricePerPerson !== "" && (
+                    <div className="flex justify-between items-center py-2 border-b border-dashed border-gray-200">
+                      <span className="text-sm text-gray-600">Remaining Balance (after DP)</span>
+                      <span className="font-semibold text-gray-700">
+                        ₱{(Number(formData.regularPricePerPerson) - Number(formData.fixedDownpaymentAmount)).toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+              </div>
+            </div>
+
+            {/* Per-departure-date pricing */}
+            {formData.departureDates.length > 0 && (
+              <div className="mt-6">
+                <h3 className="font-bold text-gray-700 text-base border-b pb-2 mb-3">Departure Date Pricing</h3>
+                <div className="space-y-2">
+                  {formData.departureDates.map((d, idx) => {
+                    const effectivePrice = d.price != null
+                      ? d.price
+                      : formData.regularPricePerPerson !== ""
+                        ? Number(formData.regularPricePerPerson)
+                        : null;
+                    return (
+                      <div key={idx} className="flex justify-between items-center py-2 border-b border-dashed border-gray-100">
+                        <span className="text-sm text-gray-600">
+                          {d.start && d.end
+                            ? `${new Date(d.start + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })} – ${new Date(d.end + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}`
+                            : `Departure #${idx + 1}`}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {d.price != null && (
+                            <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">Custom Price</span>
+                          )}
+                          <span className="font-semibold text-gray-800">
+                            {effectivePrice !== null
+                              ? `₱${effectivePrice.toLocaleString()}`
+                              : <span className="text-gray-400 text-xs">TBD</span>}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Optional Tours computed prices */}
+            {formData.optionalTours.length > 0 && (
+              <div className="mt-6">
+                <h3 className="font-bold text-gray-700 text-base border-b pb-2 mb-3">Optional Tour Pricing</h3>
+                <div className="space-y-2">
+                  {formData.optionalTours.map((ot, idx) => {
+                    const promoPrice =
+                      ot.promoEnabled && ot.promoValue !== ""
+                        ? ot.promoType === "flat"
+                          ? Number(ot.promoValue)
+                          : ot.regularPrice !== ""
+                            ? Math.round(Number(ot.regularPrice) * (1 - Number(ot.promoValue) / 100))
+                            : null
+                        : null;
+                    return (
+                      <div key={idx} className="flex justify-between items-center py-2 border-b border-dashed border-gray-100">
+                        <span className="text-sm text-gray-600">
+                          Day {ot.day} – {ot.title || `Optional Tour #${idx + 1}`}
+                        </span>
+                        <div className="flex items-center gap-3">
+                          {ot.regularPrice !== "" && (
+                            <span className={`text-sm ${
+                              promoPrice !== null ? "line-through text-gray-400" : "font-semibold text-gray-800"
+                            }`}>
+                              ₱{Number(ot.regularPrice).toLocaleString()}
+                            </span>
+                          )}
+                          {promoPrice !== null && (
+                            <span className="font-semibold text-green-600">₱{promoPrice.toLocaleString()}</span>
+                          )}
+                          {ot.promoEnabled && ot.promoType === "percent" && ot.promoValue !== "" && (
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{ot.promoValue}% off</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Cash Freebies list */}
+            {formData.cashFreebies.length > 0 && (
+              <div className="mt-6">
+                <h3 className="font-bold text-gray-700 text-base border-b pb-2 mb-3">Full Cash Payment Freebies</h3>
+                <ul className="space-y-1">
+                  {formData.cashFreebies.map((fb, idx) => (
+                    <li key={idx} className="flex items-center gap-2 text-sm text-green-800">
+                      <Check size={15} className="text-green-500 flex-shrink-0" />
+                      {fb.type === "percent_off" && fb.value !== ""
+                        ? `${fb.value}% off ${fb.label}`
+                        : fb.type === "free"
+                          ? `FREE ${fb.label}`
+                          : fb.label}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
           {/* Travel Dates Section */}
