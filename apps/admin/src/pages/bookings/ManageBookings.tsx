@@ -8,6 +8,148 @@ import {
   getDashboardStats 
 } from '../../services/bookingRepo';
 
+// ─── PDF / Print ──────────────────────────────────────────────────────────────
+function printBooking(booking: import('../../types/booking').Booking) {
+  const statusColors: Record<string, string> = {
+    confirmed: '#16a34a',
+    pending:   '#d97706',
+    cancelled: '#dc2626',
+    completed: '#2563eb',
+  };
+  const statusColor = statusColors[booking.status] ?? '#374151';
+
+  const balance = booking.totalAmount - booking.paidAmount;
+
+  const travelDate = new Date(booking.selectedDate).toLocaleDateString('en-PH', {
+    year: 'numeric', month: 'long', day: 'numeric',
+  });
+  const bookingDate = new Date(booking.bookingDate).toLocaleDateString('en-PH', {
+    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+  const printedDate = new Date().toLocaleDateString('en-PH', {
+    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+
+  const appointmentBlock = (booking.appointmentDate && booking.appointmentTime) ? `
+    <div class="section">
+      <div class="section-title" style="color:#1d4ed8;border-color:#93c5fd;">Office Appointment</div>
+      <table class="info-table">
+        <tr><td class="label">Date</td><td>${new Date(booking.appointmentDate).toLocaleDateString('en-PH', { year:'numeric', month:'long', day:'numeric', weekday:'long' })}</td></tr>
+        <tr><td class="label">Time</td><td>${booking.appointmentTime}</td></tr>
+        ${booking.appointmentPurpose ? `<tr><td class="label">Purpose</td><td>${booking.appointmentPurpose.replace(/_/g,' ')}</td></tr>` : ''}
+        <tr><td class="label">Location</td><td>Discover Group Travel and Tours Office</td></tr>
+      </table>
+    </div>` : '';
+
+  const notesBlock = booking.notes ? `
+    <div class="section">
+      <div class="section-title">Additional Notes</div>
+      <p style="color:#374151;font-size:13px;">${booking.notes}</p>
+    </div>` : '';
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Booking Confirmation – ${booking.bookingId}</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#111827;background:#fff;padding:32px;}
+    .header{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #1e3a8a;padding-bottom:16px;margin-bottom:24px;}
+    .company h1{font-size:22px;font-weight:700;color:#1e3a8a;letter-spacing:-0.5px;}
+    .company p{font-size:11px;color:#6b7280;margin-top:2px;}
+    .badge{display:inline-block;padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}60;}
+    .booking-id{font-size:11px;color:#6b7280;margin-top:6px;}
+    .booking-id span{font-weight:700;color:#111827;}
+    .section{margin-bottom:20px;}
+    .section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#1e3a8a;border-bottom:1px solid #bfdbfe;padding-bottom:4px;margin-bottom:10px;}
+    .info-table{width:100%;border-collapse:collapse;}
+    .info-table tr:nth-child(even){background:#f9fafb;}
+    .info-table td{padding:5px 8px;font-size:13px;}
+    .label{font-weight:600;color:#374151;width:38%;}
+    .payment-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:12px 16px;margin-top:8px;}
+    .payment-box.has-balance{background:#fff7ed;border-color:#fed7aa;}
+    .total-row{font-weight:700;font-size:14px;}
+    .balance-row{color:#b45309;font-weight:700;}
+    .footer{margin-top:32px;border-top:1px solid #e5e7eb;padding-top:12px;display:flex;justify-content:space-between;font-size:11px;color:#9ca3af;}
+    @media print{
+      body{padding:20px;}
+      @page{margin:1.5cm;size:A4;}
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="company">
+      <h1>Discover Group Travel &amp; Tours</h1>
+      <p>Official Booking Confirmation</p>
+    </div>
+    <div style="text-align:right;">
+      <div class="badge">${booking.status}</div>
+      <div class="booking-id">Booking ID: <span>${booking.bookingId}</span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Booking Information</div>
+    <table class="info-table">
+      <tr><td class="label">Booking Date</td><td>${bookingDate}</td></tr>
+      <tr><td class="label">Passengers</td><td>${booking.passengers}</td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Customer Information</div>
+    <table class="info-table">
+      <tr><td class="label">Full Name</td><td>${booking.customerName}</td></tr>
+      <tr><td class="label">Email</td><td>${booking.customerEmail}</td></tr>
+      <tr><td class="label">Phone</td><td>${booking.customerPhone}</td></tr>
+      ${booking.customerPassport ? `<tr><td class="label">Passport No.</td><td>${booking.customerPassport}</td></tr>` : ''}
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Tour Information</div>
+    <table class="info-table">
+      <tr><td class="label">Tour</td><td><strong>${booking.tour?.title ?? 'N/A'}</strong></td></tr>
+      <tr><td class="label">Duration</td><td>${booking.tour?.durationDays ?? '–'} days</td></tr>
+      <tr><td class="label">Travel Date</td><td>${travelDate}</td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Payment Information</div>
+    <div class="payment-box${balance > 0 ? ' has-balance' : ''}">
+      <table class="info-table">
+        <tr><td class="label">Price per Person</td><td>PHP ${(booking.perPerson ?? 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td></tr>
+        <tr class="total-row"><td class="label">Total Amount</td><td>PHP ${(booking.totalAmount ?? 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td></tr>
+        <tr><td class="label">Paid Amount</td><td style="color:#16a34a;font-weight:600;">PHP ${(booking.paidAmount ?? 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td></tr>
+        <tr><td class="label">Payment Type</td><td style="text-transform:capitalize;">${booking.paymentType}${booking.paymentType === 'downpayment' ? ' (30%)' : ''}</td></tr>
+        ${balance > 0 ? `<tr class="balance-row"><td class="label">Balance Due</td><td>PHP ${balance.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td></tr>` : ''}
+      </table>
+    </div>
+  </div>
+
+  ${appointmentBlock}
+  ${notesBlock}
+
+  <div class="footer">
+    <span>Printed: ${printedDate}</span>
+    <span>Discover Group Travel &amp; Tours — Official Document</span>
+  </div>
+
+  <script>window.onload = function(){ window.print(); };</script>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank', 'width=850,height=1100');
+  if (w) {
+    w.document.write(html);
+    w.document.close();
+  }
+}
+// ──────────────────────────────────────────────────────────────────────────────
+
 // Utility functions
 function formatCurrency(amount: number | undefined | null): string {
   if (typeof amount !== 'number' || isNaN(amount)) return 'PHP 0.00';
@@ -203,7 +345,7 @@ function BookingFilters({ filters, onFiltersChange, onGenerateReport }: FiltersP
 }
 
 // Booking Detail Modal Component
-function BookingDetailModal({ booking, onClose }: { booking: Booking; onClose: () => void }) {
+function BookingDetailModal({ booking, onClose, onPrint }: { booking: Booking; onClose: () => void; onPrint: () => void }) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -378,7 +520,16 @@ function BookingDetailModal({ booking, onClose }: { booking: Booking; onClose: (
           )}
         </div>
 
-        <div className="sticky bottom-0 bg-gray-50 border-t px-6 py-4 flex justify-end">
+        <div className="sticky bottom-0 bg-gray-50 border-t px-6 py-4 flex items-center justify-between">
+          <button
+            onClick={onPrint}
+            className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            Print / Download PDF
+          </button>
           <button
             onClick={onClose}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
@@ -723,6 +874,15 @@ export default function ManageBookings() {
                           </svg>
                         </button>
                         <button
+                          onClick={() => printBooking(booking)}
+                          className="text-indigo-600 hover:text-indigo-800"
+                          title="Print / Download PDF"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                          </svg>
+                        </button>
+                        <button
                           onClick={() => handleDeleteBooking(booking.bookingId)}
                           className="text-red-600 hover:text-red-800"
                           title="Delete Booking"
@@ -750,9 +910,10 @@ export default function ManageBookings() {
 
       {/* Booking Detail Modal */}
       {selectedBooking && (
-        <BookingDetailModal 
-          booking={selectedBooking} 
-          onClose={() => setSelectedBooking(null)} 
+        <BookingDetailModal
+          booking={selectedBooking}
+          onClose={() => setSelectedBooking(null)}
+          onPrint={() => printBooking(selectedBooking)}
         />
       )}
     </div>
