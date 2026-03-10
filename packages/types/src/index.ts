@@ -57,6 +57,9 @@ export type Tour = {
   isSaleEnabled?: boolean;
   saleEndDate?: string | null;
 
+  // Year-tagged booking/flipbook links (e.g. from "Links for 2026: url1, url2")
+  bookingLinks?: { year: string; urls: string[] }[];
+
   // Optional add-on excursions per day
   optionalTours?: {
     day: number;
@@ -65,6 +68,7 @@ export type Tour = {
     promoEnabled: boolean;
     promoType: "flat" | "percent";
     promoValue: number;
+    flipbookUrl?: string; // individual flipbook link for this optional tour
   }[];
 
   // Full cash payment freebies

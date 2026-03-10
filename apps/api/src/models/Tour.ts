@@ -10,6 +10,8 @@ export interface ITour extends Document {
   images?: string[];
   guaranteedDeparture?: boolean;
   bookingPdfUrl?: string;
+  // Year-tagged booking/flipbook links, e.g. [{year: "2026", urls: ["https://..."]}, ...]
+  bookingLinks?: Array<{ year: string; urls: string[] }>;
   video_url?: string;
   departureDates?: string[];
   travelWindow?: {
@@ -56,6 +58,10 @@ const TourSchema = new Schema<ITour>({
   images: [{ type: String }],
   guaranteedDeparture: { type: Boolean, default: false },
   bookingPdfUrl: { type: String },
+  bookingLinks: [{
+    year: { type: String },
+    urls: [{ type: String }]
+  }],
   video_url: { type: String },
   departureDates: [{
     start: { type: String, required: true },

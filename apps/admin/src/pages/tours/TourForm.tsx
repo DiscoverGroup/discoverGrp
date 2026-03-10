@@ -88,6 +88,20 @@ function parseTourText(raw: string): Partial<TourFormData> {
     result.slug = `${slug}-${result.durationDays ?? 15}-days`;
   }
 
+  // ─ Booking links (year-tagged) — "Links for 2026: url1, and url2" ───────
+  const bookingLinks: TourFormData['bookingLinks'] = [];
+  for (const line of lines) {
+    const lm = line.match(/Links?\s+for\s+(\d{4})\s*:\s*(.+)/i);
+    if (lm) {
+      const year = lm[1];
+      const urlPart = lm[2];
+      // split on "," or " and " separators, extract https?:// URLs
+      const urls = urlPart.match(/https?:\/\/[^\s,]+/gi) ?? [];
+      if (urls.length) bookingLinks.push({ year, urls });
+    }
+  }
+  if (bookingLinks.length) result.bookingLinks = bookingLinks;
+
   // ─ Departure dates ───────────────────────────────────────────────
   const departureDates: TourFormData['departureDates'] = [];
   const seen = new Set<string>();
@@ -150,6 +164,7 @@ function parseTourText(raw: string): Partial<TourFormData> {
     }
   }
   if (optionalTours.length) result.optionalTours = optionalTours;
+  // (Note: individual optional tour flipbookUrl not typically in paste text — user adds manually)
 
   // ─ Downpayment + balance days ───────────────────────────────────────
   const dpM = raw.match(/Php\s*([\d,]+)\s*downpayment/i);
@@ -194,6 +209,10 @@ function parseTourText(raw: string): Partial<TourFormData> {
 
 // ── Route A Preferred pre-fill template ─────────────────────────────────────
 const ROUTE_A_TEMPLATE: Partial<TourFormData> = {
+  bookingLinks: [
+    { year: "2026", urls: ["https://bit.ly/ROUTEAPREF_MAR-JUNE2026", "https://bit.ly/ROUTEAPREF_OCT-NOV2026"] },
+    { year: "2027", urls: ["https://bit.ly/ROUTEAPREF_MAR-APR2027"] },
+  ],
   title: "Route A Preferred – Europe (15 Days)",
   slug: "route-a-preferred-europe-15-days",
   summary: "Experience the best of Europe in 15 days — France, Switzerland, Italy & Vatican with guaranteed departure dates.",
@@ -369,6 +388,9 @@ interface TourFormData {
     citiesToVisit?: CityEntry[];
   };
 
+  // Year-tagged booking links (e.g. from paste text "Links for 2026: url1, url2")
+  bookingLinks: { year: string; urls: string[] }[];
+
   // Optional add-on excursions for specific days
   optionalTours: {
     day: number;
@@ -377,6 +399,7 @@ interface TourFormData {
     promoEnabled: boolean;
     promoType: "flat" | "percent";
     promoValue: number | "";
+    flipbookUrl?: string; // individual optional-tour flipbook/itinerary link
   }[];
 
   // Full cash payment freebies
@@ -543,6 +566,7 @@ export default function TourForm(): JSX.Element {
     },
     optionalTours: [],
     cashFreebies: [],
+    bookingLinks: [],
     allowsDownpayment: false,
     fixedDownpaymentAmount: "",
     balanceDueDaysBeforeTravel: 90,
@@ -674,6 +698,9 @@ export default function TourForm(): JSX.Element {
           cashFreebies: Array.isArray((tour as Record<string, unknown>).cashFreebies)
             ? ((tour as Record<string, unknown>).cashFreebies as TourFormData["cashFreebies"])
             : [],
+          bookingLinks: Array.isArray((tour as Record<string, unknown>).bookingLinks)
+            ? ((tour as Record<string, unknown>).bookingLinks as TourFormData["bookingLinks"])
+            : [],
           allowsDownpayment: !!(tour as Record<string, unknown>).allowsDownpayment,
           fixedDownpaymentAmount: typeof (tour as Record<string, unknown>).fixedDownpaymentAmount === 'number'
             ? ((tour as Record<string, unknown>).fixedDownpaymentAmount as number)
@@ -786,12 +813,59 @@ export default function TourForm(): JSX.Element {
 
   // Form submission
   // ── Optional Tour Handlers ────────────────────────────────────────────────
+  // ── Booking Links Handlers ────────────────────────────────────────────────
+  function addBookingLink() {
+    setFormData(prev => ({
+      ...prev,
+      bookingLinks: [...prev.bookingLinks, { year: String(new Date().getFullYear()), urls: [""] }],
+    }));
+  }
+
+  function updateBookingLinkYear(index: number, year: string) {
+    setFormData(prev => {
+      const updated = [...prev.bookingLinks];
+      updated[index] = { ...updated[index], year };
+      return { ...prev, bookingLinks: updated };
+    });
+  }
+
+  function updateBookingLinkUrl(linkIndex: number, urlIndex: number, url: string) {
+    setFormData(prev => {
+      const updated = [...prev.bookingLinks];
+      const urls = [...updated[linkIndex].urls];
+      urls[urlIndex] = url;
+      updated[linkIndex] = { ...updated[linkIndex], urls };
+      return { ...prev, bookingLinks: updated };
+    });
+  }
+
+  function addBookingLinkUrl(linkIndex: number) {
+    setFormData(prev => {
+      const updated = [...prev.bookingLinks];
+      updated[linkIndex] = { ...updated[linkIndex], urls: [...updated[linkIndex].urls, ""] };
+      return { ...prev, bookingLinks: updated };
+    });
+  }
+
+  function removeBookingLinkUrl(linkIndex: number, urlIndex: number) {
+    setFormData(prev => {
+      const updated = [...prev.bookingLinks];
+      const urls = updated[linkIndex].urls.filter((_, i) => i !== urlIndex);
+      if (urls.length === 0) {
+        // Remove the whole year group if no URLs left
+        return { ...prev, bookingLinks: updated.filter((_, i) => i !== linkIndex) };
+      }
+      updated[linkIndex] = { ...updated[linkIndex], urls };
+      return { ...prev, bookingLinks: updated };
+    });
+  }
+
   function addOptionalTour() {
     setFormData(prev => ({
       ...prev,
       optionalTours: [
         ...prev.optionalTours,
-        { day: prev.optionalTours.length + 4, title: "", regularPrice: "", promoEnabled: false, promoType: "percent", promoValue: "" },
+        { day: prev.optionalTours.length + 4, title: "", regularPrice: "", promoEnabled: false, promoType: "percent", promoValue: "", flipbookUrl: "" },
       ],
     }));
   }
@@ -887,12 +961,18 @@ export default function TourForm(): JSX.Element {
         },
         // Preserve existing backend field name for compatibility — used to store FlippingBook links
         bookingPdfUrl: formData.bookingPdfUrl ? formData.bookingPdfUrl : undefined,
+        // Year-tagged booking links
+        bookingLinks: formData.bookingLinks && formData.bookingLinks.length
+          ? formData.bookingLinks.filter(bl => bl.year && bl.urls.some(u => u.trim()))
+              .map(bl => ({ year: bl.year, urls: bl.urls.filter(u => u.trim()) }))
+          : undefined,
         // Optional tours and freebies
         optionalTours: formData.optionalTours.length
           ? formData.optionalTours.map(ot => ({
               ...ot,
               regularPrice: ot.regularPrice === "" ? 0 : Number(ot.regularPrice),
               promoValue: ot.promoValue === "" ? 0 : Number(ot.promoValue),
+              flipbookUrl: ot.flipbookUrl?.trim() || undefined,
             }))
           : undefined,
         cashFreebies: formData.cashFreebies.length
@@ -1012,7 +1092,7 @@ export default function TourForm(): JSX.Element {
                 </p>
                 <textarea
                   className="w-full border border-gray-300 rounded-xl p-4 text-sm font-mono focus:ring-2 focus:ring-purple-400 focus:border-transparent resize-y min-h-[180px]"
-                  placeholder={`Route A Preferred (15 days)\nTravel Date: May 13 - 27, 2026 (Php 170,000)\n             May 25 - June 8, 2026 (Php 170,000)\nOptional Tours:\nDay 4: Disneyland Paris Tour\n...\nCountry to Visit: FRANCE | SWITZERLAND | ITALY | VATICAN\nFULLCASH PAYMENT FREEBIES:\n50% off on Visa Processing and Appointment Fee\nFree Philippine Travel Tax`}
+                  placeholder={`Route A Preferred (15 days)\nLinks for 2026: https://bit.ly/ROUTEAPREF_MAR-JUNE2026 , and https://bit.ly/ROUTEAPREF_OCT-NOV2026\nLinks for 2027: https://bit.ly/ROUTEAPREF_MAR-APR2027\nTravel Date: May 13 - 27, 2026 (Php 170,000)\n             May 25 - June 8, 2026 (Php 170,000)\nOptional Tours:\nDay 4: Disneyland Paris Tour\n...\nCountry to Visit: FRANCE | SWITZERLAND | ITALY | VATICAN\nFULLCASH PAYMENT FREEBIES:\n50% off on Visa Processing and Appointment Fee\nFree Philippine Travel Tax`}
                   value={smartPasteText}
                   onChange={e => { setSmartPasteText(e.target.value); setSmartPastePreview(null); }}
                 />
@@ -1054,6 +1134,18 @@ export default function TourForm(): JSX.Element {
                       <div className="flex gap-2">
                         <span className="text-purple-500 font-semibold w-36 flex-shrink-0">Title</span>
                         <span className="text-gray-800">{smartPastePreview.title} ({smartPastePreview.durationDays} days)</span>
+                      </div>
+                    )}
+                    {smartPastePreview.bookingLinks && smartPastePreview.bookingLinks.length > 0 && (
+                      <div className="flex gap-2">
+                        <span className="text-purple-500 font-semibold w-36 flex-shrink-0">Booking Links</span>
+                        <ul className="space-y-0.5">
+                          {smartPastePreview.bookingLinks.map((bl, i) => (
+                            <li key={i} className="text-gray-800 text-xs">
+                              <strong>{bl.year}:</strong> {bl.urls.join(" · ")}
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                     )}
                     {smartPastePreview.line && (
@@ -1415,6 +1507,71 @@ export default function TourForm(): JSX.Element {
                 />
                 <p className="text-xs text-gray-500 mt-1">Paste the FlippingBook link (flipbook viewer) for this tour — it will be used instead of a raw PDF file.</p>
               </div>
+
+              {/* ── Year-tagged Booking Links ─────────────────────────────────── */}
+              <div className="md:col-span-3">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Year-tagged Booking Links
+                  </label>
+                  <button
+                    type="button"
+                    onClick={addBookingLink}
+                    className="text-xs px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold flex items-center gap-1 transition-colors"
+                  >
+                    <Plus size={12} /> Add Year
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mb-3">
+                  Add booking / flipbook links grouped by year (e.g. "Links for 2026: url1, url2"). Parsed automatically from Smart Paste.
+                </p>
+                {formData.bookingLinks.length === 0 ? (
+                  <p className="text-gray-400 text-sm italic">No year-tagged links yet — use Smart Paste or click "Add Year".</p>
+                ) : (
+                  <div className="space-y-3">
+                    {formData.bookingLinks.map((bl, li) => (
+                      <div key={li} className="border border-blue-200 rounded-lg p-3 bg-blue-50 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-blue-700 w-10">Year</span>
+                          <input
+                            type="text"
+                            value={bl.year}
+                            onChange={e => updateBookingLinkYear(li, e.target.value)}
+                            className="w-20 border border-blue-300 rounded px-2 py-1 text-sm bg-white"
+                            placeholder="2026"
+                          />
+                        </div>
+                        {bl.urls.map((url, ui) => (
+                          <div key={ui} className="flex items-center gap-2">
+                            <span className="text-xs text-blue-500 w-10 flex-shrink-0">Link {ui + 1}</span>
+                            <input
+                              type="url"
+                              value={url}
+                              onChange={e => updateBookingLinkUrl(li, ui, e.target.value)}
+                              className="flex-1 border border-blue-300 rounded px-2 py-1 text-sm bg-white"
+                              placeholder="https://bit.ly/..."
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeBookingLinkUrl(li, ui)}
+                              className="text-red-400 hover:text-red-600 text-xs font-medium flex-shrink-0"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => addBookingLinkUrl(li)}
+                          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                          + Add another URL for {bl.year}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -1718,6 +1875,21 @@ export default function TourForm(): JSX.Element {
                           Promo: {ot.promoValue}% off → ₱{ot.regularPrice !== "" ? Math.round(Number(ot.regularPrice) * (1 - Number(ot.promoValue) / 100)).toLocaleString() : "—"}
                         </span>
                       )}
+                    </div>
+
+                    {/* Flipbook link for this individual optional tour */}
+                    <div className="pt-1">
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">
+                        Flipbook / Itinerary Link (optional)
+                      </label>
+                      <input
+                        type="url"
+                        value={ot.flipbookUrl ?? ""}
+                        onChange={e => updateOptionalTour(idx, "flipbookUrl", e.target.value)}
+                        placeholder="https://bit.ly/..."
+                        className="w-full border rounded px-3 py-2 text-sm"
+                      />
+                      <p className="text-xs text-gray-400 mt-0.5">Shown as a "View Details" button next to this optional tour on the tour detail page.</p>
                     </div>
                   </div>
                 ))

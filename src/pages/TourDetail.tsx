@@ -459,7 +459,23 @@ useEffect(() => {
             </a>
           </div>
         )}
-
+        {/* Year-tagged booking links */}
+        {tour && Array.isArray((tour as Tour & { bookingLinks?: { year: string; urls: string[] }[] }).bookingLinks) &&
+         (tour as Tour & { bookingLinks?: { year: string; urls: string[] }[] }).bookingLinks!.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {(tour as Tour & { bookingLinks?: { year: string; urls: string[] }[] }).bookingLinks!.map((bl, i) => (
+              <div key={i} className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-gray-500 font-medium">{bl.year}:</span>
+                {bl.urls.map((url, j) => (
+                  <a key={j} href={url} target="_blank" rel="noopener noreferrer"
+                    className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold transition-colors">
+                    Link {j + 1}
+                  </a>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
         {compact ? (
           <div className="mt-3 space-y-2">
             <div className="flex gap-2">
@@ -1000,7 +1016,7 @@ useEffect(() => {
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
-                  Extensions
+                  Add-ons &amp; Freebies
                 </span>
                 {activeTab === "extensions" && (
                   <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-full animate-scale-in" />
@@ -1093,9 +1109,75 @@ useEffect(() => {
                 </div>
               )}
               {activeTab === "extensions" && (
-                <div className="bg-white border-2 border-gray-200 rounded-lg p-6 animate-fade-in-up shadow-lg">
-                  <h3 className="text-xl font-semibold mb-4 text-gray-900 animate-slide-in-left">Extensions</h3>
-                  <p className="text-gray-700">Optional extensions (e.g., pre/post stays) are available on some departures.</p>
+                <div className="bg-white border-2 border-gray-200 rounded-lg p-6 animate-fade-in-up shadow-lg space-y-6">
+                  {/* Optional Tours / Add-ons */}
+                  {tour && Array.isArray((tour as Tour).optionalTours) && (tour as Tour).optionalTours!.length > 0 && (
+                    <div>
+                      <h3 className="text-xl font-semibold mb-4 text-gray-900 animate-slide-in-left">Optional Tours &amp; Excursions</h3>
+                      <div className="space-y-3">
+                        {(tour as Tour).optionalTours!.map((ot, i) => {
+                          const promoPrice = ot.promoEnabled
+                            ? ot.promoType === 'flat'
+                              ? ot.promoValue
+                              : Math.round(ot.regularPrice * (1 - ot.promoValue / 100))
+                            : null;
+                          return (
+                            <div key={i} className="flex items-start justify-between p-4 border border-orange-200 rounded-xl bg-orange-50 gap-3">
+                              <div className="flex-1">
+                                <div className="text-xs text-orange-600 font-semibold uppercase tracking-wide mb-0.5">Day {ot.day}</div>
+                                <div className="font-semibold text-gray-900">{ot.title}</div>
+                                <div className="mt-1 flex items-center gap-2 flex-wrap">
+                                  {ot.regularPrice > 0 && (
+                                    <span className="text-sm text-gray-600">
+                                      {promoPrice !== null ? <span className="line-through">₱{ot.regularPrice.toLocaleString()}</span> : <span>₱{ot.regularPrice.toLocaleString()}</span>}
+                                    </span>
+                                  )}
+                                  {ot.promoEnabled && promoPrice !== null && (
+                                    <span className="text-sm font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+                                      ₱{promoPrice.toLocaleString()} promo
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              {(ot as typeof ot & { flipbookUrl?: string }).flipbookUrl && (
+                                <a
+                                  href={(ot as typeof ot & { flipbookUrl?: string }).flipbookUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex-shrink-0 text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
+                                >
+                                  View Details
+                                </a>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Full Cash Payment Freebies */}
+                  {tour && Array.isArray((tour as Tour).cashFreebies) && (tour as Tour).cashFreebies!.length > 0 && (
+                    <div>
+                      <h3 className="text-xl font-semibold mb-4 text-gray-900 animate-slide-in-left">Full Cash Payment Freebies</h3>
+                      <ul className="space-y-2">
+                        {(tour as Tour).cashFreebies!.map((f, i) => (
+                          <li key={i} className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <span className="text-green-600 text-lg">{f.type === 'free' ? '🎁' : '💸'}</span>
+                            <span className="text-sm text-gray-800">
+                              {f.type === 'percent_off' && f.value ? <strong>{f.value}% off</strong> : <strong>Free</strong>}
+                              {' '}{f.label}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {!(Array.isArray((tour as Tour).optionalTours) && (tour as Tour).optionalTours!.length > 0) &&
+                   !(Array.isArray((tour as Tour).cashFreebies) && (tour as Tour).cashFreebies!.length > 0) && (
+                    <p className="text-gray-500 text-sm">No optional add-ons or freebies listed for this tour yet.</p>
+                  )}
                 </div>
               )}
               {activeTab === "details" && (
@@ -1103,7 +1185,33 @@ useEffect(() => {
                   <h3 className="text-xl font-semibold mb-4 text-gray-900 animate-slide-in-left">Tour details</h3>
                   <p className="text-gray-700">Practical information, inclusion/exclusion, activity level and more.</p>
 
-                  {/* If flipbook is available show it here too */}
+                  {/* Booking Links by Year */}
+                  {tour && Array.isArray((tour as Tour & { bookingLinks?: { year: string; urls: string[] }[] }).bookingLinks) &&
+                   (tour as Tour & { bookingLinks?: { year: string; urls: string[] }[] }).bookingLinks!.length > 0 && (
+                    <div className="mt-5">
+                      <h4 className="text-sm text-gray-900 mb-3 font-semibold">Booking Links</h4>
+                      <div className="space-y-3">
+                        {(tour as Tour & { bookingLinks?: { year: string; urls: string[] }[] }).bookingLinks!.map((bl, i) => (
+                          <div key={i} className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div className="text-xs font-bold text-blue-700 mb-2">{bl.year}</div>
+                            <div className="flex flex-wrap gap-2">
+                              {bl.urls.map((url, j) => (
+                                <a key={j} href={url} target="_blank" rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors">
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                  </svg>
+                                  Link {j + 1}
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* If single flipbook is available show it here too */}
                   {tour && tour.bookingPdfUrl && (
                     <div className="mt-4">
                       <h4 className="text-sm text-gray-900 mb-2 font-medium">Flipbook</h4>

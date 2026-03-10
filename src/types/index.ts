@@ -47,6 +47,7 @@ export type OptionalTour = {
   promoEnabled: boolean; // Whether a promo price is active
   promoType: "flat" | "percent"; // "flat" = fixed PHP amount, "percent" = % off regular price
   promoValue: number;    // e.g. 15000 (if flat) or 50 (if 50% off)
+  flipbookUrl?: string;  // Optional flipbook/itinerary link for this specific optional tour
 };
 
 /** A freebie item unlocked when the customer pays in full cash */
@@ -85,6 +86,8 @@ export type Tour = {
   // Sale fields
   isSaleEnabled?: boolean;
   saleEndDate?: string | null;
+  // Year-tagged booking/flipbook links e.g. [{ year: "2026", urls: ["https://..."] }]
+  bookingLinks?: { year: string; urls: string[] }[];
   // Optional daily excursions available for add-on booking
   optionalTours?: OptionalTour[];
   // Freebies unlocked on full cash payment
