@@ -43,6 +43,33 @@ type ExtendedTour = Tour & {
   isSaleEnabled?: boolean;
   saleEndDate?: string | null;
   allowsDownpayment?: boolean;
+  // Optional day-specific excursion add-ons
+  optionalTours?: {
+    day: number;
+    title: string;
+    regularPrice: number;
+    promoEnabled: boolean;
+    promoType: "flat" | "percent";
+    promoValue: number;
+  }[];
+  // Freebies shown when customer pays in full
+  cashFreebies?: {
+    label: string;
+    type: "free" | "percent_off";
+    value?: number;
+  }[];
+  // Payment rules
+  fixedDownpaymentAmount?: number;
+  balanceDueDaysBeforeTravel?: number;
+  // Departure dates with per-date pricing (typed here for convenience)
+  departureDates?: (string | {
+    start: string;
+    end: string;
+    price?: number;
+    isAvailable?: boolean;
+    maxCapacity?: number;
+    currentBookings?: number;
+  })[];
 };
 
 function getEffectivePriceForTour(tourData: ExtendedTour): number {
@@ -187,6 +214,9 @@ export default function Booking(): JSX.Element {
   // Installment plan configuration
   const [installmentMonths, setInstallmentMonths] = useState<number>(10); // Default 10 months (max 10)
   const [customInstallmentAmount, setCustomInstallmentAmount] = useState<number | null>(null);
+
+  // Selected optional tours (indices into tour.optionalTours array)
+  const [selectedOptionalTourIndices, setSelectedOptionalTourIndices] = useState<Set<number>>(new Set<number>());
   
   // Auto-check appointment if cash-appointment payment is selected
   useEffect(() => {
@@ -252,10 +282,51 @@ export default function Booking(): JSX.Element {
   );
   
   // Combined price per person (base tour + custom routes)
+  // Honour per-departure-date price override when user selects a specific date
+  const dateEffectivePerPerson = useMemo(() => {
+    if (!tour || !selectedDate) return perPerson ?? 0;
+    const departureDates = (tour as ExtendedTour).departureDates ?? [];
+    for (const dd of departureDates) {
+      if (typeof dd !== "string" && typeof dd.price === "number") {
+        const ddValue = `${dd.start} - ${dd.end}`;
+        if (selectedDate === ddValue || selectedDate.startsWith(ddValue)) {
+          return dd.price;
+        }
+      }
+    }
+    return perPerson ?? 0;
+  }, [tour, selectedDate, perPerson]);
+
   const combinedPerPerson = useMemo(
-    () => (perPerson ?? 0) + customRoutesTotalPerPerson,
-    [perPerson, customRoutesTotalPerPerson]
+    () => dateEffectivePerPerson + customRoutesTotalPerPerson,
+    [dateEffectivePerPerson, customRoutesTotalPerPerson]
   );
+
+  // Optional tours total per person (selected add-on excursions)
+  const isSaleActive = useMemo(
+    () =>
+      !!(tour?.isSaleEnabled &&
+        (!tour.saleEndDate || new Date(tour.saleEndDate) > new Date())),
+    [tour]
+  );
+
+  const optionalToursTotalPerPerson = useMemo(() => {
+    const optTours = (tour as ExtendedTour | null)?.optionalTours;
+    if (!optTours || selectedOptionalTourIndices.size === 0) return 0;
+    let sum = 0;
+    selectedOptionalTourIndices.forEach(idx => {
+      const ot = optTours[idx];
+      if (!ot) return;
+      if (ot.promoEnabled && isSaleActive) {
+        sum += ot.promoType === "flat"
+          ? ot.promoValue
+          : Math.round(ot.regularPrice * (1 - ot.promoValue / 100));
+      } else {
+        sum += ot.regularPrice;
+      }
+    });
+    return sum;
+  }, [tour, selectedOptionalTourIndices, isSaleActive]);
   
   // Add-on pricing — fetched from admin settings (falls back to defaults)
   const [VISA_ASSISTANCE_FEE, setVisaFee] = useState<number>(10000);
@@ -296,16 +367,36 @@ export default function Booking(): JSX.Element {
   // Total for all passengers + selected add-ons
   const total = useMemo(
     () =>
-      combinedPerPerson * Math.max(1, passengers) +
+      (combinedPerPerson + optionalToursTotalPerPerson) * Math.max(1, passengers) +
       (needsVisaAssistance ? VISA_ASSISTANCE_FEE * Math.max(1, passengers) : 0) +
       (needsTravelInsurance ? INSURANCE_FEE * Math.max(1, passengers) : 0) +
       (needsPassportAssistance ? PASSPORT_ASSISTANCE_FEE * Math.max(1, passengers) : 0),
-    [combinedPerPerson, passengers, needsVisaAssistance, needsTravelInsurance, needsPassportAssistance, VISA_ASSISTANCE_FEE, INSURANCE_FEE, PASSPORT_ASSISTANCE_FEE]
+    [combinedPerPerson, optionalToursTotalPerPerson, passengers, needsVisaAssistance, needsTravelInsurance, needsPassportAssistance, VISA_ASSISTANCE_FEE, INSURANCE_FEE, PASSPORT_ASSISTANCE_FEE]
+  );
+
+  // Fixed downpayment amount (from tour config) — overrides percentage-based downpayment
+  const fixedDownpaymentAmountConfig = useMemo(
+    () =>
+      typeof (tour as ExtendedTour | null)?.fixedDownpaymentAmount === "number"
+        ? (tour as ExtendedTour).fixedDownpaymentAmount!
+        : null,
+    [tour]
+  );
+  // Days before travel that balance is due
+  const balanceDueDaysBeforeTravel = useMemo(
+    () => (tour as ExtendedTour | null)?.balanceDueDaysBeforeTravel ?? 90,
+    [tour]
   );
   
   // Calculate payment amounts based on payment type with safety checks
   const safePercentage = Math.max(10, Math.min(90, downpaymentPercentage)); // Clamp between 10-90%
-  const downpaymentAmount = useMemo(() => Math.round(total * (safePercentage / 100)), [safePercentage, total]);
+  const downpaymentAmount = useMemo(
+    () =>
+      fixedDownpaymentAmountConfig !== null
+        ? Math.min(fixedDownpaymentAmountConfig, total) // use configured fixed amount
+        : Math.round(total * (safePercentage / 100)),   // fall back to percentage
+    [fixedDownpaymentAmountConfig, total, safePercentage]
+  );
   const remainingBalance = useMemo(() => Math.max(0, total - downpaymentAmount), [total, downpaymentAmount]); // Ensure non-negative
   const paymentAmount = useMemo(
     () => (paymentType === "cash-appointment" ? 0 : paymentType === "downpayment" ? downpaymentAmount : total),
@@ -870,6 +961,14 @@ export default function Booking(): JSX.Element {
                         setInstallmentMonths={setInstallmentMonths}
                         customInstallmentAmount={customInstallmentAmount}
                         setCustomInstallmentAmount={setCustomInstallmentAmount}
+                        optionalToursList={(tour as ExtendedTour)?.optionalTours}
+                        selectedOptionalTourIndices={selectedOptionalTourIndices}
+                        setSelectedOptionalTourIndices={setSelectedOptionalTourIndices}
+                        optionalToursTotalPerPerson={optionalToursTotalPerPerson}
+                        cashFreebies={(tour as ExtendedTour)?.cashFreebies}
+                        isSaleActive={isSaleActive}
+                        fixedDownpaymentAmount={fixedDownpaymentAmountConfig}
+                        balanceDueDaysBeforeTravel={balanceDueDaysBeforeTravel}
                       />
                     </Suspense>
                   )}

@@ -57,6 +57,28 @@ export type Tour = {
   isSaleEnabled?: boolean;
   saleEndDate?: string | null;
 
+  // Optional add-on excursions per day
+  optionalTours?: {
+    day: number;
+    title: string;
+    regularPrice: number;
+    promoEnabled: boolean;
+    promoType: "flat" | "percent";
+    promoValue: number;
+  }[];
+
+  // Full cash payment freebies
+  cashFreebies?: {
+    label: string;
+    type: "free" | "percent_off";
+    value?: number;
+  }[];
+
+  // Reservation payment rules
+  fixedDownpaymentAmount?: number;     // e.g. 50000 PHP — fixed downpayment amount
+  balanceDueDaysBeforeTravel?: number; // e.g. 90 days before departure
+  allowsDownpayment?: boolean;
+
   // allow future fields without breaking consumers
   [key: string]: unknown;
 };

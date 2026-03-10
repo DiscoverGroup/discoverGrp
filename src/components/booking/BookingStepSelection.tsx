@@ -1,5 +1,5 @@
 import React from "react";
-import type { Tour } from "../../types";
+import type { Tour, OptionalTour, CashFreebie } from "../../types";
 
 type PaymentType = "full" | "downpayment" | "cash-appointment";
 
@@ -30,6 +30,18 @@ interface BookingStepSelectionProps {
   setInstallmentMonths?: (value: number) => void;
   customInstallmentAmount?: number | null;
   setCustomInstallmentAmount?: (value: number | null) => void;
+  // Optional day excursions
+  optionalToursList?: OptionalTour[];
+  selectedOptionalTourIndices?: Set<number>;
+  setSelectedOptionalTourIndices?: (indices: Set<number>) => void;
+  optionalToursTotalPerPerson?: number;
+  // Full-cash payment freebies
+  cashFreebies?: CashFreebie[];
+  // Sale / promo flag (for optional tour promo pricing)
+  isSaleActive?: boolean;
+  // Payment rules from tour config
+  fixedDownpaymentAmount?: number | null;
+  balanceDueDaysBeforeTravel?: number;
 }
 
 export default function BookingStepSelection({
@@ -57,7 +69,35 @@ export default function BookingStepSelection({
   setInstallmentMonths,
   customInstallmentAmount,
   setCustomInstallmentAmount,
+  optionalToursList,
+  selectedOptionalTourIndices,
+  setSelectedOptionalTourIndices,
+  optionalToursTotalPerPerson = 0,
+  cashFreebies,
+  isSaleActive = false,
+  fixedDownpaymentAmount,
+  balanceDueDaysBeforeTravel = 90,
 }: BookingStepSelectionProps) {
+  // Helper: effective price for an optional tour
+  function getOptionalTourPrice(ot: OptionalTour): number {
+    if (ot.promoEnabled && isSaleActive) {
+      return ot.promoType === "flat"
+        ? ot.promoValue
+        : Math.round(ot.regularPrice * (1 - ot.promoValue / 100));
+    }
+    return ot.regularPrice;
+  }
+
+  function toggleOptionalTour(idx: number) {
+    if (!setSelectedOptionalTourIndices || !selectedOptionalTourIndices) return;
+    const next = new Set(selectedOptionalTourIndices);
+    if (next.has(idx)) {
+      next.delete(idx);
+    } else {
+      next.add(idx);
+    }
+    setSelectedOptionalTourIndices(next);
+  }
   return (
     <section aria-labelledby="review-heading">
       <div className="flex items-center gap-3 mb-6 section-header">
@@ -114,13 +154,29 @@ export default function BookingStepSelection({
                   typeof dateRange === "string"
                     ? dateRange
                     : `${dateRange.start} - ${dateRange.end}`;
-                const label =
+                const dateLabel =
                   typeof dateRange === "string"
                     ? dateRange
-                    : `${new Date(dateRange.start).toLocaleDateString()} - ${new Date(dateRange.end).toLocaleDateString()}`;
+                    : `${new Date(dateRange.start).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })} \u2013 ${new Date(dateRange.end).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}`;
+                const priceOverride =
+                  typeof dateRange !== "string" && typeof dateRange.price === "number"
+                    ? dateRange.price
+                    : null;
+                const isUnavailable =
+                  typeof dateRange !== "string" && dateRange.isAvailable === false;
+                const label = priceOverride
+                  ? `${dateLabel}  \u2014  \u20b1${priceOverride.toLocaleString()}`
+                  : dateLabel;
                 return (
-                  <option key={index} value={value} className="bg-white text-gray-900 font-medium">
-                    {label}
+                  <option
+                    key={index}
+                    value={value}
+                    disabled={isUnavailable}
+                    className={`bg-white font-medium ${
+                      isUnavailable ? "text-gray-400" : "text-gray-900"
+                    }`}
+                  >
+                    {isUnavailable ? `${label} (Fully Booked)` : label}
                   </option>
                 );
               })
@@ -152,16 +208,84 @@ export default function BookingStepSelection({
       </div>
       <div className="mt-6 p-5 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border-2 border-purple-200">
         <div className="flex items-center justify-between mb-2">
-          <div className="text-sm text-gray-700">Price per person</div>
+          <div className="text-sm text-gray-700">Base price per person</div>
           <div className="text-xl font-bold text-gray-900">{formatCurrencyPHP(perPerson)}</div>
         </div>
+        {optionalToursTotalPerPerson > 0 && (
+          <div className="flex items-center justify-between py-1">
+            <div className="text-sm text-orange-700">Optional tours add-on / person</div>
+            <div className="text-base font-semibold text-orange-700">+{formatCurrencyPHP(optionalToursTotalPerPerson)}</div>
+          </div>
+        )}
         <div className="flex items-center justify-between pt-3 border-t-2 border-purple-200">
-          <div className="text-base font-semibold text-gray-900">Total Amount</div>
+          <div className="text-base font-semibold text-gray-900">Total Amount ({passengers} pax)</div>
           <div className="text-2xl font-bold price-highlight">{formatCurrencyPHP(total)}</div>
         </div>
       </div>
 
-      <div className="mt-8 p-6 info-card">
+      {/* ─── Optional Tours / Excursions ──────────────────────────────── */}
+      {optionalToursList && optionalToursList.length > 0 && (
+        <div className="mt-6 p-5 bg-orange-50 border-2 border-orange-200 rounded-xl">
+          <div className="flex items-center gap-3 mb-4">
+            <svg className="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            <h3 className="text-lg font-bold text-gray-900">Optional Excursions / Add-ons</h3>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">Select any optional tours you'd like to add to your package. Prices are per person.</p>
+          <div className="space-y-3">
+            {optionalToursList.map((ot, idx) => {
+              const price = getOptionalTourPrice(ot);
+              const isSelected = selectedOptionalTourIndices?.has(idx) ?? false;
+              const hasPromo = ot.promoEnabled && isSaleActive && price < ot.regularPrice;
+              return (
+                <label
+                  key={idx}
+                  className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                    isSelected
+                      ? "border-orange-400 bg-orange-50"
+                      : "border-gray-200 bg-white hover:border-orange-300"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggleOptionalTour(idx)}
+                    className="w-5 h-5 text-orange-500 border-gray-300 rounded focus:ring-orange-400 flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-gray-900">
+                      Day {ot.day} — {ot.title}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      {hasPromo ? (
+                        <>
+                          <span className="text-sm text-gray-400 line-through">{formatCurrencyPHP(ot.regularPrice)}</span>
+                          <span className="text-sm font-bold text-green-600">{formatCurrencyPHP(price)}</span>
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                            {ot.promoType === "percent" ? `${ot.promoValue}% OFF` : "PROMO"}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-sm font-semibold text-gray-700">{formatCurrencyPHP(price)}/pax</span>
+                      )}
+                    </div>
+                  </div>
+                  {isSelected && (
+                    <span className="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded-full flex-shrink-0">Added</span>
+                  )}
+                </label>
+              );
+            })}
+          </div>
+          {selectedOptionalTourIndices && selectedOptionalTourIndices.size > 0 && (
+            <div className="mt-4 p-3 bg-orange-100 rounded-lg flex items-center justify-between">
+              <span className="text-sm font-semibold text-orange-800">{selectedOptionalTourIndices.size} optional tour(s) selected</span>
+              <span className="text-sm font-bold text-orange-900">+{formatCurrencyPHP(optionalToursTotalPerPerson)}/pax</span>
+            </div>
+          )}
+        </div>
+      )}
         <div className="flex items-center gap-3 mb-5">
           <div className="p-2 bg-yellow-100 rounded-lg">
             <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -180,7 +304,7 @@ export default function BookingStepSelection({
               onChange={(e) => setPaymentType(e.target.value as PaymentType)}
               className="mt-1 w-5 h-5 text-blue-600 focus:ring-blue-500 flex-shrink-0"
             />
-            <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -191,6 +315,24 @@ export default function BookingStepSelection({
                 Pay the complete amount now: <span className="font-bold text-green-600">{formatCurrencyPHP(total)}</span>
               </div>
               <div className="mt-2 text-xs text-gray-600">✓ Instant confirmation</div>
+              {/* Full Cash Freebies */}
+              {paymentType === "full" && cashFreebies && cashFreebies.length > 0 && (
+                <div className="mt-3 p-3 bg-green-50 border border-green-300 rounded-xl">
+                  <div className="text-xs font-bold text-green-800 uppercase tracking-wide mb-2">🎁 Full Cash Payment Freebies</div>
+                  <ul className="space-y-1">
+                    {cashFreebies.map((fb, idx) => (
+                      <li key={idx} className="flex items-center gap-2 text-xs text-green-800">
+                        <svg className="w-3.5 h-3.5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        {fb.type === "percent_off" && fb.value
+                          ? `${fb.value}% off — ${fb.label}`
+                          : `FREE — ${fb.label}`}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </label>
 
@@ -210,64 +352,77 @@ export default function BookingStepSelection({
                     <svg className="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <div className="text-gray-900 font-bold text-lg">Downpayment (Online Payment)</div>
+                    <div className="text-gray-900 font-bold text-lg">Downpayment (Regular Rate)</div>
                   </div>
                   <div className="text-sm text-gray-700">
-                    Pay partial amount now, remaining before departure
+                    {fixedDownpaymentAmount
+                      ? <>Open for <strong>{formatCurrencyPHP(fixedDownpaymentAmount)} downpayment</strong>. Balance due {balanceDueDaysBeforeTravel} days before travel or upon visa release.</>
+                      : <>Pay partial amount now, balance settled {balanceDueDaysBeforeTravel} days before departure or upon visa release.</>}
                   </div>
                   <div className="mt-2 text-xs text-gray-600">✓ Flexible payment terms</div>
                 </div>
               </label>
               {paymentType === "downpayment" && (
                 <div className="ml-8 p-4 bg-gray-50 border-2 border-gray-200 rounded-lg space-y-4">
-                  <div>
-                    <label className="block text-gray-700 text-sm font-medium mb-2">Select Payment Terms</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
-                      {[
-                        { value: "30", label: "30%" },
-                        { value: "50", label: "50%" },
-                        { value: "70", label: "70%" }
-                      ].map((term) => (
-                        <button
-                          key={term.value}
-                          type="button"
-                          onClick={() => {
-                            setCustomPaymentTerms(term.value);
-                            setDownpaymentPercentage(Number(term.value));
-                          }}
-                          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                            customPaymentTerms === term.value
-                              ? "bg-blue-500 text-white"
-                              : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-                          }`}
-                        >
-                          {term.label}
-                        </button>
-                      ))}
+                  {fixedDownpaymentAmount ? (
+                    /* Fixed downpayment: show the configured amount, no % picker */
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="text-sm font-semibold text-blue-800 mb-1">Fixed Downpayment Amount</div>
+                      <div className="text-2xl font-bold text-blue-900">{formatCurrencyPHP(fixedDownpaymentAmount)}</div>
+                      <p className="text-xs text-blue-700 mt-1">
+                        This is the required downpayment to secure your booking. Balance of {formatCurrencyPHP(Math.max(0, total - fixedDownpaymentAmount))} is due {balanceDueDaysBeforeTravel} days before travel or upon visa release.
+                      </p>
                     </div>
+                  ) : (
+                    <div>
+                      <label className="block text-gray-700 text-sm font-medium mb-2">Select Payment Terms</label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+                        {[
+                          { value: "30", label: "30%" },
+                          { value: "50", label: "50%" },
+                          { value: "70", label: "70%" }
+                        ].map((term) => (
+                          <button
+                            key={term.value}
+                            type="button"
+                            onClick={() => {
+                              setCustomPaymentTerms(term.value);
+                              setDownpaymentPercentage(Number(term.value));
+                            }}
+                            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                              customPaymentTerms === term.value
+                                ? "bg-blue-500 text-white"
+                                : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                            }`}
+                          >
+                            {term.label}
+                          </button>
+                        ))}
+                      </div>
 
-                    <div className="flex items-center gap-2">
-                      <label className="text-gray-700 font-medium text-sm">Custom:</label>
-                      <input
-                        type="number"
-                        min="10"
-                        max="90"
-                        value={customPaymentTerms === "30" || customPaymentTerms === "50" || customPaymentTerms === "70" ? "" : customPaymentTerms}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (value === "" || (Number(value) >= 10 && Number(value) <= 90)) {
-                            setCustomPaymentTerms(value);
-                            if (value !== "") {
-                              setDownpaymentPercentage(Number(value));
+                      <div className="flex items-center gap-2">
+                        <label className="text-gray-700 font-medium text-sm">Custom:</label>
+                        <input
+                          type="number"
+                          min="10"
+                          max="90"
+                          value={customPaymentTerms === "30" || customPaymentTerms === "50" || customPaymentTerms === "70" ? "" : customPaymentTerms}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === "" || (Number(value) >= 10 && Number(value) <= 90)) {
+                              setCustomPaymentTerms(value);
+                              if (value !== "") {
+                                setDownpaymentPercentage(Number(value));
+                              }
                             }
-                          }
-                        }}
-                        placeholder="10-90"
-                        className="w-20 rounded px-3 py-2 bg-white border-2 border-gray-300 text-gray-900 text-sm"
-                      />
-                      <span className="text-gray-600 text-sm">%</span>
+                          }}
+                          placeholder="10-90"
+                          className="w-20 rounded px-3 py-2 bg-white border-2 border-gray-300 text-gray-900 text-sm"
+                        />
+                        <span className="text-gray-600 text-sm">%</span>
+                      </div>
                     </div>
-                  </div>                    
+                  )}
                     {/* Installment Plan Configuration */}
                     <div className="pt-4 border-t-2 border-gray-300">
                       <label className="block text-gray-700 text-sm font-bold mb-3">➡ Configure Payment Schedule</label>
@@ -358,12 +513,16 @@ export default function BookingStepSelection({
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <div className="flex-1">
-                          <div className="text-sm font-semibold text-orange-200 mb-1">Payment Terms</div>
+                          <div className="text-sm font-semibold text-orange-200 mb-1">Regular Rate – Payment Terms</div>
                           <ul className="text-xs text-gray-700 space-y-1 list-disc list-inside">
-                            <li>Pay downpayment now to secure your booking</li>
-                            <li>Remaining balance due <strong>30 days before departure</strong></li>
-                            <li>Payment reminders will be sent via email & SMS</li>
-                            <li>Flexible payment options for remaining balance</li>
+                            {fixedDownpaymentAmount ? (
+                              <li>Open for <strong>₱{fixedDownpaymentAmount.toLocaleString()} downpayment</strong> to secure your booking</li>
+                            ) : (
+                              <li>Pay downpayment now to secure your booking</li>
+                            )}
+                            <li>Balance must be settled not later than <strong>{balanceDueDaysBeforeTravel} days before travel date</strong></li>
+                            <li>Balance can also be settled <strong>upon release of visa result</strong></li>
+                            <li>Payment reminders will be sent via email &amp; SMS</li>
                           </ul>
                         </div>
                       </div>
@@ -372,7 +531,7 @@ export default function BookingStepSelection({
                       <svg className="w-3 h-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      <span>Remaining balance must be paid at least 7 days before departure</span>
+                      <span>Balance must be paid at least {balanceDueDaysBeforeTravel} days before departure or upon visa release, whichever comes first.</span>
                     </div>
                   </div>
                 </div>
@@ -427,7 +586,6 @@ export default function BookingStepSelection({
             </div>
           )}
         </div>
-      </div>
 
       {error && (
         <div className="mt-6 p-4 bg-red-500/10 border-2 border-red-500/30 rounded-xl flex items-center gap-3">

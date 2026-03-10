@@ -39,6 +39,23 @@ export type DepartureDate = {
   price?: number; // Optional: override price for specific departure
 };
 
+/** A single optional excursion/activity available on a specific tour day */
+export type OptionalTour = {
+  day: number;           // The itinerary day number (e.g. 4 = Day 4)
+  title: string;         // e.g. "Disneyland Paris Tour"
+  regularPrice: number;  // Full price in PHP
+  promoEnabled: boolean; // Whether a promo price is active
+  promoType: "flat" | "percent"; // "flat" = fixed PHP amount, "percent" = % off regular price
+  promoValue: number;    // e.g. 15000 (if flat) or 50 (if 50% off)
+};
+
+/** A freebie item unlocked when the customer pays in full cash */
+export type CashFreebie = {
+  label: string;                  // e.g. "50% off Visa Processing and Appointment Fee"
+  type: "free" | "percent_off";   // Describes the benefit kind
+  value?: number;                 // e.g. 50 for 50% off; omit for fully free items
+};
+
 export type Tour = {
   id: string;
   slug: string;
@@ -68,6 +85,14 @@ export type Tour = {
   // Sale fields
   isSaleEnabled?: boolean;
   saleEndDate?: string | null;
+  // Optional daily excursions available for add-on booking
+  optionalTours?: OptionalTour[];
+  // Freebies unlocked on full cash payment
+  cashFreebies?: CashFreebie[];
+  // Reservation payment rules
+  fixedDownpaymentAmount?: number;        // e.g. 50000 — fixed PHP downpayment (overrides % when set)
+  balanceDueDaysBeforeTravel?: number;    // e.g. 90 — days before departure that balance is due
+  allowsDownpayment?: boolean;
   [key: string]: unknown;
 };
 
