@@ -907,6 +907,7 @@ useEffect(() => {
               <div className="rounded-xl overflow-hidden shadow-2xl bg-black w-full">
                 <video
                   src={tour.video_url}
+                  poster={tour.images?.[0] ?? undefined}
                   controls
                   playsInline
                   preload="metadata"
