@@ -45,7 +45,6 @@ export default function TourDetailNew() {
     );
   }
 
-  const images: string[] = (tour.galleryImages || tour.images || []) as string[];
   const regularPrice = tour.regularPricePerPerson || 0;
   const promoPrice = tour.promoPricePerPerson;
   const displayPrice = promoPrice && promoPrice < regularPrice ? promoPrice : regularPrice;
@@ -171,37 +170,6 @@ export default function TourDetailNew() {
                 </span>
               </div>
             </div>
-          </motion.div>
-        )}
-
-        {/* Photo Strip */}
-        {images.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.98 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true, amount: 0.2 }}
-            transition={{ duration: 0.5 }}
-            className="grid grid-cols-2 lg:grid-cols-4 gap-2 h-[140px] lg:h-[200px] mb-8 rounded-xl overflow-hidden"
-          >
-            {images.slice(0, 4).map((img, idx) => (
-              <motion.div
-                key={idx}
-                whileHover={{ scale: 1.05 }}
-                className="relative group cursor-pointer overflow-hidden"
-              >
-                <img
-                  src={img}
-                  alt={`${tour.title} ${idx + 1}`}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-all duration-300" />
-                {idx === 3 && images.length > 4 && (
-                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                    <span className="text-white font-semibold text-sm">+{images.length - 4} photos</span>
-                  </div>
-                )}
-              </motion.div>
-            ))}
           </motion.div>
         )}
 
