@@ -789,7 +789,6 @@ useEffect(() => {
                     alt={`${tour.title!} image ${carouselIndex! + 1}`}
                     className="w-full h-full object-cover transition-all duration-700 ease-out transform hover:scale-105"
                     loading="lazy"
-                    crossOrigin="anonymous"
                     onClick={() => openGallery(carouselIndex)}
                     style={{ cursor: "zoom-in" }}
                   />
