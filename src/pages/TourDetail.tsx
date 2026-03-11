@@ -888,8 +888,8 @@ useEffect(() => {
 
         {/* Tour Video Section - Full Width with animation */}
         {/* VIDEO DEBUG */}
-        {tour && console.log('[TourDetail] render check — video_url:', (tour as unknown as { video_url?: string }).video_url)}
-        {tour && (tour as unknown as { video_url?: string }).video_url && (
+        {tour && console.log('[TourDetail] render — video_url:', tour.video_url)}
+        {tour?.video_url && (
           <div className="mb-8 rounded-2xl overflow-hidden shadow-2xl bg-white border-2 border-gray-200 animate-scale-in stagger-4">
             <div className="p-6 lg:p-8">
               <div className="flex items-center gap-3 mb-6">
@@ -903,24 +903,20 @@ useEffect(() => {
                   <p className="text-gray-700 text-sm lg:text-base">Watch our exclusive video preview</p>
                 </div>
               </div>
-              
-              <div className="relative rounded-xl overflow-hidden shadow-2xl bg-black w-full" style={{ aspectRatio: '16/9' }}>
-                <video 
-                  src={(tour as unknown as { video_url?: string }).video_url}
-                  autoPlay
-                  loop
-                  muted
+
+              <div className="rounded-xl overflow-hidden shadow-2xl bg-black w-full">
+                <video
+                  src={tour.video_url}
+                  controls
                   playsInline
-                  className="absolute inset-0 w-full h-full object-cover"
-                  onError={(e) => console.error('[TourDetail] video load error:', e, 'src:', (tour as unknown as { video_url?: string }).video_url)}
-                  onLoadStart={() => console.log('[TourDetail] video onLoadStart — src:', (tour as unknown as { video_url?: string }).video_url)}
+                  preload="metadata"
+                  className="w-full max-h-[480px]"
+                  onError={(e) => console.error('[TourDetail] video error:', e, 'src:', tour.video_url)}
+                  onLoadStart={() => console.log('[TourDetail] video loadStart ✅ src:', tour.video_url)}
                   onCanPlay={() => console.log('[TourDetail] video canPlay ✅')}
                 >
                   Your browser does not support the video tag.
                 </video>
-                
-                {/* Content overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none" />
               </div>
 
               <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
