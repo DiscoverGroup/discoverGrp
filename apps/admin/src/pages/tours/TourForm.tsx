@@ -942,6 +942,7 @@ export default function TourForm(): JSX.Element {
         mainImage: undefined,
         galleryImages: undefined,
         relatedImages: undefined,
+        videoFile: undefined,
         regularPricePerPerson: formData.regularPricePerPerson === "" ? undefined : Number(formData.regularPricePerPerson),
         promoPricePerPerson: formData.promoPricePerPerson === "" ? undefined : Number(formData.promoPricePerPerson),
         basePricePerDay: formData.basePricePerDay === "" ? undefined : Number(formData.basePricePerDay),
