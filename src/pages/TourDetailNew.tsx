@@ -690,6 +690,36 @@ export default function TourDetailNew() {
           </div>
         </div>
 
+        {/* Tour Video Section */}
+        {tour.video_url && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="mt-12 border-t pt-12"
+          >
+            <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+              <span className="bg-yellow-400 p-2 rounded-xl">
+                <svg className="w-6 h-6 text-gray-900" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
+                </svg>
+              </span>
+              Experience This Tour
+            </h3>
+            <div className="rounded-2xl overflow-hidden shadow-xl bg-black">
+              <video
+                src={tour.video_url}
+                poster={(tour.images?.[0]) ?? undefined}
+                controls
+                playsInline
+                preload="metadata"
+                className="w-full max-h-[480px]"
+              />
+            </div>
+          </motion.div>
+        )}
+
         {/* Map Section */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
