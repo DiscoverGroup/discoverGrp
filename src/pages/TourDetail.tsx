@@ -116,6 +116,11 @@ function TourDetail() {
         const t = await fetchTourBySlug(slug);
         if (cancelled) return;
         setTour(t);
+        // ── VIDEO DEBUG ────────────────────────────────
+        console.log('[TourDetail] full tour object:', JSON.stringify(t, null, 2));
+        console.log('[TourDetail] video_url value:', (t as unknown as { video_url?: string })?.video_url);
+        console.log('[TourDetail] tour keys:', t ? Object.keys(t) : 'null');
+        // ───────────────────────────────────────────────
         if (t) {
           const defaultDate =
             t.travelWindow?.start ??
@@ -882,6 +887,8 @@ useEffect(() => {
         </div>
 
         {/* Tour Video Section - Full Width with animation */}
+        {/* VIDEO DEBUG */}
+        {tour && console.log('[TourDetail] render check — video_url:', (tour as unknown as { video_url?: string }).video_url)}
         {tour && (tour as unknown as { video_url?: string }).video_url && (
           <div className="mb-8 rounded-2xl overflow-hidden shadow-2xl bg-white border-2 border-gray-200 animate-scale-in stagger-4">
             <div className="p-6 lg:p-8">
@@ -905,6 +912,9 @@ useEffect(() => {
                   muted
                   playsInline
                   className="absolute inset-0 w-full h-full object-cover"
+                  onError={(e) => console.error('[TourDetail] video load error:', e, 'src:', (tour as unknown as { video_url?: string }).video_url)}
+                  onLoadStart={() => console.log('[TourDetail] video onLoadStart — src:', (tour as unknown as { video_url?: string }).video_url)}
+                  onCanPlay={() => console.log('[TourDetail] video canPlay ✅')}
                 >
                   Your browser does not support the video tag.
                 </video>
