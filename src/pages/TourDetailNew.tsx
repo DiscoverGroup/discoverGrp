@@ -194,6 +194,47 @@ export default function TourDetailNew() {
           ))}
         </motion.div>
 
+        {/* Cinematic Video Section */}
+        {tour.video_url && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 0.7 }}
+            className="relative mb-10 rounded-2xl overflow-hidden shadow-2xl bg-black group"
+          >
+            {/* 16:9 aspect wrapper */}
+            <div className="relative w-full" style={{ aspectRatio: '16/9' }}>
+              <video
+                src={tour.video_url}
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="auto"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              {/* Dark gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent pointer-events-none" />
+              {/* Bottom-left label */}
+              <div className="absolute bottom-0 left-0 p-5 lg:p-8 pointer-events-none">
+                <span className="inline-flex items-center gap-2 bg-yellow-400 text-gray-900 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest mb-3">
+                  <span className="w-2 h-2 rounded-full bg-gray-900 animate-pulse" />
+                  Live Preview
+                </span>
+                <h3 className="text-white text-xl lg:text-3xl font-bold drop-shadow-lg">{tour.title}</h3>
+                <p className="text-white/80 text-sm mt-1">{tour.line || 'Multiple Destinations'}</p>
+              </div>
+              {/* Top-right mute hint */}
+              <div className="absolute top-4 right-4 pointer-events-none">
+                <span className="bg-black/50 backdrop-blur-sm text-white/70 text-xs px-3 py-1 rounded-full">
+                  🔇 Muted · Tap for sound
+                </span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Left Content - 2 columns */}
@@ -690,35 +731,7 @@ export default function TourDetailNew() {
           </div>
         </div>
 
-        {/* Tour Video Section */}
-        {tour.video_url && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="mt-12 border-t pt-12"
-          >
-            <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-              <span className="bg-yellow-400 p-2 rounded-xl">
-                <svg className="w-6 h-6 text-gray-900" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
-                </svg>
-              </span>
-              Experience This Tour
-            </h3>
-            <div className="rounded-2xl overflow-hidden shadow-xl bg-black">
-              <video
-                src={tour.video_url}
-                poster={(tour.images?.[0]) ?? undefined}
-                controls
-                playsInline
-                preload="metadata"
-                className="w-full max-h-[480px]"
-              />
-            </div>
-          </motion.div>
-        )}
+
 
         {/* Map Section */}
         <motion.div 
