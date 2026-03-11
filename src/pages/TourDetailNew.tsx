@@ -133,68 +133,7 @@ export default function TourDetailNew() {
           </div>
         </motion.div>
 
-        {/* Image Gallery Grid */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true, amount: 0.2 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="grid grid-cols-1 lg:grid-cols-4 gap-2 h-[250px] lg:h-[400px] mb-8 rounded-xl overflow-hidden"
-        >
-          {/* Main large image */}
-          <motion.div 
-            whileHover={{ scale: 1.02 }}
-            transition={{ duration: 0.3 }}
-            className="col-span-1 lg:col-span-2 lg:row-span-2 relative group cursor-pointer overflow-hidden"
-          >
-            {images[0] ? (
-              <>
-                <img
-                  src={images[0]}
-                  alt={tour.title}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300" />
-              </>
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-blue-900 to-indigo-800 flex flex-col items-center justify-center gap-3 select-none">
-                <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center text-4xl font-bold text-white">
-                  {tour.title ? tour.title.charAt(0).toUpperCase() : "?"}
-                </div>
-                <p className="text-white font-semibold text-base px-8 text-center">{tour.title}</p>
-                <span className="text-white/60 text-xs uppercase tracking-widest">No image yet</span>
-              </div>
-            )}
-          </motion.div>
-          
-          {/* Smaller images */}
-          {images.slice(1, 5).map((img, idx) => (
-            <motion.div 
-              key={idx}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.3 + idx * 0.1 }}
-              whileHover={{ scale: 1.05 }}
-              className="hidden lg:block relative group cursor-pointer overflow-hidden"
-            >
-              <img
-                src={img}
-                alt={`${tour.title} ${idx + 2}`}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-              />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300" />
-              {idx === 3 && images.length > 5 && (
-                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                  <button className="text-white font-semibold hover:scale-110 transition-transform">
-                    Show all {images.length} photos
-                  </button>
-                </div>
-              )}
-            </motion.div>
-          ))}
-        </motion.div>
-
-        {/* Cinematic Video Section */}
+        {/* Cinematic Video Section — hero position */}
         {tour.video_url && (
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -232,6 +171,37 @@ export default function TourDetailNew() {
                 </span>
               </div>
             </div>
+          </motion.div>
+        )}
+
+        {/* Photo Strip */}
+        {images.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 0.5 }}
+            className="grid grid-cols-2 lg:grid-cols-4 gap-2 h-[140px] lg:h-[200px] mb-8 rounded-xl overflow-hidden"
+          >
+            {images.slice(0, 4).map((img, idx) => (
+              <motion.div
+                key={idx}
+                whileHover={{ scale: 1.05 }}
+                className="relative group cursor-pointer overflow-hidden"
+              >
+                <img
+                  src={img}
+                  alt={`${tour.title} ${idx + 1}`}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-all duration-300" />
+                {idx === 3 && images.length > 4 && (
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                    <span className="text-white font-semibold text-sm">+{images.length - 4} photos</span>
+                  </div>
+                )}
+              </motion.div>
+            ))}
           </motion.div>
         )}
 
