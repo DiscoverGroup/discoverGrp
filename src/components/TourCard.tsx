@@ -286,7 +286,7 @@ export default function TourCard({
             <span className="text-2xl font-bold text-gray-900">
               ₱{displayPrice?.toLocaleString() || 'N/A'}
             </span>
-            <span className="text-sm text-gray-500">/night</span>
+            <span className="text-sm text-gray-500">/person</span>
           </div>
           {originalPrice && (
             <div className="text-xs text-gray-400 line-through mt-1">
