@@ -139,7 +139,7 @@ export default function TourDetailNew() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.2 }}
             transition={{ duration: 0.7 }}
-            className="relative mb-8 -mx-4 lg:mx-0 rounded-none lg:rounded-2xl overflow-hidden shadow-2xl bg-black group"
+            className="relative mb-8 -mx-4 lg:mx-0 rounded-2xl overflow-hidden shadow-2xl bg-black group"
           >
             {/* 16:9 aspect wrapper */}
             <div className="relative w-full" style={{ aspectRatio: '16/9' }}>
