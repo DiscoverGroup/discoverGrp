@@ -91,7 +91,7 @@ export default function TourDetailNew() {
         </div>
       </motion.div>
 
-      <div className="container mx-auto px-6 py-8">
+      <div className="container mx-auto px-4 lg:px-6 py-6 lg:py-8 overflow-x-hidden">
         {/* Header */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -139,7 +139,7 @@ export default function TourDetailNew() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.2 }}
             transition={{ duration: 0.7 }}
-            className="relative mb-10 rounded-2xl overflow-hidden shadow-2xl bg-black group"
+            className="relative mb-8 -mx-4 lg:mx-0 rounded-none lg:rounded-2xl overflow-hidden shadow-2xl bg-black group"
           >
             {/* 16:9 aspect wrapper */}
             <div className="relative w-full" style={{ aspectRatio: '16/9' }}>
@@ -155,13 +155,13 @@ export default function TourDetailNew() {
               {/* Dark gradient overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent pointer-events-none" />
               {/* Bottom-left label */}
-              <div className="absolute bottom-0 left-0 p-5 lg:p-8 pointer-events-none">
-                <span className="inline-flex items-center gap-2 bg-yellow-400 text-gray-900 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest mb-3">
+              <div className="absolute bottom-0 left-0 p-4 lg:p-8 pointer-events-none">
+                <span className="inline-flex items-center gap-2 bg-yellow-400 text-gray-900 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest mb-2">
                   <span className="w-2 h-2 rounded-full bg-gray-900 animate-pulse" />
                   Live Preview
                 </span>
-                <h3 className="text-white text-xl lg:text-3xl font-bold drop-shadow-lg">{tour.title}</h3>
-                <p className="text-white/80 text-sm mt-1">{tour.line || 'Multiple Destinations'}</p>
+                <h3 className="text-white text-base lg:text-3xl font-bold drop-shadow-lg">{tour.title}</h3>
+                <p className="text-white/80 text-xs lg:text-sm mt-1">{tour.line || 'Multiple Destinations'}</p>
               </div>
               {/* Top-right mute hint */}
               <div className="absolute top-4 right-4 pointer-events-none">
