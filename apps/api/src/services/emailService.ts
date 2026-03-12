@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 
-import { getBookingDepartmentEmail, getEmailFromAddress, getEmailFromName } from '../routes/admin/settings';
+import { getBookingDepartmentEmail, getSalesDepartmentEmail, getEmailFromAddress, getEmailFromName } from '../routes/admin/settings';
 
 interface CustomRoute {
   tourSlug: string;
@@ -15,6 +15,7 @@ interface BookingDetails {
   bookingId: string;
   customerName: string;
   customerEmail: string;
+  customerPhone?: string;
   tourTitle: string;
   tourDate: string;
   passengers: number;
@@ -44,6 +45,9 @@ interface BookingDetails {
   visaDestinationCountries?: string;
   visaAssistanceStatus?: string;
   visaAssistanceNotes?: string;
+  // Passport assistance
+  passportAssistanceRequested?: boolean;
+  passportAssistanceFee?: number;
 }
 
 // Create transporter - using Gmail for real email sending
@@ -737,6 +741,217 @@ The Discover Group Team
     }
   } catch (error) {
     console.error('❌ Password reset email sending failed with critical error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SALES DEPARTMENT NOTIFICATION — internal action-alert sent on every new booking
+// ─────────────────────────────────────────────────────────────────────────────
+
+const generateSalesNotificationEmail = (booking: BookingDetails): string => {
+  const fmt = (n: number) => `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`;
+  const paymentType = booking.isDownpaymentOnly ? 'DOWNPAYMENT' : 'FULL PAYMENT';
+  const paymentColor = booking.isDownpaymentOnly ? '#e67e22' : '#27ae60';
+
+  const addOns: string[] = [];
+  if (booking.visaAssistanceRequested)    addOns.push(`Visa Assistance${booking.visaAssistanceFee ? ` (${fmt(booking.visaAssistanceFee)})` : ''}`);
+  if (booking.travelInsuranceRequested)   addOns.push(`Travel Insurance${booking.travelInsuranceFee ? ` (${fmt(booking.travelInsuranceFee)})` : ''}`);
+  if (booking.passportAssistanceRequested) addOns.push(`Passport Assistance${booking.passportAssistanceFee ? ` (${fmt(booking.passportAssistanceFee)})` : ''}`);
+
+  const addOnsHtml = addOns.length
+    ? addOns.map(a => `<li style="margin:4px 0;">✅ ${a}</li>`).join('')
+    : '<li style="color:#888;">None</li>';
+
+  const appointmentHtml = booking.appointmentDate
+    ? `<tr><td style="padding:6px 12px;color:#555;font-size:13px;">Appointment</td><td style="padding:6px 12px;font-size:13px;font-weight:600;">${booking.appointmentDate}${booking.appointmentTime ? ' @ ' + booking.appointmentTime : ''}${booking.appointmentPurpose ? ' — ' + booking.appointmentPurpose : ''}</td></tr>`
+    : '';
+
+  const adminUrl = process.env.ADMIN_URL || 'https://admin.discovergrp.com';
+
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f0f2f5;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f2f5;padding:24px 0;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.10);max-width:600px;">
+
+        <!-- HEADER -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#c0392b,#e74c3c);padding:28px 32px;text-align:center;">
+            <p style="margin:0 0 6px 0;font-size:12px;color:rgba(255,255,255,0.8);letter-spacing:2px;text-transform:uppercase;">Discover Group Travel</p>
+            <h1 style="margin:0;color:#fff;font-size:26px;font-weight:700;">🔔 New Booking Alert</h1>
+            <p style="margin:8px 0 0 0;color:rgba(255,255,255,0.9);font-size:14px;">A customer just completed a tour reservation</p>
+          </td>
+        </tr>
+
+        <!-- BOOKING ID BADGE -->
+        <tr>
+          <td style="background:#fdf3f2;padding:16px 32px;border-bottom:1px solid #f5c6c2;text-align:center;">
+            <span style="font-size:13px;color:#888;">Booking ID: </span>
+            <span style="font-size:15px;font-weight:700;color:#c0392b;letter-spacing:1px;">${booking.bookingId}</span>
+            &nbsp;&nbsp;
+            <span style="display:inline-block;padding:4px 14px;background:${paymentColor};color:#fff;border-radius:20px;font-size:12px;font-weight:700;">${paymentType}</span>
+          </td>
+        </tr>
+
+        <!-- CUSTOMER DETAILS -->
+        <tr>
+          <td style="padding:24px 32px 0 32px;">
+            <h2 style="margin:0 0 14px 0;font-size:15px;font-weight:700;color:#2c3e50;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #e74c3c;padding-bottom:8px;">👤 Customer Details</h2>
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="padding:6px 0;color:#555;font-size:13px;width:140px;">Name</td>
+                <td style="padding:6px 0;font-size:14px;font-weight:600;color:#1a1a1a;">${booking.customerName}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 0;color:#555;font-size:13px;">Email</td>
+                <td style="padding:6px 0;font-size:14px;"><a href="mailto:${booking.customerEmail}" style="color:#2980b9;text-decoration:none;">${booking.customerEmail}</a></td>
+              </tr>
+              ${booking.customerPhone ? `<tr>
+                <td style="padding:6px 0;color:#555;font-size:13px;">Phone</td>
+                <td style="padding:6px 0;font-size:14px;font-weight:600;color:#1a1a1a;">
+                  <a href="tel:${booking.customerPhone}" style="color:#2980b9;text-decoration:none;">${booking.customerPhone}</a>
+                </td>
+              </tr>` : ''}
+            </table>
+          </td>
+        </tr>
+
+        <!-- TOUR DETAILS -->
+        <tr>
+          <td style="padding:20px 32px 0 32px;">
+            <h2 style="margin:0 0 14px 0;font-size:15px;font-weight:700;color:#2c3e50;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #e74c3c;padding-bottom:8px;">🗺️ Tour Details</h2>
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fa;border-radius:8px;">
+              <tr>
+                <td style="padding:10px 12px;color:#555;font-size:13px;width:140px;">Tour</td>
+                <td style="padding:10px 12px;font-size:14px;font-weight:700;color:#2c3e50;">${booking.tourTitle}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 12px;color:#555;font-size:13px;">Date</td>
+                <td style="padding:6px 12px;font-size:13px;font-weight:600;">${formatTourDate(booking.tourDate)}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 12px;color:#555;font-size:13px;">Passengers</td>
+                <td style="padding:6px 12px;font-size:13px;font-weight:600;">${booking.passengers} pax</td>
+              </tr>
+              ${appointmentHtml}
+            </table>
+          </td>
+        </tr>
+
+        <!-- PAYMENT SUMMARY -->
+        <tr>
+          <td style="padding:20px 32px 0 32px;">
+            <h2 style="margin:0 0 14px 0;font-size:15px;font-weight:700;color:#2c3e50;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #e74c3c;padding-bottom:8px;">💰 Payment Summary</h2>
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fa;border-radius:8px;">
+              <tr>
+                <td style="padding:10px 12px;color:#555;font-size:13px;width:140px;">Per Person</td>
+                <td style="padding:10px 12px;font-size:13px;">${fmt(booking.pricePerPerson)}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 12px;color:#555;font-size:13px;">Total Amount</td>
+                <td style="padding:6px 12px;font-size:15px;font-weight:700;color:#2c3e50;">${fmt(booking.totalAmount)}</td>
+              </tr>
+              ${booking.isDownpaymentOnly && booking.downpaymentAmount != null ? `
+              <tr>
+                <td style="padding:6px 12px;color:#555;font-size:13px;">Paid (Downpayment)</td>
+                <td style="padding:6px 12px;font-size:13px;font-weight:700;color:#27ae60;">${fmt(booking.downpaymentAmount!)}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 12px;color:#555;font-size:13px;">Balance Due</td>
+                <td style="padding:6px 12px;font-size:13px;font-weight:700;color:#e67e22;">${fmt(booking.remainingBalance ?? (booking.totalAmount - booking.downpaymentAmount!))}</td>
+              </tr>` : ''}
+              ${booking.paymentMethod ? `
+              <tr>
+                <td style="padding:6px 12px;color:#555;font-size:13px;">Payment Method</td>
+                <td style="padding:6px 12px;font-size:13px;">${booking.paymentMethodDescription || booking.paymentMethod}</td>
+              </tr>` : ''}
+            </table>
+          </td>
+        </tr>
+
+        <!-- ADD-ONS -->
+        <tr>
+          <td style="padding:20px 32px 0 32px;">
+            <h2 style="margin:0 0 10px 0;font-size:15px;font-weight:700;color:#2c3e50;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #e74c3c;padding-bottom:8px;">🧳 Add-On Services</h2>
+            <ul style="margin:0;padding:0 0 0 4px;list-style:none;font-size:13px;color:#333;">
+              ${addOnsHtml}
+            </ul>
+          </td>
+        </tr>
+
+        <!-- ACTION BUTTONS -->
+        <tr>
+          <td style="padding:28px 32px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td align="center" style="padding:0 6px;">
+                  <a href="${adminUrl}/bookings/${booking.bookingId}"
+                     style="display:inline-block;padding:12px 22px;background:#c0392b;color:#fff;text-decoration:none;border-radius:6px;font-size:13px;font-weight:700;">
+                    📋 Open in Admin Panel
+                  </a>
+                </td>
+                <td align="center" style="padding:0 6px;">
+                  <a href="mailto:${booking.customerEmail}"
+                     style="display:inline-block;padding:12px 22px;background:#2980b9;color:#fff;text-decoration:none;border-radius:6px;font-size:13px;font-weight:700;">
+                    ✉️ Email Customer
+                  </a>
+                </td>
+                ${booking.customerPhone ? `<td align="center" style="padding:0 6px;">
+                  <a href="tel:${booking.customerPhone}"
+                     style="display:inline-block;padding:12px 22px;background:#27ae60;color:#fff;text-decoration:none;border-radius:6px;font-size:13px;font-weight:700;">
+                    📞 Call Customer
+                  </a>
+                </td>` : ''}
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- FOOTER -->
+        <tr>
+          <td style="background:#f8f9fa;padding:14px 32px;text-align:center;border-top:1px solid #eee;">
+            <p style="margin:0;font-size:11px;color:#aaa;">This is an internal sales alert — do not forward to customers.</p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+};
+
+export const sendSalesNotificationEmail = async (
+  booking: BookingDetails
+): Promise<{ success: boolean; messageId?: string; error?: string }> => {
+  try {
+    const salesEmail = getSalesDepartmentEmail();
+    if (!salesEmail) {
+      console.warn('⚠️ No sales department email configured — skipping sales notification');
+      return { success: false, error: 'No sales department email configured' };
+    }
+
+    const transporter = await createTransporter();
+    const fromEmail = getEmailFromAddress();
+    const fromName  = getEmailFromName();
+
+    const result = await transporter.sendMail({
+      from: `"${fromName}" <${fromEmail}>`,
+      to: salesEmail,
+      subject: `[NEW BOOKING] ${booking.customerName} — ${booking.tourTitle} (${booking.bookingId})`,
+      html: generateSalesNotificationEmail(booking),
+    });
+
+    console.log('✅ Sales notification sent to:', salesEmail, '| Message ID:', result.messageId);
+    return { success: true, messageId: result.messageId };
+  } catch (error) {
+    console.error('❌ Sales notification email failed (non-critical):', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

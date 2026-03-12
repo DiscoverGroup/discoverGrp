@@ -34,8 +34,11 @@ export interface Testimonial {
   displayOrder: number;
 }
 
-export async function fetchCountries(): Promise<Country[]> {
-  const response = await fetch(buildApiUrl('/api/countries'));
+export async function fetchCountries(continent?: string): Promise<Country[]> {
+  const url = continent
+    ? buildApiUrl(`/api/countries?continent=${encodeURIComponent(continent)}`)
+    : buildApiUrl('/api/countries');
+  const response = await fetch(url);
   if (!response.ok) {
     throw new Error('Failed to fetch countries');
   }

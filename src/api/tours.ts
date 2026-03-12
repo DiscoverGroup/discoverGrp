@@ -93,31 +93,32 @@ export async function fetchContinents(): Promise<string[]> {
   }
 }
 
+// Hardcoded fallback: proper country names (never city names) per continent
+const CONTINENT_COUNTRY_FALLBACK: Record<string, string[]> = {
+  "Europe": ["France", "Italy", "Switzerland", "Vatican City", "Spain", "Germany", "Austria", "Netherlands", "Belgium", "Portugal", "Greece", "Czech Republic", "Hungary", "Poland", "Croatia", "United Kingdom"],
+  "Asia": ["Japan", "Thailand", "Vietnam", "Philippines", "South Korea", "China", "Indonesia", "Malaysia", "Singapore", "India", "Turkey"],
+  "North America": ["USA", "Canada", "Mexico"],
+  "South America": ["Brazil", "Argentina", "Chile", "Peru", "Colombia"],
+  "Africa": ["South Africa", "Egypt", "Morocco", "Kenya"],
+  "Oceania": ["Australia", "New Zealand"],
+};
+
 export async function fetchCountriesByContinent(continent: string): Promise<string[]> {
   try {
-    const response = await fetchWithTimeout(buildApiUrl(`/public/tours/by-continent/${encodeURIComponent(continent)}/countries`));
+    // Primary: fetch from the Countries collection (real country names, never cities)
+    const response = await fetchWithTimeout(buildApiUrl(`/api/countries/by-continent/${encodeURIComponent(continent)}/names`));
     if (!response.ok) {
-      throw new Error('Failed to fetch countries');
+      throw new Error('Countries-by-continent API unavailable');
     }
-    const data = await response.json();
-    return Array.isArray(data) ? data : [];
+    const data: { name: string; slug: string }[] = await response.json();
+    if (Array.isArray(data) && data.length > 0) {
+      return data.map((c) => c.name);
+    }
+    // If the API returned an empty array, fall through to the fallback below
+    throw new Error('No countries returned from API');
   } catch {
-    // Fallback to getting countries from tours
-    const tours = await fetchTours();
-    const countries = new Set<string>();
-    
-    tours.forEach(tour => {
-      if (tour.continent === continent) {
-        const tourCountries = Array.isArray(tour.additionalInfo?.countriesVisited)
-          ? tour.additionalInfo?.countriesVisited
-          : Array.isArray(tour.additionalInfo?.countries)
-            ? tour.additionalInfo?.countries
-            : [];
-        tourCountries.forEach((country: string) => countries.add(country));
-      }
-    });
-    
-    return Array.from(countries).sort();
+    // Fallback: return hardcoded country names (not tour data – avoids cities leaking in)
+    return CONTINENT_COUNTRY_FALLBACK[continent] ?? [];
   }
 }
 
@@ -126,8 +127,13 @@ export async function fetchDestinationsByContinent(continent: string): Promise<s
 }
 
 export async function fetchToursByCountry(country: string): Promise<Tour[]> {
+  // Normalize to slug so both "France" and "france" match tours with "France" in countriesVisited
+  const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const needle = normalize(country);
   const tours = await fetchTours();
-  return tours.filter((t) => (t.additionalInfo?.countriesVisited ?? []).includes(country));
+  return tours.filter((t) =>
+    (t.additionalInfo?.countriesVisited ?? []).some((c: string) => normalize(c) === needle)
+  );
 }
 
 export async function fetchToursByContinent(continent: string): Promise<Tour[]> {

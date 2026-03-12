@@ -28,8 +28,9 @@ import {
   Tag,
   ToggleLeft,
   ToggleRight,
+  MessageSquare,
 } from 'lucide-react';
-import { getEmailSettings, updateEmailSettings, getAddonSettings, updateAddonSettings, AddonSettings } from '../services/settingsService';
+import { getEmailSettings, updateEmailSettings, getAddonSettings, updateAddonSettings, AddonSettings, getMetaSettings, updateMetaSettings } from '../services/settingsService';
 
 interface SystemSettings {
   // General Settings
@@ -85,6 +86,11 @@ interface SystemSettings {
   showWelcomeTour: boolean;
   enableDarkMode: boolean;
   compactSidebar: boolean;
+
+  // Meta / Facebook Integration
+  metaPageId: string;
+  metaPageAccessToken: string;
+  metaNotificationPsid: string;
 }
 
 const Settings: React.FC = () => {
@@ -142,6 +148,11 @@ const Settings: React.FC = () => {
     showWelcomeTour: true,
     enableDarkMode: false,
     compactSidebar: false,
+
+    // Meta / Facebook Integration
+    metaPageId: '',
+    metaPageAccessToken: '',
+    metaNotificationPsid: '',
   });
 
   const [activeTab, setActiveTab] = useState('general');
@@ -200,6 +211,20 @@ const Settings: React.FC = () => {
       .catch(error => {
         console.error('Failed to load email settings from API:', error);
       });
+
+    // Load Meta / Facebook settings from API
+    getMetaSettings()
+      .then(meta => {
+        setSettings(prev => ({
+          ...prev,
+          metaPageId: meta.metaPageId,
+          metaPageAccessToken: meta.metaPageAccessToken,
+          metaNotificationPsid: meta.metaNotificationPsid,
+        }));
+      })
+      .catch(err => {
+        console.warn('Could not load Meta settings:', err);
+      });
   }, []);
 
   // Load addon pricing settings from API
@@ -221,6 +246,7 @@ const Settings: React.FC = () => {
     { id: 'notifications', name: 'Notifications', icon: Bell },
     { id: 'business', name: 'Business', icon: FileText },
     { id: 'addons', name: 'Add-on Pricing', icon: Tag },
+    { id: 'meta', name: 'Meta / Facebook', icon: MessageSquare },
     { id: 'system', name: 'System', icon: Database },
     { id: 'appearance', name: 'Appearance', icon: Palette },
   ];
@@ -254,6 +280,14 @@ const Settings: React.FC = () => {
         emailFromName: settings.emailFromName,
       });
       console.log('✅ Email settings saved to API');
+
+      // Save Meta / Facebook settings to API
+      await updateMetaSettings({
+        metaPageId: settings.metaPageId,
+        metaPageAccessToken: settings.metaPageAccessToken,
+        metaNotificationPsid: settings.metaNotificationPsid,
+      });
+      console.log('✅ Meta settings saved to API');
       
       // Store all settings in localStorage for persistence
       localStorage.setItem('discovergroup-admin-settings', JSON.stringify(settings));
@@ -583,6 +617,20 @@ const Settings: React.FC = () => {
               placeholder="booking@discovergrp.com"
             />
             <p className="text-xs text-gray-500 mt-1">Email address that receives booking notifications</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Sales Department Email
+            </label>
+            <input
+              type="email"
+              value={settings.salesDepartmentEmail ?? ''}
+              onChange={(e) => updateSetting('salesDepartmentEmail', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="sales@discovergrp.com"
+            />
+            <p className="text-xs text-gray-500 mt-1">Sales team alert — receives a compact action-oriented email on every new reservation (customer phone, payment type, add-ons, admin links)</p>
           </div>
           
           <div className="md:col-span-2">
@@ -1229,6 +1277,105 @@ const Settings: React.FC = () => {
     </div>
   );
 
+  const renderMetaSettings = () => (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <MessageSquare className="w-6 h-6 text-blue-600 flex-shrink-0" />
+        <div>
+          <h3 className="font-semibold text-blue-900">Meta / Facebook Integration</h3>
+          <p className="text-sm text-blue-700 mt-0.5">
+            Connect your Facebook Page to display a Messenger chat widget on your website and receive
+            real-time booking alerts in Messenger.
+          </p>
+        </div>
+      </div>
+
+      {/* Page ID */}
+      <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-5">
+        <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide border-b border-gray-100 pb-3">
+          Page Configuration
+        </h4>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Facebook Page ID
+          </label>
+          <input
+            type="text"
+            value={settings.metaPageId}
+            onChange={(e) => updateSetting('metaPageId', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+            placeholder="e.g. 123456789012345"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Found in Meta Business Suite → Settings → Page Info. Used to display the Messenger chat bubble on your website.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Page Access Token
+          </label>
+          <input
+            type="password"
+            value={settings.metaPageAccessToken}
+            onChange={(e) => updateSetting('metaPageAccessToken', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+            placeholder="EAAxxxxx..."
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Long-lived Page Access Token from Meta for Developers → Graph API Explorer. Required to send booking alerts via Messenger.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Sales Department Messenger PSID
+          </label>
+          <input
+            type="text"
+            value={settings.metaNotificationPsid}
+            onChange={(e) => updateSetting('metaNotificationPsid', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+            placeholder="e.g. 5678901234567890"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            The Page-Scoped User ID (PSID) of the Sales Department recipient. Once set, every new booking triggers a Messenger alert to this PSID.
+            They must message your Page first — find their PSID via the Sales Department page or the Graph API.
+          </p>
+        </div>
+      </div>
+
+      {/* Chat Widget setup guide */}
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-5 space-y-3">
+        <h4 className="font-semibold text-yellow-900 text-sm">💬 Messenger Chat Widget</h4>
+        <p className="text-sm text-yellow-800">
+          Once your Page ID is saved, the chat bubble is embedded via the <code className="bg-yellow-100 px-1 rounded text-xs font-mono">VITE_FB_PAGE_ID</code> environment variable in your Netlify deployment.
+          Set it equal to your Page ID, then redeploy — the widget will appear automatically on every page.
+        </p>
+        <ol className="text-sm text-yellow-800 list-decimal list-inside space-y-1">
+          <li>Go to Netlify → Site settings → Environment variables</li>
+          <li>Add <code className="bg-yellow-100 px-1 rounded text-xs font-mono">VITE_FB_PAGE_ID</code> = your Page ID above</li>
+          <li>Trigger a redeploy</li>
+        </ol>
+      </div>
+
+      {/* Booking notification guide */}
+      <div className="bg-green-50 border border-green-200 rounded-lg p-5 space-y-2">
+        <h4 className="font-semibold text-green-900 text-sm">🔔 Booking Notifications → Messenger</h4>
+        <p className="text-sm text-green-800">
+          When a customer completes a reservation, the system will automatically send a Messenger message
+          to the PSID configured above — including the customer's name, phone, tour, payment type,
+          and add-ons. No action needed once the Page Access Token and PSID are set.
+        </p>
+        <p className="text-xs text-green-700 mt-1">
+          <strong>Note:</strong> The recipient must have previously messaged your Page. The message is sent with the <code className="bg-green-100 px-1 rounded font-mono">CONFIRMED_EVENT_UPDATE</code> tag, which is permitted outside the 24-hour window.
+        </p>
+      </div>
+    </div>
+  );
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'general': return renderGeneralSettings();
@@ -1238,6 +1385,7 @@ const Settings: React.FC = () => {
       case 'notifications': return renderNotificationSettings();
       case 'business': return renderBusinessSettings();
       case 'addons': return renderAddonSettings();
+      case 'meta': return renderMetaSettings();
       case 'system': return renderSystemSettings();
       case 'appearance': return renderAppearanceSettings();
       default: return renderGeneralSettings();

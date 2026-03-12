@@ -10,6 +10,10 @@ import {
 import { buildApiUrl } from "../config/apiBase";
 import type { Tour } from "../types";
 
+// Convert a country display name to a URL slug (e.g. "Vatican City" → "vatican-city")
+function slugifyCountry(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
 
 // admin URL: prefer env var from Vite, fallback to explicit dev admin port
 // Read from a runtime-supplied global to avoid using `import.meta` which
@@ -295,7 +299,7 @@ export default function Header(): React.ReactElement {
                           return (
                             <Link
                               key={country}
-                              to={`/destinations/${encodeURIComponent(country)}`}
+                              to={`/destinations/${slugifyCountry(country)}`}
                               state={{ tours: toursForCountry ?? [], country }}
                               className="flex items-center gap-2 text-left px-2 py-2 rounded-lg transition-all duration-150 hover:bg-blue-50 hover:text-blue-700 focus:bg-blue-100 focus:text-blue-900"
                             >

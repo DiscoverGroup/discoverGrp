@@ -5,8 +5,15 @@ const API_BASE_URL = getAdminApiBaseUrl();
 
 export interface EmailSettings {
   bookingDepartmentEmail: string;
+  salesDepartmentEmail?: string;
   emailFromAddress: string;
   emailFromName: string;
+}
+
+export interface MetaSettings {
+  metaPageId: string;
+  metaPageAccessToken: string;
+  metaNotificationPsid: string;
 }
 
 export async function getEmailSettings(): Promise<EmailSettings> {
@@ -61,4 +68,30 @@ export async function updateAddonSettings(settings: Partial<AddonSettings>): Pro
   if (!res.ok) throw new Error('Failed to update addon settings');
   const data = await res.json();
   return data.settings;
+}
+
+export async function getMetaSettings(): Promise<MetaSettings> {
+  const res = await authFetch(`${API_BASE_URL}/admin/settings`);
+  if (!res.ok) throw new Error('Failed to fetch Meta settings');
+  const data = await res.json();
+  return {
+    metaPageId: data.settings.metaPageId ?? '',
+    metaPageAccessToken: data.settings.metaPageAccessToken ?? '',
+    metaNotificationPsid: data.settings.metaNotificationPsid ?? '',
+  };
+}
+
+export async function updateMetaSettings(settings: Partial<MetaSettings>): Promise<MetaSettings> {
+  const res = await authFetch(`${API_BASE_URL}/admin/settings`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings),
+  });
+  if (!res.ok) throw new Error('Failed to update Meta settings');
+  const data = await res.json();
+  return {
+    metaPageId: data.settings.metaPageId ?? '',
+    metaPageAccessToken: data.settings.metaPageAccessToken ?? '',
+    metaNotificationPsid: data.settings.metaNotificationPsid ?? '',
+  };
 }

@@ -142,7 +142,7 @@ export default function DestinationCountry() {
           <h1 className="text-3xl font-bold text-white mb-4">
             {error || 'Destination Not Found'}
           </h1>
-          <Link to="/routes" className="text-blue-400 hover:text-blue-300">
+          <Link to="/destinations" className="text-blue-400 hover:text-blue-300">
             ← Back to All Destinations
           </Link>
         </div>
@@ -361,7 +361,7 @@ export default function DestinationCountry() {
               Contact Us
             </Link>
             <Link
-              to="/routes"
+              to="/destinations"
               className="px-10 py-4 bg-white/10 text-white font-bold text-lg rounded-full hover:bg-white/20 transition-all border-2 border-white/30"
             >
               View All Destinations

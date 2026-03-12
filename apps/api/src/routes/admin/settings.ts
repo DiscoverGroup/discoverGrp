@@ -7,8 +7,13 @@ const router = express.Router();
 // In-memory storage for settings (you can replace this with MongoDB if needed)
 const adminSettings = {
   bookingDepartmentEmail: process.env.BOOKING_DEPT_EMAIL || 'booking@discovergrp.com',
+  salesDepartmentEmail: process.env.SALES_DEPT_EMAIL || 'sales@discovergrp.com',
   emailFromAddress: process.env.FROM_EMAIL || 'traveldesk@discovergrp.com',
   emailFromName: process.env.FROM_NAME || 'Discover Group Travel Desk',
+  // Meta / Facebook integration
+  metaPageId: process.env.META_PAGE_ID || '',
+  metaPageAccessToken: process.env.META_PAGE_ACCESS_TOKEN || '',
+  metaNotificationPsid: process.env.META_NOTIFICATION_PSID || '',
 };
 
 // GET /admin/settings - Get all settings
@@ -30,17 +35,30 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
 // PUT /admin/settings - Update settings
 router.put('/', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const { bookingDepartmentEmail, emailFromAddress, emailFromName } = req.body;
+    const { bookingDepartmentEmail, salesDepartmentEmail, emailFromAddress, emailFromName,
+            metaPageId, metaPageAccessToken, metaNotificationPsid } = req.body;
 
     // Update settings
     if (bookingDepartmentEmail) {
       adminSettings.bookingDepartmentEmail = bookingDepartmentEmail as string;
+    }
+    if (salesDepartmentEmail) {
+      adminSettings.salesDepartmentEmail = salesDepartmentEmail as string;
     }
     if (emailFromAddress) {
       adminSettings.emailFromAddress = emailFromAddress as string;
     }
     if (emailFromName) {
       adminSettings.emailFromName = emailFromName as string;
+    }
+    if (typeof metaPageId === 'string') {
+      adminSettings.metaPageId = metaPageId;
+    }
+    if (typeof metaPageAccessToken === 'string') {
+      adminSettings.metaPageAccessToken = metaPageAccessToken;
+    }
+    if (typeof metaNotificationPsid === 'string') {
+      adminSettings.metaNotificationPsid = metaNotificationPsid;
     }
 
     console.log('✅ Admin settings updated:', adminSettings);
@@ -147,12 +165,28 @@ export function getBookingDepartmentEmail(): string {
   return adminSettings.bookingDepartmentEmail;
 }
 
+export function getSalesDepartmentEmail(): string {
+  return adminSettings.salesDepartmentEmail;
+}
+
 export function getEmailFromAddress(): string {
   return adminSettings.emailFromAddress;
 }
 
 export function getEmailFromName(): string {
   return adminSettings.emailFromName;
+}
+
+export function getMetaPageId(): string {
+  return adminSettings.metaPageId;
+}
+
+export function getMetaPageAccessToken(): string {
+  return adminSettings.metaPageAccessToken;
+}
+
+export function getMetaNotificationPsid(): string {
+  return adminSettings.metaNotificationPsid;
 }
 
 export default router;

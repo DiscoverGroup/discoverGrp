@@ -1,6 +1,7 @@
-import React, { JSX, useEffect, useState } from "react";
-import { Trash2, Plus, Edit2, Check, X, Eye, EyeOff } from "lucide-react";
+import React, { JSX, useEffect, useState, useCallback } from "react";
+import { Trash2, Plus, Edit2, Check, X, Eye, EyeOff, ExternalLink, RefreshCw } from "lucide-react";
 import { getAdminApiBaseUrl } from "../config/apiBase";
+import { getMetaSettings } from "../services/settingsService";
 
 interface MessengerAccount {
   id: string;
@@ -19,6 +20,79 @@ interface MetaMessengerConfig {
 }
 
 const API_BASE_URL = getAdminApiBaseUrl();
+
+// ─── Graph API types ─────────────────────────────────────────────────────────
+interface GraphApiError { error?: { message?: string } }
+interface GraphParticipant { id: string; name: string }
+interface GraphMessage { id: string; message?: string; from?: { id: string }; created_time: string }
+interface GraphConversation {
+  id: string;
+  updated_time?: string;
+  participants?: { data: GraphParticipant[] };
+  messages?: { data: GraphMessage[] };
+}
+interface GraphConversationsResponse { data?: GraphConversation[] }
+
+// ─── Real-time conversation fetch from Meta Graph API ─────────────────────────
+const GRAPH_API_VERSION = 'v19.0';
+
+const fetchConversationsFromMeta = async (
+  pageId: string,
+  accessToken: string
+): Promise<MessengerConversation[]> => {
+  const fields = 'id,participants,updated_time,messages.limit(30){message,from,created_time}';
+  const url = `https://graph.facebook.com/${GRAPH_API_VERSION}/${pageId}/conversations?fields=${fields}&limit=25&access_token=${encodeURIComponent(accessToken)}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as GraphApiError;
+    throw new Error(err?.error?.message || `Graph API error ${res.status}`);
+  }
+  const data = (await res.json()) as GraphConversationsResponse;
+  const rawConvs: GraphConversation[] = data.data || [];
+
+  return rawConvs.map((conv): MessengerConversation => {
+    const participants: GraphParticipant[] = conv.participants?.data || [];
+    const customer = participants.find(p => String(p.id) !== String(pageId))
+      || { name: 'Unknown Customer', id: 'unknown' };
+    const rawMessages: GraphMessage[] = (conv.messages?.data || []).slice().reverse();
+    const messages: Message[] = rawMessages.map((m): Message => ({
+      id: m.id,
+      sender: String(m.from?.id) === String(pageId) ? 'agent' : 'customer',
+      text: m.message || '(media)',
+      timestamp: m.created_time,
+    }));
+    return {
+      id: conv.id,
+      customerName: customer.name,
+      customerMessengerId: customer.id,
+      status: 'in-progress',
+      assignedAgent: 'Sales Team',
+      messages,
+      lastMessageAt: conv.updated_time || new Date().toISOString(),
+      createdAt: conv.updated_time || new Date().toISOString(),
+    };
+  });
+};
+
+// ─── Send a reply via Graph API ──────────────────────────────────────────────
+const sendMetaReply = async (
+  recipientId: string,
+  text: string,
+  accessToken: string
+): Promise<void> => {
+  const res = await fetch(
+    `https://graph.facebook.com/${GRAPH_API_VERSION}/me/messages?access_token=${encodeURIComponent(accessToken)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipient: { id: recipientId }, message: { text } }),
+    }
+  );
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as GraphApiError;
+    throw new Error(err?.error?.message || 'Failed to send reply');
+  }
+};
 
 interface Message {
   id: string;
@@ -242,11 +316,44 @@ export default function SalesDepartment(): JSX.Element {
   const [showAddForm, setShowAddForm] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  
+
+  // Meta API credentials loaded from admin Settings
+  const [metaCredentials, setMetaCredentials] = useState<{
+    pageId: string; accessToken: string; notificationPsid: string;
+  }>({ pageId: '', accessToken: '', notificationPsid: '' });
+
   // Conversation states
-  const [conversations] = useState<MessengerConversation[]>(DUMMY_CONVERSATIONS);
+  const [conversations, setConversations] = useState<MessengerConversation[]>([]);
+  const [conversationsLoading, setConversationsLoading] = useState(false);
+  const [conversationsError, setConversationsError] = useState<string | null>(null);
+  const [usingDemoData, setUsingDemoData] = useState(false);
   const [selectedConversation, setSelectedConversation] = useState<MessengerConversation | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [replying, setReplying] = useState(false);
   const [transactions] = useState<ExtractedTransaction[]>(DUMMY_TRANSACTIONS);
+
+  // ── Load Meta credentials from API and fetch real conversations ───────────
+  const loadConversations = useCallback(async (pageId: string, accessToken: string) => {
+    if (!pageId || !accessToken) {
+      setConversations(DUMMY_CONVERSATIONS);
+      setUsingDemoData(true);
+      return;
+    }
+    setConversationsLoading(true);
+    setConversationsError(null);
+    setUsingDemoData(false);
+    try {
+      const real = await fetchConversationsFromMeta(pageId, accessToken);
+      setConversations(real.length > 0 ? real : []);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setConversationsError(msg);
+      setConversations(DUMMY_CONVERSATIONS);
+      setUsingDemoData(true);
+    } finally {
+      setConversationsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     // Load saved configuration from localStorage
@@ -268,7 +375,6 @@ export default function SalesDepartment(): JSX.Element {
               createdAt: new Date().toISOString()
             }]
           });
-          // Save migrated config
           localStorage.setItem('metaMessengerConfig', JSON.stringify({
             enabled: parsed.enabled || false,
             accounts: [{
@@ -288,7 +394,93 @@ export default function SalesDepartment(): JSX.Element {
         console.error('Failed to load Meta Messenger config:', e);
       }
     }
-  }, []);
+
+    // Load Meta credentials from admin API Settings
+    getMetaSettings()
+      .then(meta => {
+        setMetaCredentials({
+          pageId: meta.metaPageId,
+          accessToken: meta.metaPageAccessToken,
+          notificationPsid: meta.metaNotificationPsid,
+        });
+        // Auto-sync pageId to localStorage config if set
+        if (meta.metaPageId) {
+          const saved = localStorage.getItem('metaMessengerConfig');
+          const parsed = saved ? JSON.parse(saved) : { enabled: false, accounts: [] };
+          const hasThisPage = (parsed.accounts as MessengerAccount[])?.some(a => a.pageId === meta.metaPageId);
+          if (!hasThisPage && meta.metaPageId && meta.metaNotificationPsid) {
+            // Ensure we have at least the primary page represented
+            const updated = {
+              ...parsed,
+              enabled: true,
+              accounts: [...((parsed.accounts as MessengerAccount[]) || []), {
+                id: 'api-primary',
+                name: 'Primary Page (from Settings)',
+                pageId: meta.metaPageId,
+                appId: '',
+                email: 'sales@discovergrp.com',
+                status: 'active' as const,
+                createdAt: new Date().toISOString(),
+              }].filter((a, i, arr) =>
+                arr.findIndex(b => b.pageId === a.pageId) === i
+              ),
+            };
+            setConfig(updated);
+            localStorage.setItem('metaMessengerConfig', JSON.stringify(updated));
+          }
+        }
+        // Fetch real conversations
+        loadConversations(meta.metaPageId, meta.metaPageAccessToken);
+      })
+      .catch(err => {
+        console.warn('Could not load Meta settings from API:', err);
+        setConversations(DUMMY_CONVERSATIONS);
+        setUsingDemoData(true);
+      });
+  }, [loadConversations]);
+
+  const handleRefreshConversations = () => {
+    loadConversations(metaCredentials.pageId, metaCredentials.accessToken);
+  };
+
+  const handleSendReply = async () => {
+    if (!replyText.trim() || !selectedConversation || !metaCredentials.accessToken) return;
+    setReplying(true);
+    try {
+      await sendMetaReply(
+        selectedConversation.customerMessengerId,
+        replyText.trim(),
+        metaCredentials.accessToken
+      );
+      // Optimistically add to thread
+      const newMsg: Message = {
+        id: `local_${Date.now()}`,
+        sender: 'agent',
+        text: replyText.trim(),
+        timestamp: new Date().toISOString(),
+      };
+      setConversations(prev =>
+        prev.map(c =>
+          c.id === selectedConversation.id
+            ? { ...c, messages: [...c.messages, newMsg] }
+            : c
+        )
+      );
+      setSelectedConversation(prev => prev
+        ? { ...prev, messages: [...prev.messages, newMsg] }
+        : prev
+      );
+      setReplyText('');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setMessage({ type: 'error', text: `Reply failed: ${msg}` });
+      setTimeout(() => setMessage(null), 5000);
+    } finally {
+      setReplying(false);
+    }
+  };
+
+
 
   const handleAddAccount = async () => {
     if (!newAccount.name || !newAccount.pageId || !newAccount.appId || !newAccount.email) {
@@ -550,7 +742,7 @@ export default function SalesDepartment(): JSX.Element {
         }}>
           {config.enabled && activeAccounts > 0 ? '✓' : '⚠'}
         </div>
-        <div>
+        <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 600, marginBottom: 4 }}>
             {config.enabled && activeAccounts > 0
               ? `Meta Messenger Integration Active (${activeAccounts} ${activeAccounts === 1 ? 'Account' : 'Accounts'})`
@@ -562,6 +754,66 @@ export default function SalesDepartment(): JSX.Element {
               : 'Add sales team accounts and enable integration to start receiving customer inquiries'}
           </div>
         </div>
+        <div style={{ fontSize: 13 }}>
+          <span style={{
+            padding: '4px 10px',
+            borderRadius: 12,
+            background: metaCredentials.accessToken ? '#d4edda' : '#fff3cd',
+            color: metaCredentials.accessToken ? '#155724' : '#856404',
+            fontWeight: 500,
+          }}>
+            {metaCredentials.accessToken ? '🔑 API Token ✓' : '⚠ No API Token'}
+          </span>
+        </div>
+      </div>
+
+      {/* API Credentials Status (from Admin Settings) */}
+      <div style={{
+        background: metaCredentials.accessToken ? '#f0fdf4' : '#fefce8',
+        border: `1px solid ${metaCredentials.accessToken ? '#86efac' : '#fde047'}`,
+        borderRadius: 10,
+        padding: 16,
+        marginBottom: 24,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 16,
+      }}>
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4,
+            color: metaCredentials.accessToken ? '#14532d' : '#713f12' }}>
+            {metaCredentials.accessToken
+              ? '🔗 Connected to Admin Settings — Page Access Token is set'
+              : '⚙️ Page Access Token not configured'}
+          </div>
+          <div style={{ fontSize: 13, color: '#666' }}>
+            {metaCredentials.pageId ? `Page ID: ${metaCredentials.pageId}` : 'No Page ID'}
+            {metaCredentials.notificationPsid ? ` · Sales Dept PSID: ${metaCredentials.notificationPsid.slice(0, 6)}…` : ''}
+          </div>
+        </div>
+        <a
+          href="/admin/settings"
+          style={{
+            padding: '8px 14px',
+            background: '#3b82f6',
+            color: '#fff',
+            borderRadius: 6,
+            textDecoration: 'none',
+            fontSize: 13,
+            fontWeight: 500,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+            <polyline points="15 3 21 3 21 9"/>
+            <line x1="10" y1="14" x2="21" y2="3"/>
+          </svg>
+          Settings → Meta/Facebook
+        </a>
       </div>
 
       {/* Global Enable/Disable */}
@@ -1072,13 +1324,63 @@ export default function SalesDepartment(): JSX.Element {
             display: 'flex',
             flexDirection: 'column'
           }}>
-            <div style={{ padding: 16, borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>
-                Conversations ({conversations.length})
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid #e5e7eb', background: '#f9fafb',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>
+                {conversationsLoading ? 'Loading…' : `Conversations (${conversations.length})`}
               </h3>
+              <button
+                onClick={handleRefreshConversations}
+                disabled={conversationsLoading || !metaCredentials.accessToken}
+                title={metaCredentials.accessToken ? 'Refresh from Meta' : 'Configure API token first'}
+                style={{
+                  padding: '5px 8px',
+                  background: 'transparent',
+                  border: '1px solid #d1d5db',
+                  borderRadius: 6,
+                  cursor: conversationsLoading || !metaCredentials.accessToken ? 'not-allowed' : 'pointer',
+                  opacity: !metaCredentials.accessToken ? 0.4 : 1,
+                  display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#374151',
+                }}
+              >
+                <RefreshCw size={13} style={conversationsLoading ? { animation: 'spin 1s linear infinite' } : {}} />
+                Refresh
+              </button>
             </div>
+
+            {/* Demo data / error banner */}
+            {(usingDemoData || conversationsError) && (
+              <div style={{
+                padding: '8px 12px',
+                background: conversationsError ? '#fee2e2' : '#fef9c3',
+                borderBottom: '1px solid #e5e7eb',
+                fontSize: 12,
+                color: conversationsError ? '#991b1b' : '#713f12',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}>
+                <span>
+                  {conversationsError ? `⚠ ${conversationsError}` : '📋 Showing sample data — configure API token to see live conversations'}
+                </span>
+                {!conversationsError && (
+                  <a href="/admin/settings" style={{ color: '#2563eb', textDecoration: 'underline', fontSize: 11, whiteSpace: 'nowrap' }}>
+                    Settings →
+                  </a>
+                )}
+              </div>
+            )}
+
             <div style={{ flex: 1, overflowY: 'auto' }}>
-              {conversations.map((conv) => (
+              {conversationsLoading ? (
+                <div style={{ padding: 24, textAlign: 'center', color: '#9ca3af', fontSize: 14 }}>
+                  <div style={{ width: 24, height: 24, border: '2px solid #e5', borderTopColor: '#3b82f6',
+                    borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 8px' }} />
+                  Fetching from Meta…
+                </div>
+              ) : conversations.length === 0 ? (
+                <div style={{ padding: 24, textAlign: 'center', color: '#9ca3af', fontSize: 14 }}>
+                  No conversations yet. Customers who message your Facebook Page will appear here.
+                </div>
+              ) : conversations.map((conv) => (
                 <div
                   key={conv.id}
                   onClick={() => setSelectedConversation(conv)}
@@ -1089,16 +1391,8 @@ export default function SalesDepartment(): JSX.Element {
                     background: selectedConversation?.id === conv.id ? '#eff6ff' : '#fff',
                     transition: 'background 0.2s'
                   }}
-                  onMouseEnter={(e) => {
-                    if (selectedConversation?.id !== conv.id) {
-                      e.currentTarget.style.background = '#f9fafb';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (selectedConversation?.id !== conv.id) {
-                      e.currentTarget.style.background = '#fff';
-                    }
-                  }}
+                  onMouseEnter={(e) => { if (selectedConversation?.id !== conv.id) e.currentTarget.style.background = '#f9fafb'; }}
+                  onMouseLeave={(e) => { if (selectedConversation?.id !== conv.id) e.currentTarget.style.background = '#fff'; }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 8 }}>
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{conv.customerName}</div>
@@ -1106,11 +1400,11 @@ export default function SalesDepartment(): JSX.Element {
                       fontSize: 11,
                       padding: '2px 8px',
                       borderRadius: 12,
-                      background: 
+                      background:
                         conv.status === 'new' ? '#fecaca' :
                         conv.status === 'in-progress' ? '#fde68a' :
                         conv.status === 'converted' ? '#bbf7d0' : '#e5e7eb',
-                      color: 
+                      color:
                         conv.status === 'new' ? '#991b1b' :
                         conv.status === 'in-progress' ? '#92400e' :
                         conv.status === 'converted' ? '#14532d' : '#374151',
@@ -1120,7 +1414,9 @@ export default function SalesDepartment(): JSX.Element {
                     </span>
                   </div>
                   <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 4 }}>
-                    {conv.messages[conv.messages.length - 1].text.slice(0, 60)}...
+                    {conv.messages.length > 0
+                      ? `${conv.messages[conv.messages.length - 1].text.slice(0, 60)}…`
+                      : '(no messages)'}
                   </div>
                   <div style={{ fontSize: 11, color: '#9ca3af' }}>
                     {new Date(conv.lastMessageAt).toLocaleString()}
@@ -1147,7 +1443,16 @@ export default function SalesDepartment(): JSX.Element {
                     <div>
                       <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{selectedConversation.customerName}</h3>
                       <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
-                        Assigned to: {selectedConversation.assignedAgent}
+                        {selectedConversation.customerMessengerId !== 'unknown' && (
+                          <a
+                            href={`https://www.facebook.com/messages/t/${selectedConversation.customerMessengerId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#3b82f6', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 3 }}
+                          >
+                            Open in Messenger <ExternalLink size={11} />
+                          </a>
+                        )}
                       </div>
                     </div>
                     <button
@@ -1187,11 +1492,7 @@ export default function SalesDepartment(): JSX.Element {
                         boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
                       }}>
                         <div style={{ fontSize: 14, lineHeight: 1.5 }}>{msg.text}</div>
-                        <div style={{
-                          fontSize: 11,
-                          marginTop: 4,
-                          opacity: 0.7
-                        }}>
+                        <div style={{ fontSize: 11, marginTop: 4, opacity: 0.7 }}>
                           {new Date(msg.timestamp).toLocaleTimeString()}
                         </div>
                       </div>
@@ -1201,43 +1502,49 @@ export default function SalesDepartment(): JSX.Element {
 
                 {/* Reply Input */}
                 <div style={{ padding: 16, borderTop: '1px solid #e5e7eb', background: '#fff' }}>
+                  {!metaCredentials.accessToken && (
+                    <div style={{ fontSize: 12, color: '#f59e0b', marginBottom: 8 }}>
+                      ⚠ Configure Page Access Token in Settings to send replies
+                    </div>
+                  )}
                   <div style={{ display: 'flex', gap: 8 }}>
                     <input
                       type="text"
-                      placeholder="Type a message..."
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendReply(); } }}
+                      placeholder={metaCredentials.accessToken ? 'Type a message…' : 'API token required to reply'}
+                      disabled={!metaCredentials.accessToken || replying}
                       style={{
                         flex: 1,
                         padding: '10px 14px',
                         border: '1px solid #d1d5db',
                         borderRadius: 8,
-                        fontSize: 14
+                        fontSize: 14,
+                        opacity: !metaCredentials.accessToken ? 0.5 : 1,
                       }}
                     />
                     <button
+                      onClick={handleSendReply}
+                      disabled={!metaCredentials.accessToken || !replyText.trim() || replying}
                       style={{
                         padding: '10px 20px',
-                        background: '#3b82f6',
+                        background: metaCredentials.accessToken && replyText.trim() ? '#3b82f6' : '#9ca3af',
                         color: '#fff',
                         border: 'none',
                         borderRadius: 8,
                         fontWeight: 500,
-                        cursor: 'pointer'
+                        cursor: !metaCredentials.accessToken || !replyText.trim() || replying ? 'not-allowed' : 'pointer',
                       }}
                     >
-                      Send
+                      {replying ? '…' : 'Send'}
                     </button>
                   </div>
                 </div>
               </>
             ) : (
-              <div style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#9ca3af',
-                fontSize: 14
-              }}>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#9ca3af', fontSize: 14 }}>
                 Select a conversation to view messages
               </div>
             )}

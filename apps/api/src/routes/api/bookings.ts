@@ -2,7 +2,8 @@
 import express from "express";
 import Booking from "../../models/Booking";
 import VisaApplication from "../../models/VisaApplication";
-import { sendBookingConfirmationEmail } from "../../services/emailService";
+import { sendBookingConfirmationEmail, sendSalesNotificationEmail } from "../../services/emailService";
+import { sendMetaBookingNotification } from "../../services/metaService";
 import { evaluateVisaReadiness } from "../../services/visa-readiness";
 
 const router = express.Router();
@@ -228,6 +229,52 @@ router.post("/", async (req, res) => {
       } else {
         console.warn('⚠️ Failed to send confirmation email:', emailResult.error);
       }
+
+      // Send internal sales department alert
+      await sendSalesNotificationEmail({
+        bookingId,
+        customerName,
+        customerEmail,
+        customerPhone,
+        tourTitle: tourSlug,
+        tourDate: selectedDate,
+        passengers,
+        pricePerPerson: perPerson,
+        totalAmount,
+        downpaymentAmount: paidAmount < totalAmount ? paidAmount : undefined,
+        remainingBalance: paidAmount < totalAmount ? totalAmount - paidAmount : undefined,
+        isDownpaymentOnly: paidAmount < totalAmount,
+        appointmentDate,
+        appointmentTime,
+        appointmentPurpose,
+        paymentMethod: paymentType,
+        visaAssistanceRequested: visaAssistanceRequested || false,
+        visaAssistanceFee: visaAssistanceRequested ? 10000 : undefined,
+        travelInsuranceRequested: travelInsuranceRequested || false,
+        travelInsuranceFee: travelInsuranceRequested ? (travelInsuranceFee ?? 3000) : undefined,
+        passportAssistanceRequested: passportAssistanceRequested || false,
+        passportAssistanceFee: passportAssistanceRequested ? (passportAssistanceFee ?? 5000) : undefined,
+      });
+
+      // Send Meta Messenger notification to sales team
+      await sendMetaBookingNotification({
+        bookingId,
+        customerName,
+        customerEmail,
+        customerPhone,
+        tourTitle: tourSlug,
+        tourDate: selectedDate,
+        passengers,
+        totalAmount,
+        downpaymentAmount: paidAmount < totalAmount ? paidAmount : undefined,
+        remainingBalance: paidAmount < totalAmount ? totalAmount - paidAmount : undefined,
+        isDownpaymentOnly: paidAmount < totalAmount,
+        appointmentDate,
+        appointmentTime,
+        visaAssistanceRequested: visaAssistanceRequested || false,
+        travelInsuranceRequested: travelInsuranceRequested || false,
+        passportAssistanceRequested: passportAssistanceRequested || false,
+      });
     } catch (emailError) {
       // Don't fail the booking if email fails
       console.error('⚠️ Email sending error (non-critical):', emailError);

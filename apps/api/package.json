@@ -7,7 +7,9 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "start": "node dist/index.js",
     "build": "tsc -p tsconfig.json",
+    "migrate:continents": "node scripts/migrate-country-continents.cjs",
     "migrate:visa-readiness": "node scripts/migrate-visa-readiness.cjs",
+    "migrate:all": "npm run migrate:continents && npm run migrate:visa-readiness",
     "prisma:generate": "prisma generate --schema=prisma/schema.prisma",
     "prisma:migrate": "prisma migrate dev --name init --schema=prisma/schema.prisma",
     "prisma:seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts"

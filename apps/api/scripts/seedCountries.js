@@ -8,6 +8,7 @@ const mongoose = require('mongoose');
 const countrySchema = new mongoose.Schema({
   name: { type: String, required: true, unique: true },
   slug: { type: String, required: true, unique: true },
+  continent: String,
   description: { type: String, required: true },
   heroImageUrl: String,
   heroImages: [String],
@@ -38,6 +39,7 @@ const countries = [
   {
     name: 'France',
     slug: 'france',
+    continent: 'Europe',
     description: 'Experience the romance and elegance of France, from the iconic Eiffel Tower in Paris to the lavender fields of Provence. Discover world-class cuisine, stunning architecture, and rich cultural heritage in the heart of Europe.',
     heroImages: [
       'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=1920',
@@ -92,6 +94,7 @@ const countries = [
   {
     name: 'Italy',
     slug: 'italy',
+    continent: 'Europe',
     description: 'Immerse yourself in the timeless beauty of Italy, where ancient Roman ruins meet Renaissance masterpieces. From the canals of Venice to the rolling hills of Tuscany, Italy offers unparalleled art, cuisine, and history.',
     heroImages: [
       'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?w=1920',
@@ -141,6 +144,7 @@ const countries = [
   {
     name: 'Switzerland',
     slug: 'switzerland',
+    continent: 'Europe',
     description: 'Discover the stunning Alpine landscapes of Switzerland, where snow-capped peaks meet crystal-clear lakes. Experience world-renowned chocolate, precision watches, and charming mountain villages in this picture-perfect destination.',
     heroImages: [
       'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?w=1920',
@@ -190,6 +194,7 @@ const countries = [
   {
     name: 'Vatican City',
     slug: 'vatican-city',
+    continent: 'Europe',
     description: 'Explore the world\'s smallest independent state, home to the Pope and the heart of the Catholic Church. Marvel at Michelangelo\'s Sistine Chapel, St. Peter\'s Basilica, and centuries of priceless art within the Vatican Museums.',
     heroImages: [
       'https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=1920',
@@ -238,6 +243,7 @@ const countries = [
   {
     name: 'Spain',
     slug: 'spain',
+    continent: 'Europe',
     description: 'Experience the vibrant culture of Spain, from flamenco dancing in Seville to Gaudí\'s masterpieces in Barcelona. Enjoy world-class beaches, delicious tapas, and a rich blend of Moorish and Christian heritage.',
     heroImages: [
       'https://images.unsplash.com/photo-1583422409516-2895a77efded?w=1920',

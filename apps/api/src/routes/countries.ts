@@ -40,15 +40,31 @@ router.get('/debug/status', async (req: Request, res: Response) => {
   }
 });
 
-// Get all countries
+// Get all countries (optionally filtered by ?continent=Europe)
 router.get('/', async (req: Request, res: Response) => {
   try {
+    const query: Record<string, unknown> = { isActive: true };
+    if (typeof req.query.continent === 'string' && req.query.continent.trim()) {
+      query.continent = req.query.continent.trim();
+    }
     // @ts-expect-error - Mongoose model type complexity issue
-    const countries = await Country.find({ isActive: true }).sort({ name: 1 });
+    const countries = await Country.find(query).sort({ name: 1 });
     res.json(countries);
   } catch (error) {
     console.error('Error fetching countries:', error);
     res.status(500).json({ error: 'Failed to fetch countries' });
+  }
+});
+
+// Get country names by continent — used by the destination mega-menu
+router.get('/by-continent/:continent/names', async (req: Request, res: Response) => {
+  try {
+    // @ts-expect-error - Mongoose model type complexity issue
+    const countries = await Country.find({ isActive: true, continent: req.params.continent }).sort({ name: 1 }).select('name slug -_id');
+    res.json(countries.map((c: { name: string; slug: string }) => ({ name: c.name, slug: c.slug })));
+  } catch (error) {
+    console.error('Error fetching countries by continent:', error);
+    res.status(500).json({ error: 'Failed to fetch countries by continent' });
   }
 });
 
