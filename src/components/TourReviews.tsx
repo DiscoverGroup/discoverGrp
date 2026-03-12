@@ -230,7 +230,7 @@ export default function TourReviews({ tourSlug, tourTitle }: TourReviewsProps) {
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       {/* Header */}
-      <div className="flex justify-between items-start mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-6">
         <div>
           <h3 className="text-2xl font-bold text-gray-900 mb-2">
             Reviews & Ratings
@@ -252,7 +252,7 @@ export default function TourReviews({ tourSlug, tourTitle }: TourReviewsProps) {
           )}
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-shrink-0">
           {user ? (
             !showReviewForm && (
               <button
