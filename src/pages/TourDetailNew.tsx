@@ -139,10 +139,10 @@ export default function TourDetailNew() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.2 }}
             transition={{ duration: 0.7 }}
-            className="relative mb-8 rounded-2xl overflow-hidden shadow-2xl bg-black group max-w-3xl mx-auto"
+            className="relative mb-8 rounded-2xl overflow-hidden shadow-2xl bg-black group w-full"
           >
-            {/* 16:9 aspect wrapper */}
-            <div className="relative w-full" style={{ aspectRatio: '16/9' }}>
+            {/* Facebook cover-photo style: ~8:3 aspect ratio */}
+            <div className="relative w-full" style={{ aspectRatio: '820/312' }}>
               <video
                 src={tour.video_url}
                 autoPlay
