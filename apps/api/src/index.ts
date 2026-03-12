@@ -297,6 +297,7 @@ import homepageSettingsRouter from "./routes/homepage-settings";
 import countriesRouter from "./routes/countries";
 import promoBannerRouter from "./routes/promoBanner";
 import featuredVideosRouter from "./routes/featured-videos";
+import facebookRouter from "./routes/facebook";
 
 app.use("/admin/tours", adminToursRouter);
 app.use("/admin/users", adminUsersRouter);
@@ -318,6 +319,7 @@ app.use("/api/homepage-settings", homepageSettingsRouter);
 app.use("/api/countries", countriesRouter);
 app.use("/api/promo-banners", promoBannerRouter);
 app.use("/api/featured-videos", featuredVideosRouter);
+app.use("/api/facebook", facebookRouter);
 app.use("/api/security", securityStatusRouter);
 app.use("/api/monitoring", monitoringRouter);
 app.use("/api/visa-readiness", visaReadinessRouter);

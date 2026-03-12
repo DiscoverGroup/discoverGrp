@@ -361,10 +361,10 @@ export default function DestinationCountry() {
               Contact Us
             </Link>
             <Link
-              to="/destinations"
+              to={`/destinations?country=${encodeURIComponent(countryParam ?? '')}`}
               className="px-10 py-4 bg-white/10 text-white font-bold text-lg rounded-full hover:bg-white/20 transition-all border-2 border-white/30"
             >
-              View All Destinations
+              View {country.name} Tours
             </Link>
           </div>
         </div>

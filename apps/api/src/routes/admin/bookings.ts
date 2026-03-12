@@ -1,4 +1,4 @@
-import express from "express";
+﻿import express from "express";
 import Booking from "../../models/Booking";
 import { requireAuth, requireAdmin } from "../../middleware/auth";
 
@@ -28,9 +28,9 @@ interface FullTour extends BaseTour {
 
 const router = express.Router();
 
-// Interface for booking response with populated tour data (removed — not used)
+// Interface for booking response with populated tour data (removed â€” not used)
 
-// ── Tour lookup helpers ───────────────────────────────────────────────────────
+// â”€â”€ Tour lookup helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Import tour data from both systems
 const mockTours: FullTour[] = [
   {
@@ -83,7 +83,7 @@ function attachTour(booking: ReturnType<(typeof Booking.prototype)['toObject']>)
   return bookingObj;
 }
 
-// ── GET /admin/bookings - list active (non-archived) bookings ─────────────────
+// â”€â”€ GET /admin/bookings - list active (non-archived) bookings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.get("/", requireAuth, requireAdmin, async (req, res) => {
   try {
     const query: Record<string, unknown> = { archived: { $ne: true } };
@@ -107,7 +107,7 @@ router.get("/", requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// ── GET /admin/bookings/archived - list archived bookings ─────────────────────
+// â”€â”€ GET /admin/bookings/archived - list archived bookings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.get("/archived", requireAuth, requireAdmin, async (req, res) => {
   try {
     const query: Record<string, unknown> = { archived: true };
@@ -127,7 +127,7 @@ router.get("/archived", requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// ── GET /admin/bookings/dashboard-stats ───────────────────────────────────────
+// â”€â”€ GET /admin/bookings/dashboard-stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.get("/dashboard-stats", requireAuth, requireAdmin, async (req, res) => {
   try {
     const activeFilter = { archived: { $ne: true } };
@@ -175,7 +175,71 @@ router.get("/dashboard-stats", requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// ── GET /admin/bookings/:bookingId ────────────────────────────────────────────
+// â”€â”€ POST /admin/bookings/batch-archive â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// NOTE: all /batch-* and fixed-path routes MUST come before /:bookingId routes
+router.post("/batch-archive", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { bookingIds } = req.body as { bookingIds: string[] };
+    if (!Array.isArray(bookingIds) || bookingIds.length === 0) {
+      return res.status(400).json({ error: "bookingIds array required" });
+    }
+    const result = await Booking.updateMany(
+      { bookingId: { $in: bookingIds } },
+      { $set: { archived: true, archivedAt: new Date() } }
+    );
+    console.log(`ðŸ“¦ Batch archived ${result.modifiedCount} bookings`);
+    res.json({ message: `${result.modifiedCount} booking(s) archived`, count: result.modifiedCount });
+  } catch (error) {
+    console.error('Error batch archiving:', error);
+    res.status(500).json({ error: "Failed to archive bookings" });
+  }
+});
+
+// â”€â”€ POST /admin/bookings/batch-restore â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+router.post("/batch-restore", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { bookingIds } = req.body as { bookingIds: string[] };
+    if (!Array.isArray(bookingIds) || bookingIds.length === 0) {
+      return res.status(400).json({ error: "bookingIds array required" });
+    }
+    const result = await Booking.updateMany(
+      { bookingId: { $in: bookingIds } },
+      { $set: { archived: false }, $unset: { archivedAt: '' } }
+    );
+    console.log(`â™»ï¸ Batch restored ${result.modifiedCount} bookings`);
+    res.json({ message: `${result.modifiedCount} booking(s) restored`, count: result.modifiedCount });
+  } catch (error) {
+    console.error('Error batch restoring:', error);
+    res.status(500).json({ error: "Failed to restore bookings" });
+  }
+});
+
+// â”€â”€ POST /admin/bookings/batch-delete â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+router.post("/batch-delete", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { bookingIds } = req.body as { bookingIds: string[] };
+    if (!Array.isArray(bookingIds) || bookingIds.length === 0) {
+      return res.status(400).json({ error: "bookingIds array required" });
+    }
+    const result = await Booking.deleteMany({ bookingId: { $in: bookingIds } });
+    console.log(`ðŸ—‘ï¸ Batch deleted ${result.deletedCount} bookings`);
+    res.json({ message: `${result.deletedCount} booking(s) deleted`, count: result.deletedCount });
+  } catch (error) {
+    console.error('Error batch deleting:', error);
+    res.status(500).json({ error: "Failed to delete bookings" });
+  }
+});
+
+// â”€â”€ POST /admin/bookings/sync-tours â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+router.post("/sync-tours", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    res.json({ message: "Tour sync completed", tours: ADMIN_TOURS });
+  } catch {
+    res.status(500).json({ error: "Failed to sync tours" });
+  }
+});
+
+// â”€â”€ GET /admin/bookings/:bookingId â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.get("/:bookingId", requireAuth, requireAdmin, async (req, res) => {
   try {
     const booking = await Booking.findOne({ bookingId: req.params.bookingId });
@@ -187,7 +251,7 @@ router.get("/:bookingId", requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// ── PUT /admin/bookings/:bookingId/status ─────────────────────────────────────
+// â”€â”€ PUT /admin/bookings/:bookingId/status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.put("/:bookingId/status", requireAuth, requireAdmin, async (req, res) => {
   try {
     const { status, notes } = req.body as { status?: string; notes?: string };
@@ -207,7 +271,7 @@ router.put("/:bookingId/status", requireAuth, requireAdmin, async (req, res) => 
   }
 });
 
-// ── PATCH /admin/bookings/:bookingId/archive ──────────────────────────────────
+// â”€â”€ PATCH /admin/bookings/:bookingId/archive â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.patch("/:bookingId/archive", requireAuth, requireAdmin, async (req, res) => {
   try {
     const booking = await Booking.findOneAndUpdate(
@@ -216,7 +280,7 @@ router.patch("/:bookingId/archive", requireAuth, requireAdmin, async (req, res) 
       { new: true }
     );
     if (!booking) return res.status(404).json({ error: "Booking not found" });
-    console.log(`📦 Archived booking: ${req.params.bookingId}`);
+    console.log(`ðŸ“¦ Archived booking: ${req.params.bookingId}`);
     res.json({ message: "Booking archived", booking: attachTour(booking.toObject()) });
   } catch (error) {
     console.error('Error archiving booking:', error);
@@ -224,7 +288,7 @@ router.patch("/:bookingId/archive", requireAuth, requireAdmin, async (req, res) 
   }
 });
 
-// ── PATCH /admin/bookings/:bookingId/restore ──────────────────────────────────
+// â”€â”€ PATCH /admin/bookings/:bookingId/restore â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.patch("/:bookingId/restore", requireAuth, requireAdmin, async (req, res) => {
   try {
     const booking = await Booking.findOneAndUpdate(
@@ -233,7 +297,7 @@ router.patch("/:bookingId/restore", requireAuth, requireAdmin, async (req, res) 
       { new: true }
     );
     if (!booking) return res.status(404).json({ error: "Booking not found" });
-    console.log(`♻️ Restored booking: ${req.params.bookingId}`);
+    console.log(`â™»ï¸ Restored booking: ${req.params.bookingId}`);
     res.json({ message: "Booking restored", booking: attachTour(booking.toObject()) });
   } catch (error) {
     console.error('Error restoring booking:', error);
@@ -241,78 +305,16 @@ router.patch("/:bookingId/restore", requireAuth, requireAdmin, async (req, res) 
   }
 });
 
-// ── DELETE /admin/bookings/:bookingId ─────────────────────────────────────────
+// â”€â”€ DELETE /admin/bookings/:bookingId â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.delete("/:bookingId", requireAuth, requireAdmin, async (req, res) => {
   try {
     const booking = await Booking.findOneAndDelete({ bookingId: req.params.bookingId });
     if (!booking) return res.status(404).json({ error: "Booking not found" });
-    console.log(`🗑️ Deleted booking: ${req.params.bookingId}`);
+    console.log(`ðŸ—‘ï¸ Deleted booking: ${req.params.bookingId}`);
     res.json({ message: "Booking deleted" });
   } catch (error) {
     console.error('Error deleting booking:', error);
     res.status(500).json({ error: "Failed to delete booking" });
-  }
-});
-
-// ── POST /admin/bookings/batch-archive ────────────────────────────────────────
-router.post("/batch-archive", requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const { bookingIds } = req.body as { bookingIds: string[] };
-    if (!Array.isArray(bookingIds) || bookingIds.length === 0) {
-      return res.status(400).json({ error: "bookingIds array required" });
-    }
-    const result = await Booking.updateMany(
-      { bookingId: { $in: bookingIds } },
-      { $set: { archived: true, archivedAt: new Date() } }
-    );
-    console.log(`📦 Batch archived ${result.modifiedCount} bookings`);
-    res.json({ message: `${result.modifiedCount} booking(s) archived`, count: result.modifiedCount });
-  } catch (error) {
-    console.error('Error batch archiving:', error);
-    res.status(500).json({ error: "Failed to archive bookings" });
-  }
-});
-
-// ── POST /admin/bookings/batch-restore ────────────────────────────────────────
-router.post("/batch-restore", requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const { bookingIds } = req.body as { bookingIds: string[] };
-    if (!Array.isArray(bookingIds) || bookingIds.length === 0) {
-      return res.status(400).json({ error: "bookingIds array required" });
-    }
-    const result = await Booking.updateMany(
-      { bookingId: { $in: bookingIds } },
-      { $set: { archived: false }, $unset: { archivedAt: '' } }
-    );
-    console.log(`♻️ Batch restored ${result.modifiedCount} bookings`);
-    res.json({ message: `${result.modifiedCount} booking(s) restored`, count: result.modifiedCount });
-  } catch (error) {
-    console.error('Error batch restoring:', error);
-    res.status(500).json({ error: "Failed to restore bookings" });
-  }
-});
-
-// ── POST /admin/bookings/batch-delete ────────────────────────────────────────
-router.post("/batch-delete", requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const { bookingIds } = req.body as { bookingIds: string[] };
-    if (!Array.isArray(bookingIds) || bookingIds.length === 0) {
-      return res.status(400).json({ error: "bookingIds array required" });
-    }
-    const result = await Booking.deleteMany({ bookingId: { $in: bookingIds } });
-    console.log(`🗑️ Batch deleted ${result.deletedCount} bookings`);
-    res.json({ message: `${result.deletedCount} booking(s) deleted`, count: result.deletedCount });
-  } catch (error) {
-    console.error('Error batch deleting:', error);
-    res.status(500).json({ error: "Failed to delete bookings" });
-  }
-});
-
-// ── POST /admin/bookings/sync-tours ──────────────────────────────────────────
-router.post("/sync-tours", requireAuth, requireAdmin, async (req, res) => {
-  try {    res.json({ message: "Tour sync completed", tours: ADMIN_TOURS });
-  } catch {
-    res.status(500).json({ error: "Failed to sync tours" });
   }
 });
 
