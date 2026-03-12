@@ -152,14 +152,14 @@ const TourCard3D: React.FC<{
           )}
         </div>
 
-        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-gray-100">
           <span className="text-2xl font-bold text-yellow-400">
             {tour.price}
           </span>
           
           <Link
             to={`/tour/${tour.slug}`}
-            className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-lg text-sm font-medium transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/50"
+            className="w-full sm:w-auto text-center px-5 py-2.5 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-lg text-sm font-medium transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/50"
           >
             View Details
           </Link>

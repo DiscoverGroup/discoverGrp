@@ -18,7 +18,7 @@ export default function AboutUs() {
 
   const stats = [
     { number: "2008", label: "Established", icon: Calendar },
-    { number: "15+", label: "Years Experience", icon: Award },
+    { number: `${new Date().getFullYear() - 2008}+`, label: "Years Experience", icon: Award },
     { number: "32K+", label: "Happy Travelers", icon: Users },
     { number: "100%", label: "Personalized", icon: Heart },
   ];

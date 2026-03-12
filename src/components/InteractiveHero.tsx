@@ -475,7 +475,7 @@ const InteractiveHero: React.FC = () => {
                 className="mt-6 text-center text-white"
               >
                 <h3 className="text-2xl font-bold mb-2">Discover Our Story</h3>
-                <p className="text-white/80">Journey through 15+ years of creating unforgettable travel experiences</p>
+                <p className="text-white/80">Journey through {new Date().getFullYear() - 2008}+ years of creating unforgettable travel experiences</p>
               </motion.div>
             </motion.div>
           </motion.div>

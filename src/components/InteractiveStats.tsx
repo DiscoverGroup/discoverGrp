@@ -23,6 +23,9 @@ interface StatItem {
   accent: string;
 }
 
+const FOUNDED_YEAR = 2008;
+const yearsOfExperience = new Date().getFullYear() - FOUNDED_YEAR;
+
 const statsData: StatItem[] = [
   {
     id: 'travelers',
@@ -67,7 +70,7 @@ const statsData: StatItem[] = [
   {
     id: 'experience',
     icon: <Globe className="w-8 h-8" />,
-    value: 15,
+    value: yearsOfExperience,
     suffix: ' Years',
     label: 'Experience',
     description: 'Crafting unforgettable travel experiences',
