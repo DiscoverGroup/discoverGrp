@@ -128,172 +128,7 @@ interface ExtractedTransaction {
   notes?: string;
 }
 
-// Dummy data for conversations
-const DUMMY_CONVERSATIONS: MessengerConversation[] = [
-  {
-    id: 'conv_001',
-    customerName: 'Maria Santos',
-    customerMessengerId: 'fb_12345',
-    status: 'new',
-    assignedAgent: 'John Doe',
-    lastMessageAt: '2025-11-06T14:30:00Z',
-    createdAt: '2025-11-06T14:25:00Z',
-    messages: [
-      {
-        id: 'msg_001',
-        sender: 'customer',
-        text: 'Hi! I\'m interested in booking a tour to Boracay for my family.',
-        timestamp: '2025-11-06T14:25:00Z'
-      },
-      {
-        id: 'msg_002',
-        sender: 'agent',
-        text: 'Hello Maria! Thank you for your interest. How many people will be traveling and what dates are you looking at?',
-        timestamp: '2025-11-06T14:27:00Z'
-      },
-      {
-        id: 'msg_003',
-        sender: 'customer',
-        text: 'We are 4 people - 2 adults and 2 kids. We\'re looking at December 15-20. What\'s the price range?',
-        timestamp: '2025-11-06T14:30:00Z'
-      }
-    ]
-  },
-  {
-    id: 'conv_002',
-    customerName: 'James Chen',
-    customerMessengerId: 'fb_67890',
-    status: 'converted',
-    assignedAgent: 'John Doe',
-    lastMessageAt: '2025-11-05T16:45:00Z',
-    createdAt: '2025-11-05T10:15:00Z',
-    messages: [
-      {
-        id: 'msg_004',
-        sender: 'customer',
-        text: 'Good morning! Do you have any packages for Palawan in January?',
-        timestamp: '2025-11-05T10:15:00Z'
-      },
-      {
-        id: 'msg_005',
-        sender: 'agent',
-        text: 'Good morning James! Yes, we have several Palawan packages. Can you share your budget and group size?',
-        timestamp: '2025-11-05T10:20:00Z'
-      },
-      {
-        id: 'msg_006',
-        sender: 'customer',
-        text: 'It\'s just me and my wife. Budget is around 50,000 PHP for 5 days.',
-        timestamp: '2025-11-05T10:25:00Z'
-      },
-      {
-        id: 'msg_007',
-        sender: 'agent',
-        text: 'Perfect! I have a 5D4N El Nido package that fits your budget. Let me send you the details.',
-        timestamp: '2025-11-05T10:30:00Z'
-      },
-      {
-        id: 'msg_008',
-        sender: 'customer',
-        text: 'Great! How do I book?',
-        timestamp: '2025-11-05T16:40:00Z'
-      },
-      {
-        id: 'msg_009',
-        sender: 'agent',
-        text: 'I\'ll send you the booking link. You can pay online or via bank transfer.',
-        timestamp: '2025-11-05T16:45:00Z'
-      }
-    ]
-  },
-  {
-    id: 'conv_003',
-    customerName: 'Ana Rodriguez',
-    customerMessengerId: 'fb_11223',
-    status: 'in-progress',
-    assignedAgent: 'John Doe',
-    lastMessageAt: '2025-11-06T09:15:00Z',
-    createdAt: '2025-11-04T15:30:00Z',
-    messages: [
-      {
-        id: 'msg_010',
-        sender: 'customer',
-        text: 'Hi! I saw your Siargao tour. Is it still available for November 20?',
-        timestamp: '2025-11-04T15:30:00Z'
-      },
-      {
-        id: 'msg_011',
-        sender: 'agent',
-        text: 'Hi Ana! Yes, we still have slots for November 20. How many people?',
-        timestamp: '2025-11-04T15:35:00Z'
-      },
-      {
-        id: 'msg_012',
-        sender: 'customer',
-        text: '6 people. What\'s included in the package?',
-        timestamp: '2025-11-04T15:40:00Z'
-      },
-      {
-        id: 'msg_013',
-        sender: 'agent',
-        text: 'The package includes accommodation, island hopping, surfing lessons, and airport transfers. Total is 35,000 PHP per person.',
-        timestamp: '2025-11-06T09:10:00Z'
-      },
-      {
-        id: 'msg_014',
-        sender: 'customer',
-        text: 'That sounds good. Can I get a group discount?',
-        timestamp: '2025-11-06T09:15:00Z'
-      }
-    ]
-  }
-];
 
-// Dummy data for extracted transactions
-const DUMMY_TRANSACTIONS: ExtractedTransaction[] = [
-  {
-    id: 'trans_001',
-    conversationId: 'conv_002',
-    customerName: 'James Chen',
-    customerEmail: 'james.chen@email.com',
-    customerPhone: '+639171234567',
-    tourInterest: 'Palawan - El Nido Package',
-    preferredDates: 'January 10-15, 2026',
-    numberOfPeople: 2,
-    estimatedBudget: '₱50,000',
-    extractedAt: '2025-11-05T16:50:00Z',
-    status: 'booked',
-    assignedAgent: 'John Doe',
-    notes: 'Paid full amount via bank transfer. Booking confirmed.'
-  },
-  {
-    id: 'trans_002',
-    conversationId: 'conv_001',
-    customerName: 'Maria Santos',
-    tourInterest: 'Boracay Family Package',
-    preferredDates: 'December 15-20, 2025',
-    numberOfPeople: 4,
-    estimatedBudget: '₱80,000 - ₱100,000',
-    extractedAt: '2025-11-06T14:32:00Z',
-    status: 'lead',
-    assignedAgent: 'John Doe',
-    notes: 'Waiting for customer response on package details.'
-  },
-  {
-    id: 'trans_003',
-    conversationId: 'conv_003',
-    customerName: 'Ana Rodriguez',
-    customerPhone: '+639189876543',
-    tourInterest: 'Siargao Surfing Package',
-    preferredDates: 'November 20-24, 2025',
-    numberOfPeople: 6,
-    estimatedBudget: '₱210,000 (₱35,000 x 6)',
-    extractedAt: '2025-11-06T09:17:00Z',
-    status: 'quoted',
-    assignedAgent: 'John Doe',
-    notes: 'Negotiating group discount. Customer interested.'
-  }
-];
 
 export default function SalesDepartment(): JSX.Element {
   const [activeTab, setActiveTab] = useState<'accounts' | 'conversations' | 'transactions'>('accounts');
@@ -330,12 +165,12 @@ export default function SalesDepartment(): JSX.Element {
   const [selectedConversation, setSelectedConversation] = useState<MessengerConversation | null>(null);
   const [replyText, setReplyText] = useState('');
   const [replying, setReplying] = useState(false);
-  const [transactions] = useState<ExtractedTransaction[]>(DUMMY_TRANSACTIONS);
+  const [transactions] = useState<ExtractedTransaction[]>([]);
 
   // ── Load Meta credentials from API and fetch real conversations ───────────
   const loadConversations = useCallback(async (pageId: string, accessToken: string) => {
     if (!pageId || !accessToken) {
-      setConversations(DUMMY_CONVERSATIONS);
+      setConversations([]);
       setUsingDemoData(true);
       return;
     }
@@ -348,7 +183,7 @@ export default function SalesDepartment(): JSX.Element {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setConversationsError(msg);
-      setConversations(DUMMY_CONVERSATIONS);
+      setConversations([]);
       setUsingDemoData(true);
     } finally {
       setConversationsLoading(false);
@@ -434,7 +269,7 @@ export default function SalesDepartment(): JSX.Element {
       })
       .catch(err => {
         console.warn('Could not load Meta settings from API:', err);
-        setConversations(DUMMY_CONVERSATIONS);
+        setConversations([]);
         setUsingDemoData(true);
       });
   }, [loadConversations]);
@@ -1359,7 +1194,7 @@ export default function SalesDepartment(): JSX.Element {
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               }}>
                 <span>
-                  {conversationsError ? `⚠ ${conversationsError}` : '📋 Showing sample data — configure API token to see live conversations'}
+                  {conversationsError ? `⚠ ${conversationsError}` : '⚙ Configure API token in Settings to see live conversations'}
                 </span>
                 {!conversationsError && (
                   <a href="/admin/settings" style={{ color: '#2563eb', textDecoration: 'underline', fontSize: 11, whiteSpace: 'nowrap' }}>
