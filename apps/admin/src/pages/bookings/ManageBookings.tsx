@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { Booking, BookingFilters, BookingReportData, DashboardStats, BookingStatus } from '../../types/booking';
 import { 
   fetchBookings, 
   updateBookingStatus, 
   deleteBooking, 
   generateBookingReport, 
-  getDashboardStats 
+  getDashboardStats,
+  archiveBooking,
+  batchArchiveBookings,
+  batchDeleteBookings,
 } from '../../services/bookingRepo';
 
 // ─── PDF / Print ──────────────────────────────────────────────────────────────
@@ -544,6 +548,7 @@ function BookingDetailModal({ booking, onClose, onPrint }: { booking: Booking; o
 
 // Main Component
 export default function ManageBookings() {
+  const navigate = useNavigate();
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -552,6 +557,7 @@ export default function ManageBookings() {
   const [reportData, setReportData] = useState<BookingReportData[]>([]);
   const [showReports, setShowReports] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const loadBookings = useCallback(async () => {
     try {
@@ -596,6 +602,60 @@ export default function ManageBookings() {
     } catch (err) {
       console.error('Error deleting booking:', err);
       setError('Failed to delete booking. Please try again.');
+    }
+  };
+
+  const handleArchiveBooking = async (bookingId: string) => {
+    try {
+      await archiveBooking(bookingId);
+      setSelectedIds(prev => { const n = new Set(prev); n.delete(bookingId); return n; });
+      loadBookings();
+    } catch (err) {
+      console.error('Error archiving booking:', err);
+      setError('Failed to archive booking. Please try again.');
+    }
+  };
+
+  const handleBatchArchive = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Archive ${selectedIds.size} selected booking(s)? They can be restored from the Archive page.`)) return;
+    try {
+      await batchArchiveBookings(Array.from(selectedIds));
+      setSelectedIds(new Set());
+      loadBookings();
+    } catch (err) {
+      console.error('Error batch archiving:', err);
+      setError('Failed to archive selected bookings.');
+    }
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Permanently delete ${selectedIds.size} selected booking(s)? This cannot be undone.`)) return;
+    try {
+      await batchDeleteBookings(Array.from(selectedIds));
+      setSelectedIds(new Set());
+      loadBookings();
+    } catch (err) {
+      console.error('Error batch deleting:', err);
+      setError('Failed to delete selected bookings.');
+    }
+  };
+
+  const handleToggleSelect = (bookingId: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(bookingId)) next.delete(bookingId);
+      else next.add(bookingId);
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === filteredBookings.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredBookings.map(b => b.bookingId)));
     }
   };
 
@@ -683,6 +743,15 @@ export default function ManageBookings() {
         </div>
         <div className="flex gap-3 mt-4 sm:mt-0">
           <button
+            onClick={() => navigate('/bookings/archive')}
+            className="inline-flex items-center px-4 py-2 bg-amber-100 text-amber-800 border border-amber-300 rounded-lg hover:bg-amber-200 transition-colors font-medium"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12M10 12v4m4-4v4" />
+            </svg>
+            View Archive
+          </button>
+          <button
             onClick={loadBookings}
             className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
           >
@@ -706,6 +775,39 @@ export default function ManageBookings() {
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
           {error}
+        </div>
+      )}
+
+      {/* Batch action toolbar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+          <span className="text-sm font-medium text-blue-800">
+            {selectedIds.size} booking{selectedIds.size !== 1 ? 's' : ''} selected
+          </span>
+          <button
+            onClick={handleBatchArchive}
+            className="inline-flex items-center px-3 py-1.5 bg-amber-500 text-white text-sm rounded-md hover:bg-amber-600 transition-colors font-medium"
+          >
+            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12M10 12v4m4-4v4" />
+            </svg>
+            Archive Selected
+          </button>
+          <button
+            onClick={handleBatchDelete}
+            className="inline-flex items-center px-3 py-1.5 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors font-medium"
+          >
+            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Delete Selected
+          </button>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="ml-auto text-sm text-blue-600 hover:text-blue-800 underline"
+          >
+            Clear selection
+          </button>
         </div>
       )}
 
@@ -787,6 +889,15 @@ export default function ManageBookings() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr key="bookings-header">
+                  <th className="px-4 py-3 text-left">
+                    <input
+                      type="checkbox"
+                      checked={filteredBookings.length > 0 && selectedIds.size === filteredBookings.length}
+                      onChange={handleSelectAll}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      title="Select all"
+                    />
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booking Details</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tour</th>
@@ -798,7 +909,15 @@ export default function ManageBookings() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredBookings.map((booking) => (
-                  <tr key={booking.id} className="hover:bg-gray-50">
+                  <tr key={booking.id} className={`hover:bg-gray-50 ${selectedIds.has(booking.bookingId) ? 'bg-blue-50' : ''}`}>
+                    <td className="px-4 py-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(booking.bookingId)}
+                        onChange={() => handleToggleSelect(booking.bookingId)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-gray-900">{booking.bookingId}</div>
@@ -880,6 +999,15 @@ export default function ManageBookings() {
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => handleArchiveBooking(booking.bookingId)}
+                          className="text-amber-500 hover:text-amber-700"
+                          title="Archive Booking"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12M10 12v4m4-4v4" />
                           </svg>
                         </button>
                         <button

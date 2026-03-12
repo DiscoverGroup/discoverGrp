@@ -16,6 +16,7 @@ const Home = lazy(() => import('./pages/RoleDashboard'));
 const ToursList = lazy(() => import('./pages/tours'));
 const TourForm = lazy(() => import('./pages/tours/TourForm'));
 const ManageBookings = lazy(() => import('./pages/bookings'));
+const ArchivedBookings = lazy(() => import('./pages/bookings/ArchivedBookings'));
 const UserManagement = lazy(() => import('./pages/UserManagement'));
 const CustomerService = lazy(() => import('./pages/customer-service'));
 const Reports = lazy(() => import('./pages/Reports'));
@@ -134,6 +135,17 @@ const AppRouter: React.FC = () => {
                   allowedRoles={[UserRole.SUPER_ADMIN, UserRole.ADMINISTRATOR, UserRole.BOOKING_DEPARTMENT, UserRole.CSR_DEPARTMENT]}
                 >
                   <ManageBookings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/bookings/archive"
+              element={
+                <ProtectedRoute 
+                  requiredPermission="canAccessBookings"
+                  allowedRoles={[UserRole.SUPER_ADMIN, UserRole.ADMINISTRATOR, UserRole.BOOKING_DEPARTMENT, UserRole.CSR_DEPARTMENT]}
+                >
+                  <ArchivedBookings />
                 </ProtectedRoute>
               }
             />

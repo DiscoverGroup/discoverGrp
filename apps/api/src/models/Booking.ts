@@ -78,6 +78,8 @@ export interface IBooking extends Document {
     };
     evaluatedAt: string;
   };
+  archived?: boolean;
+  archivedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -165,6 +167,8 @@ const BookingSchema = new Schema<IBooking>({
     },
     evaluatedAt: { type: String },
   },
+  archived: { type: Boolean, default: false },
+  archivedAt: { type: Date },
 }, { timestamps: true });
 
 BookingSchema.index({ bookingId: 1 });
@@ -174,5 +178,6 @@ BookingSchema.index({ customerEmail: 1, createdAt: -1 });
 BookingSchema.index({ tourSlug: 1, selectedDate: 1 });
 BookingSchema.index({ visaReadinessStatus: 1 });
 BookingSchema.index({ 'visaReadinessSnapshot.evaluatedAt': -1 });
+BookingSchema.index({ archived: 1, createdAt: -1 });
 
 export default mongoose.model<IBooking>('Booking', BookingSchema);

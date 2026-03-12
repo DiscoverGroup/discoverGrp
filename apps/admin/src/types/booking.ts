@@ -43,6 +43,8 @@ export interface Booking {
   appointmentDate?: string;
   appointmentTime?: string;
   appointmentPurpose?: string;
+  archived?: boolean;
+  archivedAt?: string;
 }
 
 export interface BookingFilters {
