@@ -178,7 +178,7 @@ function parseTourText(raw: string): Partial<TourFormData> {
   for (const line of lines) {
     const l = line.trim();
     if (/optional\s*tours?\s*:/i.test(l) || /^optional\s*tours?\s*$/i.test(l)) { inOptional = true; continue; }
-    if (/regular\s*rate|country\s*to\s*visit|fullcash|full\s*cash|downpayment/i.test(l)) inOptional = false;
+    if (/regular\s*rate|countr(?:y|ies)\s*to\s*visit|cit(?:y|ies)\s*to\s*visit|fullcash|full\s*cash|downpayment/i.test(l)) inOptional = false;
     if (inOptional) {
       const dm = l.match(/Day\s*(\d+)\s*[:\-–]\s*(.+)/i);
       if (dm) {
@@ -216,6 +216,26 @@ function parseTourText(raw: string): Partial<TourFormData> {
         countries: cs.map(name => ({ name, image: "" })),
         citiesToVisit: [],
       };
+    }
+  }
+
+  // ─ Cities to Visit ──────────────────────────────────────────────────────
+  // Matches "City to Visit:", "Cities to Visit:" followed by | or , separated list
+  const cityVisitMatch = raw.match(/Cit(?:y|ies)\s+to\s+[Vv]isit\s*:\s*([^\n]+)/i);
+  if (cityVisitMatch) {
+    const cities = cityVisitMatch[1].split(/[|,]/).map(c => c.trim()).filter(Boolean);
+    if (cities.length) {
+      if (!result.additionalInfo) {
+        result.additionalInfo = {
+          countriesVisited: [],
+          startingPoint: "",
+          endingPoint: "",
+          mainCities: {},
+          countries: [],
+          citiesToVisit: [],
+        };
+      }
+      result.additionalInfo.citiesToVisit = cities.map(city => ({ city, country: "", image: "" }));
     }
   }
 
