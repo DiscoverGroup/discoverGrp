@@ -95,7 +95,6 @@ export type Tour = {
   // Reservation payment rules
   fixedDownpaymentAmount?: number;        // e.g. 50000 — fixed PHP downpayment (overrides % when set)
   balanceDueDaysBeforeTravel?: number;    // e.g. 90 — days before departure that balance is due
-  allowsDownpayment?: boolean;
   [key: string]: unknown;
 };
 

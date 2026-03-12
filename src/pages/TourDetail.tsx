@@ -904,14 +904,14 @@ useEffect(() => {
                 </div>
               </div>
 
-              <div className="rounded-xl overflow-hidden shadow-2xl bg-black w-full">
+              <div className="rounded-xl overflow-hidden shadow-2xl bg-black w-full max-w-3xl mx-auto">
                 <video
                   src={tour.video_url}
                   poster={tour.images?.[0] ?? undefined}
                   controls
                   playsInline
                   preload="metadata"
-                  className="w-full max-h-[480px]"
+                  className="w-full max-h-[360px] object-contain"
                   onError={(e) => console.error('[TourDetail] video error:', e, 'src:', tour.video_url)}
                   onLoadStart={() => console.log('[TourDetail] video loadStart ✅ src:', tour.video_url)}
                   onCanPlay={() => console.log('[TourDetail] video canPlay ✅')}
