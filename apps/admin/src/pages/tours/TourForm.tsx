@@ -72,30 +72,47 @@ function parseTourText(raw: string): Partial<TourFormData> {
   const result: Partial<TourFormData> = {};
   const lines = raw.split(/\r?\n/);
 
-  // ─ Title + duration ───────────────────────────────────────────────────
-  const titleM = raw.match(/^([^\n(]+?)\s*\((\d+)\s*days?\)/im);
-  if (titleM) {
-    result.title = titleM[1].trim();
-    result.durationDays = parseInt(titleM[2]);
-    const tl = result.title.toLowerCase();
-    if (/route\s*a/i.test(tl))       result.line = 'ROUTE_A';
-    else if (/route\s*b/i.test(tl))  result.line = 'ROUTE_B';
-    else if (/route\s*c/i.test(tl))  result.line = 'ROUTE_C';
-    else if (/route\s*d/i.test(tl))  result.line = 'ROUTE_D';
-    if (/europe/i.test(tl))          result.continent = 'Europe';
-    else if (/asia/i.test(tl))       result.continent = 'Asia';
-    const slug = result.title.toLowerCase().replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').trim();
-    result.slug = `${slug}-${result.durationDays ?? 15}-days`;
+  // ─ Helper: detect tour line from a string ─────────────────────────────
+  function detectLine(s: string): string | null {
+    const m = s.match(/route\s*([a-z])/i);
+    if (m) return `ROUTE_${m[1].toUpperCase()}`;
+    return null;
   }
 
-  // ─ Booking links (year-tagged) — "Links for 2026: url1, and url2" ───────
+  // ─ Title + duration ───────────────────────────────────────────────────
+  const titleWithDays = raw.match(/^([^\n(]+?)\s*\((\d+)\s*days?\)/im);
+  if (titleWithDays) {
+    result.title = titleWithDays[1].trim();
+    result.durationDays = parseInt(titleWithDays[2]);
+    const detectedLine = detectLine(result.title);
+    if (detectedLine) result.line = detectedLine;
+    if (/europe/i.test(result.title))     result.continent = 'Europe';
+    else if (/asia/i.test(result.title))  result.continent = 'Asia';
+    const slug = result.title.toLowerCase().replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').trim();
+    result.slug = `${slug}-${result.durationDays ?? 15}-days`;
+  } else {
+    // Fallback: use first non-empty line as title (handles "Route N Advanced" without "(X days)")
+    const firstLine = lines.find(l => l.trim() && !/^(Links?|Liks?|Travel Date|Country|Optional|Full\s*Cash)/i.test(l.trim()));
+    if (firstLine) {
+      result.title = firstLine.trim();
+      const detectedLine = detectLine(result.title);
+      if (detectedLine) result.line = detectedLine;
+      if (/europe/i.test(result.title))     result.continent = 'Europe';
+      else if (/asia/i.test(result.title))  result.continent = 'Asia';
+      const slug = result.title.toLowerCase().replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').trim();
+      result.slug = slug;
+    }
+  }
+
+  // ─ Booking links (year-tagged) — tolerates typos like "Liks for 2026:" ─
   const bookingLinks: TourFormData['bookingLinks'] = [];
   for (const line of lines) {
-    const lm = line.match(/Links?\s+for\s+(\d{4})\s*:\s*(.+)/i);
+    // Match "Links for 2026:", "Liks for 2026:", "Link for 2026:", "links 2026:" etc.
+    const lm = line.match(/Li[a-z]{0,3}s?\s+for\s+(\d{4})\s*:\s*(.+)/i)
+            ?? line.match(/Links?\s+(\d{4})\s*:\s*(.+)/i);
     if (lm) {
       const year = lm[1];
       const urlPart = lm[2];
-      // split on "," or " and " separators, extract https?:// URLs
       const urls = urlPart.match(/https?:\/\/[^\s,]+/gi) ?? [];
       if (urls.length) bookingLinks.push({ year, urls });
     }
@@ -110,8 +127,8 @@ function parseTourText(raw: string): Partial<TourFormData> {
     if (!seen.has(k)) { seen.add(k); departureDates.push({ start, end, price, isAvailable: true, currentBookings: 0 }); }
   };
 
-  // Pattern A — same month: "May 13 - 27, 2026 (Php 170,000)"
-  const pA = /([A-Za-z]+)\s+(\d{1,2})\s*[-–]\s*(\d{1,2}),\s*(\d{4})(?:\s*\(Php\s*([\d,]+)\))?/g;
+  // Pattern A — same month: "May 13 - 27, 2026 (Php 170,000)" or "(Php" with no amount
+  const pA = /([A-Za-z]+)\s+(\d{1,2})\s*[-–]\s*(\d{1,2}),\s*(\d{4})(?:[^\n]*\(Php\s*([\d,]*)\))?/g;
   let m: RegExpExecArray | null;
   while ((m = pA.exec(raw))) {
     const [, mon, d1, d2, yr, ps] = m;
@@ -119,7 +136,7 @@ function parseTourText(raw: string): Partial<TourFormData> {
   }
 
   // Pattern B — different months: "May 25 - June 8, 2026 (Php 170,000)"
-  const pB = /([A-Za-z]+)\s+(\d{1,2})\s*[-–]\s*([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})(?:\s*\(Php\s*([\d,]+)\))?/g;
+  const pB = /([A-Za-z]+)\s+(\d{1,2})\s*[-–]\s*([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})(?:[^\n]*\(Php\s*([\d,]*)\))?/g;
   while ((m = pB.exec(raw))) {
     const [, m1, d1, m2, d2, yr, ps] = m;
     if (MONTH_MAP[m1.toLowerCase()] && MONTH_MAP[m2.toLowerCase()])
@@ -131,6 +148,19 @@ function parseTourText(raw: string): Partial<TourFormData> {
     result.travelWindow = { start: result.departureDates[0].start, end: result.departureDates[result.departureDates.length - 1].end };
     const prices = result.departureDates.map(d => d.price ?? 0).filter(Boolean);
     if (prices.length) result.regularPricePerPerson = Math.max(...prices);
+
+    // Infer duration from first departure date if not already set
+    if (!result.durationDays && result.departureDates.length > 0) {
+      const first = result.departureDates[0];
+      const startMs = new Date(first.start).getTime();
+      const endMs = new Date(first.end).getTime();
+      const diffDays = Math.round((endMs - startMs) / 86400000) + 1;
+      if (diffDays > 0) result.durationDays = diffDays;
+    }
+    // Update slug with duration if we have both
+    if (result.slug && result.durationDays && !result.slug.match(/-\d+-days$/)) {
+      result.slug = `${result.slug}-${result.durationDays}-days`;
+    }
   }
 
   // ─ Promo info ───────────────────────────────────────────────────────
@@ -164,7 +194,6 @@ function parseTourText(raw: string): Partial<TourFormData> {
     }
   }
   if (optionalTours.length) result.optionalTours = optionalTours;
-  // (Note: individual optional tour flipbookUrl not typically in paste text — user adds manually)
 
   // ─ Downpayment + balance days ───────────────────────────────────────
   const dpM = raw.match(/Php\s*([\d,]+)\s*downpayment/i);
@@ -173,7 +202,8 @@ function parseTourText(raw: string): Partial<TourFormData> {
   if (bdM) result.balanceDueDaysBeforeTravel = parseInt(bdM[1]);
 
   // ─ Countries ───────────────────────────────────────────────────────────
-  const cM = raw.match(/Country\s+(?:to\s+visit|visited)?[:\s]+([A-Z][A-Z|\s&,]+)/i);
+  // Matches "Country to Visit:", "Country:", "Countries:" followed by | or , separated list
+  const cM = raw.match(/Countr(?:y|ies)\s*(?:to\s+visit|visited)?\s*:\s*([A-Z][A-Z\s|,&]+)/i);
   if (cM) {
     const cs = cM[1].split(/[|,]/).map(c => c.trim()).filter(Boolean)
       .map(c => c.charAt(0).toUpperCase() + c.slice(1).toLowerCase());
