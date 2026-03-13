@@ -347,6 +347,7 @@ interface ExtendedTour extends Tour {
   durationDays: number;
   guaranteedDeparture: boolean;
   bookingPdfUrl: string;
+  facebookPostUrl: string;
   regularPricePerPerson: number;
   promoPricePerPerson: number;
   basePricePerDay: number;
@@ -395,6 +396,7 @@ interface TourFormData {
   guaranteedDeparture: boolean;
   bookingPdfUrl: string;
   video_url?: string; // Tour video URL
+  facebookPostUrl: string; // Facebook post URL to embed
 
   // Pricing
   regularPricePerPerson: number | "";
@@ -592,6 +594,7 @@ export default function TourForm(): JSX.Element {
     guaranteedDeparture: false,
     bookingPdfUrl: "",
     video_url: "",
+    facebookPostUrl: "",
     videoFile: null,
     regularPricePerPerson: "",
     promoPricePerPerson: "",
@@ -700,11 +703,12 @@ export default function TourForm(): JSX.Element {
           summary: tour.summary || "",
           shortDescription: tour.shortDescription || "",
           line: tour.line || "",
-          continent: "",
+          continent: tour.continent || "",
           durationDays: tour.durationDays || 7,
           guaranteedDeparture: tour.guaranteedDeparture || false,
           bookingPdfUrl: tour.bookingPdfUrl || "",
           video_url: (tour as unknown as { video_url?: string }).video_url || "",
+          facebookPostUrl: (tour as unknown as { facebookPostUrl?: string }).facebookPostUrl || "",
           videoFile: null,
 
           regularPricePerPerson: tour.regularPricePerPerson ?? "",
@@ -1002,6 +1006,7 @@ export default function TourForm(): JSX.Element {
         travelWindow: formData.travelWindow.start && formData.travelWindow.end ? formData.travelWindow : undefined,
         // include video URL
         video_url: formData.video_url || undefined,
+        facebookPostUrl: formData.facebookPostUrl || undefined,
         additionalInfo: {
           ...formData.additionalInfo,
           continent: formData.continent,
@@ -1557,6 +1562,20 @@ export default function TourForm(): JSX.Element {
                   placeholder="https://example.flippingbook.com/view/example-id"
                 />
                 <p className="text-xs text-gray-500 mt-1">Paste the FlippingBook link (flipbook viewer) for this tour — it will be used instead of a raw PDF file.</p>
+              </div>
+
+              <div className="md:col-span-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Facebook Post URL
+                </label>
+                <input
+                  type="url"
+                  value={formData.facebookPostUrl}
+                  onChange={(e) => handleInputChange("facebookPostUrl", e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="https://www.facebook.com/discovergrp/posts/1234567890"
+                />
+                <p className="text-xs text-gray-500 mt-1">Paste the Facebook post URL for this tour — it will be embedded on the tour detail page.</p>
               </div>
 
               {/* ── Year-tagged Booking Links ─────────────────────────────────── */}
