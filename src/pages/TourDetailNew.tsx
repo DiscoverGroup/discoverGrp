@@ -647,16 +647,21 @@ export default function TourDetailNew() {
                 onClick={async () => {
                   const tourUrl = `${window.location.origin}/tour/${slug}`;
                   const message = `Hi! I'm interested in booking "${tour.title}". Could you provide more details?\n\nTour: ${tour.title}\nGuests: ${passengers}\n${selectedDate ? `Preferred Date: ${selectedDate}\n` : ''}Link: ${tourUrl}`;
+                  let copied = false;
                   try {
                     await navigator.clipboard.writeText(message);
-                  } catch { /* clipboard may fail on some browsers – still open Messenger */ }
-                  window.open(
-                    'https://www.messenger.com/t/discovergrp',
-                    '_blank',
-                    'noopener,noreferrer'
-                  );
+                    copied = true;
+                  } catch { /* clipboard may fail on some browsers */ }
                   setShowCopiedToast(true);
-                  setTimeout(() => setShowCopiedToast(false), 4000);
+                  // Delay opening Messenger so user sees the paste instruction first
+                  setTimeout(() => {
+                    window.open(
+                      'https://www.messenger.com/t/discovergrp',
+                      '_blank',
+                      'noopener,noreferrer'
+                    );
+                  }, copied ? 1500 : 0);
+                  setTimeout(() => setShowCopiedToast(false), 8000);
                 }}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -678,9 +683,10 @@ export default function TourDetailNew() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
-                  className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800 text-center"
+                  className="mb-4 p-3 bg-blue-50 border border-blue-300 rounded-lg text-sm text-blue-900 text-center"
                 >
-                  Inquiry message copied! If not auto-filled, paste it in your Messenger conversation.
+                  <p className="font-semibold mb-1">📋 Inquiry message copied!</p>
+                  <p>Press <kbd className="px-1.5 py-0.5 bg-blue-100 border border-blue-300 rounded text-xs font-mono">Ctrl+V</kbd> to paste it in the Messenger chat box.</p>
                 </motion.div>
               )}
 
