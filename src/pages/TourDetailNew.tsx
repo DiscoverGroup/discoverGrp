@@ -650,9 +650,8 @@ export default function TourDetailNew() {
                   try {
                     await navigator.clipboard.writeText(message);
                   } catch { /* clipboard may fail on some browsers – still open Messenger */ }
-                  const encodedMessage = encodeURIComponent(message);
                   window.open(
-                    `https://m.me/discovergrp?text=${encodedMessage}`,
+                    'https://www.messenger.com/t/discovergrp',
                     '_blank',
                     'noopener,noreferrer'
                   );
