@@ -3,12 +3,17 @@ const translations = {
   'nav.home': 'Home',
   'nav.tours': 'Tours',
   'nav.destinations': 'Destinations',
+  'nav.waysToGo': 'Ways To Go',
+  'nav.deals': 'Deals',
   'nav.about': 'About Us',
   'nav.contact': 'Contact',
   'nav.login': 'Login',
   'nav.logout': 'Logout',
   'nav.myBookings': 'My Bookings',
+  'nav.myFavorites': 'My Favorites',
   'nav.profile': 'Profile',
+  'nav.settings': 'Settings',
+  'nav.seeAllTours': 'See All Tours',
   
   // Common
   'common.loading': 'Loading...',

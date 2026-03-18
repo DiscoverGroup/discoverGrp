@@ -40,6 +40,7 @@ export type Tour = {
   guaranteedDeparture?: boolean;
   bookingPdfUrl?: string | null;
   video_url?: string | null; // Storage URL for tour video
+  facebookPostUrl?: string; // Facebook post URL to embed on tour detail page
 
   travelWindow?: TravelWindow | null;
   itinerary?: ItineraryItem[];

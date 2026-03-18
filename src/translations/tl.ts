@@ -3,12 +3,17 @@ const translations = {
   'nav.home': 'Tahanan',
   'nav.tours': 'Mga Tour',
   'nav.destinations': 'Mga Destinasyon',
+  'nav.waysToGo': 'Mga Paraan ng Pag-byahe',
+  'nav.deals': 'Mga Deal',
   'nav.about': 'Tungkol Sa Amin',
   'nav.contact': 'Makipag-ugnayan',
   'nav.login': 'Mag-login',
   'nav.logout': 'Mag-logout',
   'nav.myBookings': 'Aking Mga Booking',
+  'nav.myFavorites': 'Aking Mga Paborito',
   'nav.profile': 'Profile',
+  'nav.settings': 'Mga Setting',
+  'nav.seeAllTours': 'Tingnan Lahat ng Tour',
   
   // Common
   'common.loading': 'Naglo-load...',

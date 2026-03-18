@@ -72,6 +72,7 @@ export type Tour = {
   guaranteedDeparture?: boolean;
   bookingPdfUrl?: string;
   video_url?: string | null; // Storage URL for tour video
+  facebookPostUrl?: string; // Facebook post URL to embed on tour detail page
   // departureDates can be legacy string[] or new structured DepartureDate[]
   departureDates?: (string | DepartureDate)[];
   // New: travelWindow describes the start/end of the scheduled travel (when the tour runs)

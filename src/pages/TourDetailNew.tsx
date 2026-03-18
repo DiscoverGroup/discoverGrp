@@ -16,6 +16,7 @@ export default function TourDetailNew() {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [passengers, setPassengers] = useState(1);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [showCopiedToast, setShowCopiedToast] = useState(false);
 
   // Scroll to top when component mounts or slug changes
   useEffect(() => {
@@ -291,6 +292,32 @@ export default function TourDetailNew() {
                       </div>
                     </motion.div>
                   ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Facebook Post Embed */}
+            {tour.facebookPostUrl && (
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.9 }}
+                className="border-b pb-6"
+              >
+                <h3 className="text-lg lg:text-xl font-bold text-gray-900 mb-4">Latest from Facebook</h3>
+                <div className="flex justify-center">
+                  <iframe
+                    src={`https://www.facebook.com/plugins/post.php?href=${encodeURIComponent(tour.facebookPostUrl)}&width=500&show_text=true&appId`}
+                    width="500"
+                    height="600"
+                    style={{ border: 'none', overflow: 'hidden', maxWidth: '100%' }}
+                    scrolling="no"
+                    frameBorder="0"
+                    allowFullScreen={true}
+                    allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                    title="Facebook Post"
+                  />
                 </div>
               </motion.div>
             )}
@@ -616,23 +643,47 @@ export default function TourDetailNew() {
               </motion.p>
 
               {/* Contact Sales */}
-              <motion.a
-                href="https://www.facebook.com/discovergrp"
-                target="_blank"
-                rel="noopener noreferrer"
+              <motion.button
+                onClick={async () => {
+                  const tourUrl = `${window.location.origin}/tour/${slug}`;
+                  const message = `Hi! I'm interested in booking "${tour.title}". Could you provide more details?\n\nTour: ${tour.title}\nGuests: ${passengers}\n${selectedDate ? `Preferred Date: ${selectedDate}\n` : ''}Link: ${tourUrl}`;
+                  try {
+                    await navigator.clipboard.writeText(message);
+                  } catch { /* clipboard may fail on some browsers – still open Messenger */ }
+                  const encodedMessage = encodeURIComponent(message);
+                  window.open(
+                    `https://m.me/discovergrp?text=${encodedMessage}`,
+                    '_blank',
+                    'noopener,noreferrer'
+                  );
+                  setShowCopiedToast(true);
+                  setTimeout(() => setShowCopiedToast(false), 4000);
+                }}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 1.4 }}
                 whileHover={{ scale: 1.02, y: -1 }}
                 whileTap={{ scale: 0.98 }}
-                className="w-full flex items-center justify-center gap-2 bg-[#1877F2] hover:bg-[#166fe5] text-white font-semibold py-3 rounded-lg transition-all mb-4"
+                className="w-full flex items-center justify-center gap-2 bg-[#1877F2] hover:bg-[#166fe5] text-white font-semibold py-3 rounded-lg transition-all mb-4 cursor-pointer"
               >
-                {/* Facebook icon */}
+                {/* Messenger icon */}
                 <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M22 12c0-5.522-4.478-10-10-10S2 6.478 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987H7.898V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"/>
+                  <path d="M12 2C6.477 2 2 6.145 2 11.243c0 2.9 1.449 5.49 3.713 7.185V22l3.427-1.883A11.28 11.28 0 0012 20.485c5.523 0 10-4.144 10-9.242C22 6.145 17.523 2 12 2zm1.07 12.444l-2.55-2.72-4.98 2.72 5.476-5.813 2.613 2.72 4.916-2.72-5.476 5.813z"/>
                 </svg>
                 Contact Sales
-              </motion.a>
+              </motion.button>
+
+              {/* Copied-to-clipboard toast */}
+              {showCopiedToast && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800 text-center"
+                >
+                  Inquiry message copied! If not auto-filled, paste it in your Messenger conversation.
+                </motion.div>
+              )}
 
               {/* Price Breakdown */}
               <motion.div 

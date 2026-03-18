@@ -45,6 +45,7 @@ export interface ITour extends Document {
   promoPricePerPerson?: number | null;
   isSaleEnabled?: boolean;
   saleEndDate?: string | null;
+  facebookPostUrl?: string;
   [key: string]: unknown;
 }
 
@@ -104,6 +105,7 @@ const TourSchema = new Schema<ITour>({
   promoPricePerPerson: { type: Number, default: null },
   isSaleEnabled: { type: Boolean, default: false },
   saleEndDate: { type: String, default: null },
+  facebookPostUrl: { type: String },
 }, { 
   timestamps: true,
   strict: false // Allow additional fields for flexibility

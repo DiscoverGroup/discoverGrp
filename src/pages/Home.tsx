@@ -11,7 +11,6 @@ import InteractiveHero from "../components/InteractiveHero";
 import InteractiveFeatures from "../components/InteractiveFeatures";
 import TourCarousel3D from "../components/TourCarousel3D";
 import InteractiveStats from "../components/InteractiveStats";
-import FacebookFeed from "../components/FacebookFeed";
 
 // Hash name function: e.g., "Ron" -> "R*n", "Sarah" -> "S***h"
 function hashName(name: string): string {
@@ -431,9 +430,6 @@ export default function Home() {
           </div>
         </div>
       </motion.section>
-
-      {/* Facebook Feed */}
-      <FacebookFeed />
 
       {/* Call to Action */}
       <motion.section 

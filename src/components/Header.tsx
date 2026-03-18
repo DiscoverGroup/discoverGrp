@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
+import { useLanguage } from "../context/LanguageContext";
 import LanguageSwitcher from "./LanguageSwitcher";
 import {
   fetchContinents,
@@ -62,6 +63,7 @@ interface PromoBanner {
 export default function Header(): React.ReactElement {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [userMenuOpen, setUserMenuOpen] = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [promoBanner, setPromoBanner] = React.useState<PromoBanner | null>(null);
@@ -239,7 +241,7 @@ export default function Header(): React.ReactElement {
                 aria-expanded={megaOpen}
               >
                 <span>🗺️</span>
-                Destinations 
+                {t('nav.destinations')}
                 <svg className={`w-4 h-4 transition-transform duration-300 ${megaOpen ? 'rotate-180' : ''}`} fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
@@ -325,7 +327,7 @@ export default function Header(): React.ReactElement {
                           to={rightCtaSearchUrl}
                           className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-blue-900 font-bold px-8 py-3 rounded-full shadow-xl hover:from-yellow-300 hover:to-yellow-400 hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-300 text-lg"
                         >
-                          See All Tours
+                          {t('nav.seeAllTours')}
                         </Link>
                       </div>
                     </div>
@@ -341,7 +343,7 @@ export default function Header(): React.ReactElement {
               className="text-sm font-bold uppercase tracking-wider text-blue-900 hover:text-blue-600 transition-all duration-200 relative px-3 py-2 rounded-lg hover:bg-blue-50 group"
             >
               <span className="flex items-center gap-2">
-                🚶 Ways To Go
+                🚶 {t('nav.waysToGo')}
               </span>
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-600 to-blue-400 group-hover:w-full transition-all duration-300"></span>
             </Link>
@@ -350,7 +352,7 @@ export default function Header(): React.ReactElement {
               className="text-sm font-bold uppercase tracking-wider text-blue-900 hover:text-blue-600 transition-all duration-200 relative px-3 py-2 rounded-lg hover:bg-blue-50 group"
             >
               <span className="flex items-center gap-2">
-                🎉 Deals
+                🎉 {t('nav.deals')}
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">HOT</span>
               </span>
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-600 to-blue-400 group-hover:w-full transition-all duration-300"></span>
@@ -360,7 +362,7 @@ export default function Header(): React.ReactElement {
               className="text-sm font-bold uppercase tracking-wider text-blue-900 hover:text-blue-600 transition-all duration-200 relative px-3 py-2 rounded-lg hover:bg-blue-50 group"
             >
               <span className="flex items-center gap-2">
-                ℹ️ About Us
+                ℹ️ {t('nav.about')}
               </span>
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-600 to-blue-400 group-hover:w-full transition-all duration-300"></span>
             </Link>
@@ -369,7 +371,7 @@ export default function Header(): React.ReactElement {
               className="text-sm font-bold uppercase tracking-wider text-blue-900 hover:text-blue-600 transition-all duration-200 relative px-3 py-2 rounded-lg hover:bg-blue-50 group"
             >
               <span className="flex items-center gap-2">
-                📧 Contact
+                📧 {t('nav.contact')}
               </span>
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-600 to-blue-400 group-hover:w-full transition-all duration-300"></span>
             </Link>
@@ -412,25 +414,25 @@ export default function Header(): React.ReactElement {
                       <li>
                         <Link to="/bookings" className="flex items-center gap-3 px-5 py-3 hover:bg-blue-50 transition-all group text-gray-900" onClick={() => setUserMenuOpen(false)}>
                           <span className="text-lg group-hover:scale-110 transition-transform">📋</span>
-                          <span className="font-medium">My Bookings</span>
+                          <span className="font-medium">{t('nav.myBookings')}</span>
                         </Link>
                       </li>
                       <li>
                         <Link to="/favorites" className="flex items-center gap-3 px-5 py-3 hover:bg-blue-50 transition-all group text-gray-900" onClick={() => setUserMenuOpen(false)}>
                           <span className="text-lg group-hover:scale-110 transition-transform">❤️</span>
-                          <span className="font-medium">My Favorites</span>
+                          <span className="font-medium">{t('nav.myFavorites')}</span>
                         </Link>
                       </li>
                       <li>
                         <Link to="/profile" className="flex items-center gap-3 px-5 py-3 hover:bg-blue-50 transition-all group text-gray-900" onClick={() => setUserMenuOpen(false)}>
                           <span className="text-lg group-hover:scale-110 transition-transform">👤</span>
-                          <span className="font-medium">Profile</span>
+                          <span className="font-medium">{t('nav.profile')}</span>
                         </Link>
                       </li>
                       <li>
                         <Link to="/settings" className="flex items-center gap-3 px-5 py-3 hover:bg-blue-50 transition-all group text-gray-900" onClick={() => setUserMenuOpen(false)}>
                           <span className="text-lg group-hover:scale-110 transition-transform">⚙️</span>
-                          <span className="font-medium">Settings</span>
+                          <span className="font-medium">{t('nav.settings')}</span>
                         </Link>
                       </li>
                       <li className="border-t border-gray-200 mt-2 pt-2">
@@ -443,7 +445,7 @@ export default function Header(): React.ReactElement {
                           }}
                         >
                           <span className="text-lg group-hover:scale-110 transition-transform">🚪</span>
-                          <span>Logout</span>
+                          <span>{t('nav.logout')}</span>
                         </button>
                       </li>
                     </ul>
@@ -456,7 +458,7 @@ export default function Header(): React.ReactElement {
                 className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-500 text-blue-900 font-bold hover:from-yellow-300 hover:to-yellow-400 transition-all duration-200 shadow-lg hover:shadow-xl border-2 border-yellow-400 hidden md:inline-flex items-center gap-2 hover:scale-105"
               >
                 <span>🔐</span>
-                Login
+                {t('nav.login')}
               </Link>
             )}
 
@@ -532,7 +534,7 @@ export default function Header(): React.ReactElement {
                                 navigate("/");
                               }}
                             >
-                              Logout
+                              {t('nav.logout')}
                             </button>
                           </li>
                         </ul>
@@ -544,7 +546,7 @@ export default function Header(): React.ReactElement {
                     to="/login"
                     className="py-2 text-center rounded-md bg-yellow-400 text-blue-900 font-semibold"
                   >
-                    Login
+                    {t('nav.login')}
                   </Link>
                 )}
 
